@@ -9,6 +9,13 @@
     <meta property="og:description" content="Fidèle reconstitution moderne du chef-d'œuvre RPG Wizardry 1 (1981) avec moteur Pascal authentique, vue 3D fluide du donjon et export PySide6." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      window.__IS_DEV_INDEX__ = true;
+      if (window.location.hostname.endsWith('github.io') && window.__IS_DEV_INDEX__ && !window.location.pathname.includes('/docs/')) {
+        var prefix = window.location.pathname.replace(/\/index\.html$/, '').replace(/\/$/, '');
+        window.location.replace(prefix + '/docs/' + window.location.search + window.location.hash);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
