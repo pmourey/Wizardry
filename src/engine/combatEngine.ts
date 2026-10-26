@@ -1,0 +1,567 @@
+/**
+ * Faithful Wizardry I Combat Engine matching Pascal reverse engineering
+ */
+import { TCharacter, TMonster, TSpell, TStatus } from '../types/wizardry';
+import { MONSTERS_DATABASE, SPELLS } from '../data/wizardryData';
+
+export interface CombatMonsterInstance {
+  monsterId: number;
+  hpLeft: number;
+  maxHp: number;
+  status: TStatus;
+  acMod: number;
+  silencedRounds: number;
+}
+
+export interface CombatGroup {
+  monster: TMonster;
+  identified: boolean;
+  count: number;
+  aliveCount: number;
+  instances: CombatMonsterInstance[];
+}
+
+export interface PlayerCombatAction {
+  charIndex: number;
+  actionType: 'FIGHT' | 'SPELL' | 'PARRY' | 'RUN' | 'USE_ITEM' | 'DISPELL';
+  targetGroupIndex?: number;
+  targetCharIndex?: number;
+  spellId?: number;
+  inventorySlotIndex?: number;
+}
+
+export interface CombatRoundResult {
+  combatLog: string[];
+  partyAlive: boolean;
+  monstersAlive: boolean;
+  fled: boolean;
+  alarmTriggered: boolean;
+}
+
+export function initCombatEncounter(level: number, specialEnemyId?: number): {
+  groups: CombatGroup[];
+  surprise: 'PARTY' | 'MONSTERS' | 'NONE';
+  friendly: boolean;
+} {
+  const groups: CombatGroup[] = [];
+
+  // Determine primary monster
+  let baseMonsterId = specialEnemyId !== undefined 
+    ? specialEnemyId 
+    : Math.min(MONSTERS_DATABASE.length - 1, Math.max(0, Math.floor(Math.random() * (level + 2))));
+  
+  const primaryMonster = MONSTERS_DATABASE[baseMonsterId] || MONSTERS_DATABASE[0];
+  
+  // Count roll: 1-9 based on level and monster
+  const count1 = Math.min(9, Math.max(1, Math.floor(Math.random() * (2 + level)) + 1));
+  const instances1: CombatMonsterInstance[] = [];
+  for (let i = 0; i < count1; i++) {
+    const hpRoll = primaryMonster.hp.hpMinAdd + Math.floor(Math.random() * primaryMonster.hp.hpFac * primaryMonster.hp.level) + 1;
+    instances1.push({
+      monsterId: primaryMonster.id,
+      hpLeft: Math.max(1, hpRoll),
+      maxHp: Math.max(1, hpRoll),
+      status: 'OK',
+      acMod: 0,
+      silencedRounds: 0
+    });
+  }
+
+  groups.push({
+    monster: primaryMonster,
+    identified: false,
+    count: count1,
+    aliveCount: count1,
+    instances: instances1
+  });
+
+  // Secondary groups if teamPercent succeeds
+  if (primaryMonster.teamId > 0 && Math.random() * 100 < primaryMonster.teamPercent) {
+    const secondaryMonster = MONSTERS_DATABASE[primaryMonster.teamId] || MONSTERS_DATABASE[0];
+    const count2 = Math.min(6, Math.max(1, Math.floor(Math.random() * 4) + 1));
+    const instances2: CombatMonsterInstance[] = [];
+    for (let i = 0; i < count2; i++) {
+      const hpRoll = secondaryMonster.hp.hpMinAdd + Math.floor(Math.random() * secondaryMonster.hp.hpFac * secondaryMonster.hp.level) + 1;
+      instances2.push({
+        monsterId: secondaryMonster.id,
+        hpLeft: Math.max(1, hpRoll),
+        maxHp: Math.max(1, hpRoll),
+        status: 'OK',
+        acMod: 0,
+        silencedRounds: 0
+      });
+    }
+    groups.push({
+      monster: secondaryMonster,
+      identified: false,
+      count: count2,
+      aliveCount: count2,
+      instances: instances2
+    });
+  }
+
+  // Surprise roll (Pascal 80% thresholds)
+  let surprise: 'PARTY' | 'MONSTERS' | 'NONE' = 'NONE';
+  const surpriseRoll = Math.random() * 100;
+  if (surpriseRoll < 15) surprise = 'PARTY';
+  else if (surpriseRoll > 85) surprise = 'MONSTERS';
+
+  // Friendly encounter roll
+  const friendly = Math.random() * 100 < 10 && primaryMonster.monsterClass === 0;
+
+  return { groups, surprise, friendly };
+}
+
+export function executeCombatRound(
+  party: TCharacter[],
+  groups: CombatGroup[],
+  actions: PlayerCombatAction[],
+  surprise: 'PARTY' | 'MONSTERS' | 'NONE'
+): CombatRoundResult {
+  const log: string[] = [];
+  let fled = false;
+  let alarmTriggered = false;
+
+  // 1. Gather all action turns with agility initiative (1-10 + agility roll)
+  interface InitiativeUnit {
+    isPlayer: boolean;
+    charIndex: number;
+    groupIndex: number;
+    instanceIndex: number;
+    speed: number;
+  }
+
+  const turnQueue: InitiativeUnit[] = [];
+
+  // Add party actions if not surprised
+  if (surprise !== 'MONSTERS') {
+    actions.forEach(act => {
+      const hero = party[act.charIndex];
+      if (hero && hero.status === 'OK') {
+        const agi = hero.attrib.AGILITY;
+        const speed = Math.max(1, 10 - Math.floor(agi / 2) + Math.floor(Math.random() * 6));
+        turnQueue.push({
+          isPlayer: true,
+          charIndex: act.charIndex,
+          groupIndex: 0,
+          instanceIndex: 0,
+          speed
+        });
+      }
+    });
+  }
+
+  // Add monsters actions if not surprised
+  if (surprise !== 'PARTY') {
+    groups.forEach((grp, gIdx) => {
+      grp.instances.forEach((inst, iIdx) => {
+        if (inst.status === 'OK' && inst.hpLeft > 0) {
+          const speed = Math.max(1, Math.floor(Math.random() * 8) + 2);
+          turnQueue.push({
+            isPlayer: false,
+            charIndex: 0,
+            groupIndex: gIdx,
+            instanceIndex: iIdx,
+            speed
+          });
+        }
+      });
+    });
+  }
+
+  // Sort by fastest speed (lower speed initiates first in Wizardry)
+  turnQueue.sort((a, b) => a.speed - b.speed);
+
+  // 2. Process actions in turn
+  for (const unit of turnQueue) {
+    // Check if battle still ongoing
+    const partyHasConscious = party.some(p => p.status === 'OK' && p.hpLeft > 0);
+    const monstersRemaining = groups.some(g => g.aliveCount > 0);
+    if (!partyHasConscious || !monstersRemaining || fled) break;
+
+    if (unit.isPlayer) {
+      const hero = party[unit.charIndex];
+      if (!hero || hero.status !== 'OK' || hero.hpLeft <= 0) continue;
+
+      const action = actions.find(a => a.charIndex === unit.charIndex);
+      if (!action) continue;
+
+      if (action.actionType === 'RUN') {
+        // Runaway calculation from Pascal: 38 - 3 * level + party size modifier
+        const runChance = Math.min(85, Math.max(10, 45 + hero.attrib.AGILITY * 2));
+        if (Math.random() * 100 < runChance) {
+          log.push(`${hero.name} s’échappe avec le groupe ! Fuite réussie.`);
+          fled = true;
+          break;
+        } else {
+          log.push(`${hero.name} tente de fuir mais les monstres bloquent le passage !`);
+        }
+      } else if (action.actionType === 'PARRY') {
+        hero.armorClass -= 2;
+        log.push(`${hero.name} se met en garde défensive (-2 CA).`);
+      } else if (action.actionType === 'DISPELL') {
+        // Dispell undead ability for Priest, Bishop, Lord
+        const targetGroup = groups[action.targetGroupIndex ?? 0];
+        if (targetGroup && targetGroup.aliveCount > 0) {
+          log.push(`${hero.name} brandit son symbole sacré et exorcise ${targetGroup.monster.nameUnknownPlural} !`);
+          if (targetGroup.monster.monsterClass === 10) { // Undead
+            let dispelledCount = 0;
+            targetGroup.instances.forEach(inst => {
+              if (inst.status === 'OK' && Math.random() * 100 < (50 + hero.charLevel * 5 - targetGroup.monster.level * 8)) {
+                inst.status = 'DEAD';
+                inst.hpLeft = 0;
+                dispelledCount++;
+              }
+            });
+            targetGroup.aliveCount -= dispelledCount;
+            log.push(dispelledCount > 0 ? `${dispelledCount} mort(s)-vivant(s) se désintègrent en poussière !` : `L’exorcisme n’a aucun effet.`);
+          } else {
+            log.push(`Ces créatures ne sont pas des morts-vivants.`);
+          }
+        }
+      } else if (action.actionType === 'SPELL') {
+        const spell = SPELLS.find(s => s.id === action.spellId);
+        if (spell) {
+          log.push(`${hero.name} entonne le sort ${spell.name} !`);
+          executePlayerSpell(hero, spell, action, groups, party, log);
+        }
+      } else if (action.actionType === 'FIGHT') {
+        // Melee attack
+        let targetGrpIdx = action.targetGroupIndex ?? 0;
+        let targetGroup = groups[targetGrpIdx];
+        if (!targetGroup || targetGroup.aliveCount <= 0) {
+          // Retarget next available living group
+          targetGrpIdx = groups.findIndex(g => g.aliveCount > 0);
+          targetGroup = groups[targetGrpIdx];
+        }
+
+        if (targetGroup && targetGroup.aliveCount > 0) {
+          const livingTarget = targetGroup.instances.find(i => i.status === 'OK' && i.hpLeft > 0);
+          if (livingTarget) {
+            executeHeroAttack(hero, livingTarget, targetGroup, log);
+          }
+        }
+      }
+    } else {
+      // Monster Turn
+      const group = groups[unit.groupIndex];
+      if (!group || group.aliveCount <= 0) continue;
+      const monsterInst = group.instances[unit.instanceIndex];
+      if (!monsterInst || monsterInst.status !== 'OK' || monsterInst.hpLeft <= 0) continue;
+
+      executeMonsterTurn(group, monsterInst, party, log, () => { alarmTriggered = true; });
+    }
+  }
+
+  // Clean dead monsters in groups
+  groups.forEach(g => {
+    g.aliveCount = g.instances.filter(i => i.status === 'OK' && i.hpLeft > 0).length;
+  });
+
+  const partyAlive = party.some(p => p.status === 'OK' && p.hpLeft > 0);
+  const monstersAlive = groups.some(g => g.aliveCount > 0);
+
+  return {
+    combatLog: log,
+    partyAlive,
+    monstersAlive,
+    fled,
+    alarmTriggered
+  };
+}
+
+function executeHeroAttack(
+  hero: TCharacter,
+  target: CombatMonsterInstance,
+  group: CombatGroup,
+  log: string[]
+) {
+  const monster = group.monster;
+  // Hit roll calculation based on Pascal: 21 - Monster AC - Hero Hit Mod + Armor Mod
+  const targetAC = monster.ac + target.acMod;
+  const toHitThreshold = Math.max(1, Math.min(19, 21 - targetAC - hero.hitMod));
+
+  let totalDamage = 0;
+  let hitsLanded = 0;
+  let criticalHit = false;
+
+  for (let s = 0; s < Math.max(1, hero.swingCount); s++) {
+    const roll = Math.floor(Math.random() * 20) + 1;
+    if (roll >= toHitThreshold) {
+      hitsLanded++;
+      const dam = hero.wepDamage.hpMinAdd + Math.floor(Math.random() * hero.wepDamage.hpFac * hero.wepDamage.level) + 1;
+      totalDamage += dam;
+
+      // Ninja critical hit decapitation check
+      if (hero.critHit && (Math.random() * 100 < hero.charLevel * 3)) {
+        criticalHit = true;
+      }
+    }
+  }
+
+  const targetName = group.identified ? monster.name : monster.nameUnknown;
+
+  if (hitsLanded === 0) {
+    log.push(`${hero.name} attaque ${targetName} mais manque son coup.`);
+  } else {
+    if (criticalHit) {
+      target.hpLeft = 0;
+      target.status = 'DEAD';
+      group.aliveCount = Math.max(0, group.aliveCount - 1);
+      log.push(`⚡ COUP CRITIQUE ! ${hero.name} décapite net ${targetName} d’un coup magistral !`);
+    } else {
+      target.hpLeft -= totalDamage;
+      log.push(`${hero.name} frappe ${targetName} ${hitsLanded} fois pour ${totalDamage} points de dégâts !`);
+      if (target.hpLeft <= 0) {
+        target.status = 'DEAD';
+        target.hpLeft = 0;
+        group.aliveCount = Math.max(0, group.aliveCount - 1);
+        log.push(`${targetName} s’effondre sans vie !`);
+      }
+    }
+  }
+}
+
+function executePlayerSpell(
+  hero: TCharacter,
+  spell: TSpell,
+  action: PlayerCombatAction,
+  groups: CombatGroup[],
+  party: TCharacter[],
+  log: string[]
+) {
+  // Deduct spell slot
+  if (spell.spellType === 'MAGE') {
+    hero.mageSpells[spell.tier] = Math.max(0, (hero.mageSpells[spell.tier] || 0) - 1);
+  } else {
+    hero.priestSpells[spell.tier] = Math.max(0, (hero.priestSpells[spell.tier] || 0) - 1);
+  }
+
+  // Execute spell effect
+  switch (spell.name) {
+    case 'HALITO': {
+      const group = groups[action.targetGroupIndex ?? 0];
+      const target = group?.instances.find(i => i.status === 'OK' && i.hpLeft > 0);
+      if (target) {
+        const dmg = Math.floor(Math.random() * 8) + 1;
+        target.hpLeft -= dmg;
+        log.push(`Une boule de feu s’abat sur ${group.identified ? group.monster.name : group.monster.nameUnknown} pour ${dmg} dégâts !`);
+        if (target.hpLeft <= 0) {
+          target.status = 'DEAD';
+          group.aliveCount--;
+          log.push(`L'ennemi est consumé par les flammes !`);
+        }
+      }
+      break;
+    }
+    case 'KATINO': {
+      const group = groups[action.targetGroupIndex ?? 0];
+      if (group) {
+        let count = 0;
+        group.instances.forEach(inst => {
+          if (inst.status === 'OK' && Math.random() * 100 < 65) {
+            inst.status = 'ASLEEP';
+            count++;
+          }
+        });
+        log.push(`${count} monstre(s) tombent dans un profond sommeil magique.`);
+      }
+      break;
+    }
+    case 'MAHALITO':
+    case 'MOLITO':
+    case 'LAHALITO':
+    case 'MADALTO':
+    case 'LITOKAN':
+    case 'LORTO': {
+      const group = groups[action.targetGroupIndex ?? 0];
+      if (group) {
+        const diceCount = spell.name === 'MAHALITO' ? 4 : spell.name === 'MADALTO' ? 8 : 6;
+        const diceSides = spell.name === 'MADALTO' ? 8 : 6;
+        let groupDmg = 0;
+        for (let d = 0; d < diceCount; d++) groupDmg += Math.floor(Math.random() * diceSides) + 1;
+        
+        let defeated = 0;
+        group.instances.forEach(inst => {
+          if (inst.status === 'OK' && inst.hpLeft > 0) {
+            inst.hpLeft -= groupDmg;
+            if (inst.hpLeft <= 0) {
+              inst.status = 'DEAD';
+              defeated++;
+            }
+          }
+        });
+        group.aliveCount -= defeated;
+        log.push(`Le sort dévaste le groupe pour ${groupDmg} dégâts chacun ! (${defeated} terrassé(s))`);
+      }
+      break;
+    }
+    case 'TILTOWAI':
+    case 'MALIKTO': {
+      // Nuclear blast hitting all monsters in all groups
+      log.push(`UNE EXPLOSION TITANESQUE RAYE LE CHAMP DE BATAILLE !`);
+      groups.forEach(grp => {
+        let def = 0;
+        grp.instances.forEach(inst => {
+          if (inst.status === 'OK' && inst.hpLeft > 0) {
+            let dmg = 0;
+            for (let d = 0; d < 10; d++) dmg += Math.floor(Math.random() * 15) + 1;
+            inst.hpLeft -= dmg;
+            if (inst.hpLeft <= 0) {
+              inst.status = 'DEAD';
+              def++;
+            }
+          }
+        });
+        grp.aliveCount -= def;
+      });
+      break;
+    }
+    case 'MAKANITO': {
+      // Chokes enemies under level 8
+      let killed = 0;
+      groups.forEach(grp => {
+        if (grp.monster.level <= 7) {
+          grp.instances.forEach(inst => {
+            if (inst.status === 'OK') {
+              inst.status = 'DEAD';
+              inst.hpLeft = 0;
+              killed++;
+            }
+          });
+          grp.aliveCount = 0;
+        }
+      });
+      log.push(`Un gaz asphyxiant étouffe instantanément ${killed} créature(s) de faible niveau !`);
+      break;
+    }
+    case 'DIOS':
+    case 'DIAL':
+    case 'DIALMA':
+    case 'MADI': {
+      const targetHero = party[action.targetCharIndex ?? 0] || hero;
+      const healAmt = spell.name === 'DIOS' ? Math.floor(Math.random() * 8) + 1 :
+                      spell.name === 'DIAL' ? Math.floor(Math.random() * 16) + 2 :
+                      spell.name === 'DIALMA' ? Math.floor(Math.random() * 24) + 3 :
+                      targetHero.hpMax;
+      targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + healAmt);
+      if (spell.name === 'MADI') {
+        targetHero.poisonAmount = 0;
+        if (targetHero.status === 'PLYZE' || targetHero.status === 'ASLEEP') targetHero.status = 'OK';
+      }
+      log.push(`${targetHero.name} reçoit la grâce divine et récupère ${healAmt} PV (${targetHero.hpLeft}/${targetHero.hpMax}) !`);
+      break;
+    }
+    case 'LATUMAPI': {
+      groups.forEach(g => { g.identified = true; });
+      log.push(`Une illumination divine révèle l’identité exacte de tous les monstres !`);
+      break;
+    }
+    default: {
+      log.push(`L'énergie mystique crépite.`);
+      break;
+    }
+  }
+}
+
+function executeMonsterTurn(
+  group: CombatGroup,
+  inst: CombatMonsterInstance,
+  party: TCharacter[],
+  log: string[],
+  onAlarm: () => void
+) {
+  const monster = group.monster;
+  const monsterName = group.identified ? monster.name : monster.nameUnknown;
+
+  // Conscious heroes in front rank have higher targeting probability
+  const livingHeroes = party
+    .map((h, idx) => ({ hero: h, index: idx }))
+    .filter(item => item.hero.status === 'OK' && item.hero.hpLeft > 0);
+
+  if (livingHeroes.length === 0) return;
+
+  // 1. Dragon breath weapon check
+  if (monster.breathe > 0 && Math.random() * 100 < 50) {
+    const breathDmg = Math.floor(inst.hpLeft / 2);
+    log.push(`🔥 ${monsterName} souffle un cône de feu incandescent !`);
+    livingHeroes.forEach(({ hero }) => {
+      // Save vs breath using Luck
+      const saved = Math.random() * 20 < hero.luckSkill[3];
+      const actualDmg = saved ? Math.floor(breathDmg / 2) : breathDmg;
+      hero.hpLeft -= actualDmg;
+      log.push(`${hero.name} subit ${actualDmg} dégâts de souffle${saved ? ' (jet de sauvegarde réussi)' : ''} !`);
+      if (hero.hpLeft <= 0) {
+        hero.status = 'DEAD';
+        hero.hpLeft = 0;
+        log.push(`💀 ${hero.name} succombe aux flammes du dragon !`);
+      }
+    });
+    return;
+  }
+
+  // 2. Monster Spellcasting check
+  if (monster.mageSpells > 0 && Math.random() * 100 < 60 && inst.silencedRounds === 0) {
+    log.push(`⚡ ${monsterName} incante un sort noir !`);
+    const target = livingHeroes[Math.floor(Math.random() * livingHeroes.length)].hero;
+    const spellDmg = Math.floor(Math.random() * 12) + 4;
+    target.hpLeft -= spellDmg;
+    log.push(`${target.name} est frappé par un éclair noir pour ${spellDmg} dégâts !`);
+    if (target.hpLeft <= 0) {
+      target.status = 'DEAD';
+      target.hpLeft = 0;
+      log.push(`💀 ${target.name} est terrassé !`);
+    }
+    return;
+  }
+
+  // 3. Physical Melee Attack against hero
+  // Front rank (first 3 heroes) are 3x more likely to be attacked
+  const weightedTargets = livingHeroes.flatMap(item => item.index < 3 ? [item, item, item] : [item]);
+  const chosenTarget = weightedTargets[Math.floor(Math.random() * weightedTargets.length)].hero;
+
+  const targetAC = chosenTarget.armorClass;
+  const toHitThreshold = Math.max(1, Math.min(19, 20 - targetAC - monster.level));
+
+  let totalDmg = 0;
+  let hits = 0;
+
+  for (let a = 0; a < monster.attackCount; a++) {
+    const roll = Math.floor(Math.random() * 20) + 1;
+    if (roll >= toHitThreshold) {
+      hits++;
+      const attackSpec = monster.attacks[a] || { level: 1, hpFac: 6, hpMinAdd: 1 };
+      const dam = attackSpec.hpMinAdd + Math.floor(Math.random() * attackSpec.hpFac * attackSpec.level) + 1;
+      totalDmg += dam;
+    }
+  }
+
+  if (hits === 0) {
+    log.push(`${monsterName} tente d'attaquer ${chosenTarget.name} mais manque.`);
+  } else {
+    chosenTarget.hpLeft -= totalDmg;
+    log.push(`${monsterName} frappe ${chosenTarget.name} pour ${totalDmg} dégâts (${chosenTarget.hpLeft}/${chosenTarget.hpMax} PV) !`);
+
+    // Special status effects (Drain Level, Poison, Paralyze)
+    if (monster.drainAmount > 0) {
+      chosenTarget.charLevel = Math.max(1, chosenTarget.charLevel - monster.drainAmount);
+      log.push(`⚠️ ATTENTION ! ${chosenTarget.name} se fait aspirer son énergie vitale (-${monster.drainAmount} NIVEAU) !`);
+    }
+
+    if (monster.specialPower.poison && Math.random() * 100 < 40) {
+      chosenTarget.poisonAmount = (chosenTarget.poisonAmount || 0) + 1;
+      log.push(`☣️ ${chosenTarget.name} a été empoisonné !`);
+    }
+
+    if (monster.specialPower.paralyze && Math.random() * 100 < 35 && chosenTarget.status === 'OK') {
+      chosenTarget.status = 'PLYZE';
+      log.push(`⚡ ${chosenTarget.name} est paralysé de stupeur !`);
+    }
+
+    if (chosenTarget.hpLeft <= 0) {
+      chosenTarget.status = 'DEAD';
+      chosenTarget.hpLeft = 0;
+      log.push(`💀 ${chosenTarget.name} s’écroule, mort au combat !`);
+    }
+  }
+}

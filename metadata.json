@@ -1,0 +1,8 @@
+{
+  "name": "Remix Wizardry I: Proving Grounds of the Mad Overlord",
+  "description": "Fidèle reconstitution moderne du chef-d\u0027œuvre RPG Wizardry 1 (1981) avec moteur Pascal authentique, vue 3D fluide du donjon et export PySide6.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
