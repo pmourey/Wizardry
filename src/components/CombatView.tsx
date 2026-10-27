@@ -19,8 +19,12 @@ import {
   Crosshair,
   Skull,
   Zap,
-  CheckCircle2
+  CheckCircle2,
+  Biohazard,
+  Moon,
+  MicOff
 } from 'lucide-react';
+import { getActiveStatusEffects } from '../engine/statusSystem';
 
 interface CombatViewProps {
   party: TCharacter[];
@@ -174,6 +178,68 @@ export const CombatView: React.FC<CombatViewProps> = ({
         ))}
       </div>
 
+      {/* Party Status Overview Strip in Combat */}
+      <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-xl max-w-4xl mx-auto w-full mb-4">
+        <div className="text-[11px] font-bold text-slate-400 mb-2 flex items-center justify-between">
+          <span>Escouade en Combat ({party.filter(p => p.status !== 'DEAD' && p.status !== 'ASHES').length}/{party.length} debout)</span>
+          <span className="text-[10px] text-slate-500">Statuts & Afflictions en temps réel</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {party.map((hero, hIdx) => {
+            const effs = getActiveStatusEffects(hero);
+            const isTurn = !isResolving && activeHero && activeHero.id === hero.id;
+
+            return (
+              <div 
+                key={hero.id}
+                className={`p-2 rounded-lg border text-xs flex flex-col justify-between transition ${
+                  isTurn 
+                    ? 'bg-amber-950/40 border-amber-500/80 shadow-md ring-1 ring-amber-500/50' 
+                    : hero.status === 'DEAD' || hero.status === 'ASHES'
+                    ? 'bg-slate-950 border-red-950/60 opacity-60'
+                    : 'bg-slate-900 border-slate-800'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between font-bold text-white">
+                    <span className="truncate">{hero.name}</span>
+                    <span className="text-[9px] text-amber-400 font-mono">N{hero.charLevel}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px] text-slate-400 pt-0.5">
+                    <span>{hero.class}</span>
+                    <span>CA {hero.armorClass}</span>
+                  </div>
+                </div>
+
+                <div className="pt-1.5">
+                  <div className="flex justify-between text-[10px] font-semibold">
+                    <span className="text-slate-400">PV:</span>
+                    <span className={hero.hpLeft < hero.hpMax / 3 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
+                      {hero.hpLeft}/{hero.hpMax}
+                    </span>
+                  </div>
+                  {/* Status Badges */}
+                  <div className="flex flex-wrap gap-1 pt-1 min-h-[18px]">
+                    {effs.map(e => (
+                      <span 
+                        key={e.id}
+                        className={`text-[9px] font-bold px-1 py-0.2 rounded border ${e.bgColor} ${e.borderColor} ${e.color}`}
+                        title={e.description}
+                      >
+                        {e.badge}
+                      </span>
+                    ))}
+                    {effs.length === 0 && (
+                      <span className="text-[9px] text-emerald-500 font-medium">OK</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Command Panel for Active Hero */}
       {!isResolving && activeHero && (
         <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-xl space-y-4 max-w-3xl mx-auto w-full shadow-lg">
@@ -199,6 +265,14 @@ export const CombatView: React.FC<CombatViewProps> = ({
             )}
           </div>
 
+          {/* Active Hero Silence Alert */}
+          {activeHero.silencedRounds && activeHero.silencedRounds > 0 && (
+            <div className="px-3 py-1.5 bg-cyan-950/50 border border-cyan-500/40 rounded-lg text-xs text-cyan-300 flex items-center gap-2">
+              <MicOff className="w-4 h-4 text-cyan-400 shrink-0 animate-pulse" />
+              <span>{activeHero.name} est sous l'effet du silence magique MONTINO (sorts bloqués pour encore {activeHero.silencedRounds} tour(s)).</span>
+            </div>
+          )}
+
           {!selectingSpell ? (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
               {/* Fight: only front rank or with ranged */}
@@ -212,11 +286,16 @@ export const CombatView: React.FC<CombatViewProps> = ({
 
               <button
                 onClick={() => setSelectingSpell(true)}
-                disabled={availableSpells.length === 0}
+                disabled={availableSpells.length === 0 || (activeHero.silencedRounds !== undefined && activeHero.silencedRounds > 0)}
                 className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center gap-1 text-xs font-bold transition disabled:opacity-30 disabled:pointer-events-none"
+                title={activeHero.silencedRounds && activeHero.silencedRounds > 0 ? "Sous l'effet du silence magique MONTINO !" : undefined}
               >
                 <Sparkles className="w-4 h-4 text-purple-400" />
-                <span>Sorts ({availableSpells.length})</span>
+                <span>
+                  {activeHero.silencedRounds && activeHero.silencedRounds > 0 
+                    ? `Silence (${activeHero.silencedRounds}T)` 
+                    : `Sorts (${availableSpells.length})`}
+                </span>
               </button>
 
               <button

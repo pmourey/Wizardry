@@ -13,6 +13,7 @@ import {
   EXP_TABLES, 
   SPELLS 
 } from '../data/wizardryData';
+import { CharacterSheetModal } from './CharacterSheetModal';
 import { sounds } from '../utils/soundEffects';
 import { 
   Shield, 
@@ -28,36 +29,69 @@ import {
   FileCode,
   Flame,
   User,
-  ArrowRight
+  ArrowRight,
+  Biohazard,
+  Moon,
+  MicOff,
+  Skull,
+  Zap,
+  CheckCircle2,
+  Plus,
+  Minus,
+  RotateCcw,
+  Undo2,
+  Sliders,
+  BookOpen,
+  ScrollText
 } from 'lucide-react';
+import { getActiveStatusEffects } from '../engine/statusSystem';
+import { AdventureJournal } from './AdventureJournal';
+import { AdventureLogEvent, AdventureLogCategory } from '../types/wizardry';
 
 interface CastleViewProps {
   party: TCharacter[];
   setParty: React.Dispatch<React.SetStateAction<TCharacter[]>>;
   allCharacters: TCharacter[];
   setAllCharacters: React.Dispatch<React.SetStateAction<TCharacter[]>>;
+  adventureEvents?: AdventureLogEvent[];
+  onClearAdventureEvents?: () => void;
+  onAddAdventureEvent?: (
+    category: AdventureLogCategory,
+    title: string,
+    description: string,
+    details?: string,
+    level?: number,
+    coordinates?: { x: number; y: number }
+  ) => void;
   onEnterMaze: () => void;
   onOpenPySide6Export: () => void;
 }
 
-type CastleTab = 'COURTYARD' | 'TAVERN' | 'INN' | 'BOLTAC' | 'TEMPLE' | 'TRAINING';
+type CastleTab = 'COURTYARD' | 'TAVERN' | 'INN' | 'BOLTAC' | 'TEMPLE' | 'TRAINING' | 'JOURNAL';
 
 export const CastleView: React.FC<CastleViewProps> = ({
   party,
   setParty,
   allCharacters,
   setAllCharacters,
+  adventureEvents = [],
+  onClearAdventureEvents,
+  onAddAdventureEvent,
   onEnterMaze,
   onOpenPySide6Export
 }) => {
   const [currentTab, setCurrentTab] = useState<CastleTab>('COURTYARD');
   const [message, setMessage] = useState<string>('Bienvenue au Château de Trebor. Choisissez votre destination.');
   const [selectedCharIndex, setSelectedCharIndex] = useState<number>(0);
+  const [inspectingPartyIndex, setInspectingPartyIndex] = useState<number | null>(null);
+  const [inspectingRosterHero, setInspectingRosterHero] = useState<TCharacter | null>(null);
 
   // Character Creation state in Training Grounds
+  const [trainingMode, setTrainingMode] = useState<'CREATE' | 'RESPEC'>('CREATE');
   const [newCharName, setNewCharName] = useState('');
   const [newCharRace, setNewCharRace] = useState<TRace>('HUMAN');
   const [newCharAlign, setNewCharAlign] = useState<TAlign>('GOOD');
+  const [totalBonusRolled, setTotalBonusRolled] = useState<number>(10);
   const [bonusPoints, setBonusPoints] = useState<number>(10);
   const [allocatedStats, setAllocatedStats] = useState({
     STRENGTH: 8,
@@ -68,6 +102,19 @@ export const CastleView: React.FC<CastleViewProps> = ({
     LUCK: 9
   });
   const [isRollingStats, setIsRollingStats] = useState(false);
+
+  // Respec state for existing characters
+  const [respecCharId, setRespecCharId] = useState<string>('');
+  const [respecStats, setRespecStats] = useState<Record<string, number>>({
+    STRENGTH: 8,
+    IQ: 8,
+    PIETY: 5,
+    VITALITY: 8,
+    AGILITY: 8,
+    LUCK: 9
+  });
+  const [respecBonusAvailable, setRespecBonusAvailable] = useState<number>(0);
+  const [respecTotalPoints, setRespecTotalPoints] = useState<number>(0);
 
   const selectedHero = party[selectedCharIndex] || party[0];
 
@@ -105,6 +152,12 @@ export const CastleView: React.FC<CastleViewProps> = ({
       selectedHero.hpLeft = selectedHero.hpMax;
       levelUpMsg = ` 🌟 NIVEAU SUPÉRIEUR ! ${selectedHero.name} est maintenant Niveau ${selectedHero.charLevel} (+${hpGain} PV Max) !`;
       sounds.playFanfare();
+      onAddAdventureEvent?.(
+        'CASTLE',
+        `Montée de Niveau : ${selectedHero.name} (Niveau ${selectedHero.charLevel})`,
+        `Après un repos mérité à l'Auberge de l'Aventurier, ${selectedHero.name} perfectionne son art du combat et sa résistance (+${hpGain} PV Max).`,
+        `Niveau actuel : ${selectedHero.charLevel} · PV Max : ${selectedHero.hpMax}`
+      );
     }
 
     setParty([...party]);
@@ -187,29 +240,123 @@ export const CastleView: React.FC<CastleViewProps> = ({
       targetHero.hpLeft = 1;
       sounds.playFanfare();
       setMessage(`« CHANT - PRIÈRE - MIRACLE ! » ${targetHero.name} revient parmi les vivants avec 1 PV !`);
+      onAddAdventureEvent?.(
+        'RESCUE',
+        `Miracle au Temple de Cant : ${targetHero.name} ressuscité !`,
+        `Le rituel sacré et les prières des clercs ont arraché ${targetHero.name} aux mânes de la mort. Il se relève, prêt à combattre de nouveau.`,
+        `Coût de l'offrande : ${cost} PO · PV actuels : 1/${targetHero.hpMax}`
+      );
     } else {
       if (targetHero.status === 'DEAD') {
         targetHero.status = 'ASHES';
         setMessage(`« MALHEUR ! » Le rituel échoue, le corps de ${targetHero.name} est réduit en CENDRES !`);
+        onAddAdventureEvent?.(
+          'LOSS',
+          `Échec du rituel divin : ${targetHero.name} réduit en Cendres`,
+          `Les prières n'ont pu retenir l'âme de ${targetHero.name}. Sa chair a été consumée en cendres sous la puissance de l'incantation.`,
+          `Statut : CENDRES (un nouveau rituel plus coûteux reste possible)`
+        );
       } else {
         targetHero.status = 'LOST';
         setMessage(`« HÉLAS ! » Les cendres se dispersent... ${targetHero.name} est PERDU À JAMAIS !`);
+        onAddAdventureEvent?.(
+          'LOSS',
+          `Drame irréversible : ${targetHero.name} perdu dans le Néant`,
+          `Les cendres se sont évanouies dans l'éther céleste. ${targetHero.name} ne foulera plus jamais les pavés du donjon.`,
+          `Statut : PERDU À JAMAIS`
+        );
       }
     }
     setParty([...party]);
   };
 
+  const handleCurePoison = (targetHero: TCharacter) => {
+    sounds.playSpellCast();
+    const cost = 50;
+    if (selectedHero.gold < cost) {
+      setMessage(`Fonds insuffisants ! Le Temple exige ${cost} PO pour purifier le poison.`);
+      return;
+    }
+    selectedHero.gold -= cost;
+    targetHero.poisonAmount = 0;
+    setParty([...party]);
+    sounds.playFanfare();
+    setMessage(`Le poison a été totalement extrait du corps de ${targetHero.name}.`);
+  };
+
+  const handleCureParalysis = (targetHero: TCharacter) => {
+    sounds.playSpellCast();
+    const cost = 100;
+    if (selectedHero.gold < cost) {
+      setMessage(`Fonds insuffisants ! Le Temple exige ${cost} PO pour lever la paralysie.`);
+      return;
+    }
+    selectedHero.gold -= cost;
+    targetHero.status = 'OK';
+    setParty([...party]);
+    sounds.playFanfare();
+    setMessage(`L'onction sacrée a délié les membres de ${targetHero.name}. La paralysie est guérie !`);
+  };
+
+  const handleCureStoned = (targetHero: TCharacter) => {
+    sounds.playSpellCast();
+    const cost = 200;
+    if (selectedHero.gold < cost) {
+      setMessage(`Fonds insuffisants ! Le Temple exige ${cost} PO pour inverser la pétrification.`);
+      return;
+    }
+    selectedHero.gold -= cost;
+    targetHero.status = 'OK';
+    setParty([...party]);
+    sounds.playFanfare();
+    setMessage(`La pierre redevient chair vivante ! ${targetHero.name} est libéré de la pétrification !`);
+  };
+
   // ==========================================
-  // TRAINING GROUNDS (CREATE CHARACTER)
+  // TRAINING GROUNDS (CREATE & RESPEC HEROES)
   // ==========================================
+  const rollBonusDice = () => {
+    // Authentic Wizardry Pascal dice logic:
+    // Base 5 to 10 points
+    let bonus = 5 + Math.floor(Math.random() * 6);
+    // 14% chance to get +10 points (allowing Samurai, Lord, Bishop)
+    if (Math.random() < 0.14) {
+      bonus += 10;
+      // If already high, 20% chance for legendary roll (Ninja: 24..29)
+      if (Math.random() < 0.20) {
+        bonus += 9;
+      }
+    }
+    return bonus;
+  };
+
   const startRollStats = () => {
     sounds.playTurn();
     const base = RACE_BASE_ATTRIBUTES[newCharRace];
-    const bonus = 7 + Math.floor(Math.random() * 5); // 7 to 12
+    const bonus = rollBonusDice();
+    setTotalBonusRolled(bonus);
     setBonusPoints(bonus);
     setAllocatedStats({ ...base } as any);
     setIsRollingStats(true);
-    setMessage(`Points bonus tirés : ${bonus}. Allouez-les judicieusement aux caractéristiques.`);
+    setMessage(`🎲 Tirage des dés : ${bonus} points bonus obtenus ! Répartissez-les sur vos caractéristiques.`);
+  };
+
+  const handleRerollBonusPoints = () => {
+    sounds.playTurn();
+    const base = RACE_BASE_ATTRIBUTES[newCharRace];
+    const bonus = rollBonusDice();
+    setTotalBonusRolled(bonus);
+    setBonusPoints(bonus);
+    setAllocatedStats({ ...base } as any);
+    setMessage(`🎲 Relance effectuée : ${bonus} points bonus obtenus ! Répartition réinitialisée aux bases de la race.`);
+  };
+
+  const handleResetAttributeAllocation = () => {
+    sounds.playTurn();
+    const base = RACE_BASE_ATTRIBUTES[newCharRace];
+    setAllocatedStats({ ...base } as any);
+    setBonusPoints(totalBonusRolled);
+    setMessage(`Réinitialisation effectuée : les ${totalBonusRolled} points bonus sont à nouveau disponibles.`);
   };
 
   const handleAddStat = (stat: keyof typeof allocatedStats) => {
@@ -217,6 +364,113 @@ export const CastleView: React.FC<CastleViewProps> = ({
     sounds.playTurn();
     setAllocatedStats(prev => ({ ...prev, [stat]: prev[stat] + 1 }));
     setBonusPoints(prev => prev - 1);
+  };
+
+  const handleRemoveStat = (stat: keyof typeof allocatedStats) => {
+    const baseMin = RACE_BASE_ATTRIBUTES[newCharRace][stat] || 3;
+    if (allocatedStats[stat] <= baseMin) return;
+    sounds.playTurn();
+    setAllocatedStats(prev => ({ ...prev, [stat]: prev[stat] - 1 }));
+    setBonusPoints(prev => prev + 1);
+  };
+
+  const handleRaceChange = (race: TRace) => {
+    setNewCharRace(race);
+    const base = RACE_BASE_ATTRIBUTES[race];
+    setAllocatedStats({ ...base } as any);
+    if (isRollingStats) {
+      setBonusPoints(totalBonusRolled);
+      setMessage(`Race modifiée en ${race} : caractéristiques de base appliquées, ${totalBonusRolled} points bonus prêts.`);
+    }
+  };
+
+  // Respec logic for existing characters
+  const handleSelectCharForRespec = (heroId: string) => {
+    const hero = allCharacters.find(c => c.id === heroId) || party.find(c => c.id === heroId);
+    if (!hero) return;
+    setRespecCharId(hero.id);
+    const raceBase = RACE_BASE_ATTRIBUTES[hero.race];
+    
+    // Calculate total points currently invested beyond race base
+    const stats: Record<string, number> = { ...hero.attrib };
+    let invested = 0;
+    for (const [key, baseVal] of Object.entries(raceBase)) {
+      const currentVal = stats[key] ?? baseVal;
+      if (currentVal > baseVal) {
+        invested += (currentVal - baseVal);
+      }
+    }
+    const totalPool = Math.max(10, invested);
+    const spare = totalPool - invested;
+    setRespecStats(stats);
+    setRespecBonusAvailable(Math.max(0, spare));
+    setRespecTotalPoints(totalPool);
+    sounds.playTurn();
+    setMessage(`Sélection de ${hero.name} (${hero.race} ${hero.class}) : ${totalPool} points de caractéristiques disponibles.`);
+  };
+
+  const handleRespecAddStat = (stat: string) => {
+    if (respecBonusAvailable <= 0 || (respecStats[stat] ?? 0) >= 18) return;
+    sounds.playTurn();
+    setRespecStats(prev => ({ ...prev, [stat]: (prev[stat] ?? 0) + 1 }));
+    setRespecBonusAvailable(prev => prev - 1);
+  };
+
+  const handleRespecRemoveStat = (stat: string) => {
+    const hero = allCharacters.find(c => c.id === respecCharId) || party.find(c => c.id === respecCharId);
+    if (!hero) return;
+    const baseMin = RACE_BASE_ATTRIBUTES[hero.race][stat] || 3;
+    if ((respecStats[stat] ?? 0) <= baseMin) return;
+    sounds.playTurn();
+    setRespecStats(prev => ({ ...prev, [stat]: (prev[stat] ?? 0) - 1 }));
+    setRespecBonusAvailable(prev => prev + 1);
+  };
+
+  const handleRespecResetToBase = () => {
+    const hero = allCharacters.find(c => c.id === respecCharId) || party.find(c => c.id === respecCharId);
+    if (!hero) return;
+    sounds.playTurn();
+    const raceBase = RACE_BASE_ATTRIBUTES[hero.race];
+    setRespecStats({ ...raceBase });
+    setRespecBonusAvailable(respecTotalPoints);
+    setMessage(`Réinitialisation : tous les ${respecTotalPoints} points sont replacés dans la réserve.`);
+  };
+
+  const handleRespecReroll = () => {
+    const hero = allCharacters.find(c => c.id === respecCharId) || party.find(c => c.id === respecCharId);
+    if (!hero) return;
+    sounds.playTurn();
+    const newBonus = rollBonusDice() + Math.max(0, hero.charLevel - 1);
+    const raceBase = RACE_BASE_ATTRIBUTES[hero.race];
+    setRespecStats({ ...raceBase });
+    setRespecBonusAvailable(newBonus);
+    setRespecTotalPoints(newBonus);
+    setMessage(`🎲 Nouveau tirage pour ${hero.name} : ${newBonus} points bonus obtenus !`);
+  };
+
+  const handleSaveRespec = () => {
+    if (!respecCharId) return;
+    const updateHero = (h: TCharacter): TCharacter => {
+      if (h.id === respecCharId) {
+        return {
+          ...h,
+          attrib: {
+            STRENGTH: respecStats.STRENGTH ?? h.attrib.STRENGTH,
+            IQ: respecStats.IQ ?? h.attrib.IQ,
+            PIETY: respecStats.PIETY ?? h.attrib.PIETY,
+            VITALITY: respecStats.VITALITY ?? h.attrib.VITALITY,
+            AGILITY: respecStats.AGILITY ?? h.attrib.AGILITY,
+            LUCK: respecStats.LUCK ?? h.attrib.LUCK
+          }
+        };
+      }
+      return h;
+    };
+
+    setParty(prev => prev.map(updateHero));
+    setAllCharacters(prev => prev.map(updateHero));
+    sounds.playFanfare();
+    setMessage(`Caractéristiques mises à jour avec succès pour l'aventurier !`);
   };
 
   const handleCreateNewHero = (chosenClass: TClass) => {
@@ -289,6 +543,17 @@ export const CastleView: React.FC<CastleViewProps> = ({
         {/* Action Shortcuts */}
         <div className="flex items-center gap-2">
           <button
+            onClick={() => {
+              setInspectingPartyIndex(selectedCharIndex);
+              sounds.playTurn();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 rounded-lg text-xs font-semibold transition shadow-sm"
+            title="Inspecter les caractéristiques (FOR, INT, PIE, VIT, AGI, CHA) et l'équipement"
+          >
+            <User className="w-3.5 h-3.5" />
+            Fiche Personnage
+          </button>
+          <button
             onClick={onOpenPySide6Export}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold transition"
           >
@@ -343,12 +608,38 @@ export const CastleView: React.FC<CastleViewProps> = ({
         >
           Terrains d'Entraînement
         </button>
+        <button
+          onClick={() => { setCurrentTab('JOURNAL'); sounds.playTurn(); }}
+          className={`px-3 py-1.5 rounded-md font-medium transition flex items-center gap-1.5 ${currentTab === 'JOURNAL' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-400/90 hover:text-amber-300 hover:bg-slate-800/60'}`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Journal d'Aventures</span>
+          {adventureEvents.length > 0 && (
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold font-mono ${currentTab === 'JOURNAL' ? 'bg-amber-950 text-amber-300' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}`}>
+              {Math.min(10, adventureEvents.length)}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Information Banner */}
       <div className="px-6 py-2.5 bg-slate-900/40 border-b border-slate-800/40 text-xs text-amber-300/90 font-medium flex items-center justify-between">
         <span>{message}</span>
-        <span className="text-slate-400">Héros sélectionné : <strong className="text-white">{selectedHero?.name}</strong> ({selectedHero?.gold} PO)</span>
+        <div className="flex items-center gap-2">
+          <span className="text-slate-400">
+            Héros sélectionné : <strong className="text-white">{selectedHero?.name}</strong> ({selectedHero?.gold} PO)
+          </span>
+          <button
+            onClick={() => {
+              setInspectingPartyIndex(selectedCharIndex);
+              sounds.playTurn();
+            }}
+            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-cyan-500/30 rounded text-[11px] font-semibold transition flex items-center gap-1"
+          >
+            <User className="w-3 h-3" />
+            Voir Fiche
+          </button>
+        </div>
       </div>
 
       {/* Town Views Content Area */}
@@ -364,16 +655,16 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 Composez votre escouade, équipez-vous chez Boltac, bénissez vos héros au Temple de Cant et plongez dans le dédale.
               </p>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4">
                 <button
                   onClick={() => setCurrentTab('INN')}
                   className="p-4 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-left transition space-y-1.5"
                 >
                   <div className="text-amber-400 font-bold flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
-                    Auberge de l'Aventurier
+                    Auberge
                   </div>
-                  <p className="text-xs text-slate-400">Soignez les blessures, rechargez vos sorts et gagnez des niveaux.</p>
+                  <p className="text-xs text-slate-400">Soignez les blessures et gagnez des niveaux.</p>
                 </button>
 
                 <button
@@ -382,9 +673,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 >
                   <div className="text-amber-400 font-bold flex items-center gap-2">
                     <Store className="w-4 h-4" />
-                    Comptoir de Boltac
+                    Comptoir
                   </div>
-                  <p className="text-xs text-slate-400">Achetez armes, armures et potions, identifiez vos trouvailles.</p>
+                  <p className="text-xs text-slate-400">Achetez armes, armures et potions.</p>
                 </button>
 
                 <button
@@ -393,9 +684,20 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 >
                   <div className="text-amber-400 font-bold flex items-center gap-2">
                     <HeartHandshake className="w-4 h-4" />
-                    Temple de Cant
+                    Temple
                   </div>
-                  <p className="text-xs text-slate-400">Ressuscitez les défunts et purifiez les pétrifications et paralysies.</p>
+                  <p className="text-xs text-slate-400">Ressuscitez les défunts et guérissez le poison.</p>
+                </button>
+
+                <button
+                  onClick={() => setCurrentTab('JOURNAL')}
+                  className="p-4 bg-amber-950/40 hover:bg-amber-950/60 border border-amber-600/40 rounded-xl text-left transition space-y-1.5"
+                >
+                  <div className="text-amber-300 font-bold flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-amber-400" />
+                    Journal d'Aventures
+                  </div>
+                  <p className="text-xs text-amber-200/70">Consultez les 10 derniers événements du dédale.</p>
                 </button>
               </div>
             </div>
@@ -433,6 +735,30 @@ export const CastleView: React.FC<CastleViewProps> = ({
                         <span>CA: {hero.armorClass}</span>
                         <span className="text-amber-400">{hero.gold} PO</span>
                       </div>
+                      {/* Active Status Badges */}
+                      <div className="flex flex-wrap gap-1 pt-1 min-h-[18px]">
+                        {getActiveStatusEffects(hero).map(eff => (
+                          <span 
+                            key={eff.id}
+                            className={`text-[9px] font-bold px-1 py-0.2 rounded border ${eff.bgColor} ${eff.borderColor} ${eff.color}`}
+                          >
+                            {eff.badge}
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCharIndex(idx);
+                          setInspectingPartyIndex(idx);
+                          sounds.playTurn();
+                        }}
+                        className="mt-2 w-full py-1 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 rounded text-[10px] font-bold transition flex items-center justify-center gap-1"
+                        title="Voir les caractéristiques FOR, INT, PIE, VIT, AGI, CHA"
+                      >
+                        <User className="w-3 h-3" />
+                        Fiche de stats
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -557,140 +883,472 @@ export const CastleView: React.FC<CastleViewProps> = ({
           <div className="max-w-3xl mx-auto bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-6">
             <div>
               <h2 className="text-lg font-serif font-bold text-white">Le Temple Radiant de Cant</h2>
-              <p className="text-xs text-slate-400">Les prêtres invoquent les miracles divins pour relever les héros morts au combat.</p>
+              <p className="text-xs text-slate-400">Les prêtres invoquent les miracles divins pour relever les héros morts, purifier poisons et guérir paralysies.</p>
             </div>
 
             <div className="space-y-3">
-              {party.map(h => (
-                <div key={h.id} className="p-3.5 bg-slate-800/60 border border-slate-700/50 rounded-lg flex items-center justify-between text-xs">
-                  <div>
-                    <div className="font-bold text-sm text-white">{h.name} ({h.class})</div>
-                    <div className="text-slate-400">
-                      État : <strong className={h.status === 'OK' ? 'text-emerald-400' : 'text-red-400'}>{h.status}</strong>
+              {party.map(h => {
+                const effs = getActiveStatusEffects(h);
+                const hasAilment = effs.length > 0;
+
+                return (
+                  <div key={h.id} className="p-3.5 bg-slate-800/60 border border-slate-700/50 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <div className="font-bold text-sm text-white flex items-center gap-2">
+                        <span>{h.name} ({h.class})</span>
+                        <div className="flex flex-wrap gap-1">
+                          {effs.map(e => (
+                            <span key={e.id} className={`text-[10px] px-1.5 py-0.2 rounded border font-bold ${e.bgColor} ${e.borderColor} ${e.color}`}>
+                              {e.badge}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-slate-400 pt-0.5">
+                        Santé : <strong className={h.hpLeft < h.hpMax / 2 ? 'text-red-400' : 'text-emerald-400'}>{h.hpLeft}/{h.hpMax} PV</strong> · Or : {h.gold} PO
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Dead or Ashes: Resurrection */}
+                      {(h.status === 'DEAD' || h.status === 'ASHES') && (
+                        <button
+                          onClick={() => handleResurrect(h)}
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition"
+                        >
+                          Ressusciter ({h.charLevel * (h.status === 'DEAD' ? 250 : 500)} PO)
+                        </button>
+                      )}
+
+                      {/* Paralyzed: Cure Paralysis */}
+                      {h.status === 'PLYZE' && (
+                        <button
+                          onClick={() => handleCureParalysis(h)}
+                          className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-lg transition flex items-center gap-1"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          Guérir Paralysie (100 PO)
+                        </button>
+                      )}
+
+                      {/* Stoned: Cure Petrified */}
+                      {h.status === 'STONED' && (
+                        <button
+                          onClick={() => handleCureStoned(h)}
+                          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition flex items-center gap-1"
+                        >
+                          <Shield className="w-3.5 h-3.5" />
+                          Lever Pétrification (200 PO)
+                        </button>
+                      )}
+
+                      {/* Poisoned: Cure Poison */}
+                      {h.poisonAmount > 0 && (
+                        <button
+                          onClick={() => handleCurePoison(h)}
+                          className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-lg transition flex items-center gap-1"
+                        >
+                          <Biohazard className="w-3.5 h-3.5" />
+                          Purifier Poison (50 PO)
+                        </button>
+                      )}
+
+                      {!hasAilment && (
+                        <span className="text-emerald-400 flex items-center gap-1 italic text-xs">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> En pleine santé
+                        </span>
+                      )}
                     </div>
                   </div>
-                  {h.status !== 'OK' && h.status !== 'LOST' ? (
-                    <button
-                      onClick={() => handleResurrect(h)}
-                      className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition"
-                    >
-                      Prier & Ressusciter ({h.charLevel * 250} PO)
-                    </button>
-                  ) : (
-                    <span className="text-slate-500 italic">En pleine santé</span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
         {/* TRAINING GROUNDS */}
         {currentTab === 'TRAINING' && (
-          <div className="max-w-3xl mx-auto space-y-6">
-            <div className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-4">
-              <h2 className="text-lg font-serif font-bold text-white">Création d'un Nouveau Héros</h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">Nom du Héros</label>
-                  <input
-                    type="text"
-                    value={newCharName}
-                    onChange={e => setNewCharName(e.target.value)}
-                    placeholder="Ex: ARTHUR"
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white uppercase focus:outline-none focus:border-amber-500"
-                  />
-                </div>
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Mode Switcher */}
+            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl">
+              <button
+                onClick={() => { setTrainingMode('CREATE'); sounds.playTurn(); }}
+                className={`flex-1 py-2 px-4 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
+                  trainingMode === 'CREATE'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Créer un Nouveau Héros</span>
+              </button>
+              <button
+                onClick={() => {
+                  setTrainingMode('RESPEC');
+                  sounds.playTurn();
+                  if (!respecCharId && (party[0] || allCharacters[0])) {
+                    handleSelectCharForRespec((party[0] || allCharacters[0]).id);
+                  }
+                }}
+                className={`flex-1 py-2 px-4 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
+                  trainingMode === 'RESPEC'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <Sliders className="w-4 h-4" />
+                <span>Réattribuer les Caractéristiques (Héros Existant)</span>
+              </button>
+            </div>
 
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">Race</label>
-                  <select
-                    value={newCharRace}
-                    onChange={e => setNewCharRace(e.target.value as TRace)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none"
-                  >
-                    <option value="HUMAN">Humain (Équilibré)</option>
-                    <option value="ELF">Elfe (I.Q. & Piété élevés)</option>
-                    <option value="DWARF">Nain (Force & Vitalité)</option>
-                    <option value="GNOME">Gnome (Piété & Agilité)</option>
-                    <option value="HOBBIT">Hobbit (Chance légendaire)</option>
-                  </select>
+            {/* MODE 1: CREATE NEW HERO */}
+            {trainingMode === 'CREATE' && (
+              <div className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-5">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <div>
+                    <h2 className="text-lg font-serif font-bold text-white">Terrain d'Entraînement de Trebor</h2>
+                    <p className="text-xs text-slate-400">Générez un nouvel aventurier, tirez les points bonus et répartissez-les selon votre classe désirée.</p>
+                  </div>
                 </div>
-
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">Alignement</label>
-                  <select
-                    value={newCharAlign}
-                    onChange={e => setNewCharAlign(e.target.value as TAlign)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none"
-                  >
-                    <option value="GOOD">Bon</option>
-                    <option value="NEUTRAL">Neutre</option>
-                    <option value="EVIL">Mauvais</option>
-                  </select>
-                </div>
-              </div>
-
-              {!isRollingStats ? (
-                <button
-                  onClick={startRollStats}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-2"
-                >
-                  <Flame className="w-4 h-4" />
-                  Tirer les dés & Allouer les Caractéristiques
-                </button>
-              ) : (
-                <div className="space-y-4 pt-3 border-t border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-amber-300 font-bold">
-                      Points bonus restants à distribuer : {bonusPoints}
-                    </span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">Nom du Héros</label>
+                    <input
+                      type="text"
+                      value={newCharName}
+                      onChange={e => setNewCharName(e.target.value)}
+                      placeholder="Ex: ARTHUR"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-amber-500 font-mono tracking-wider"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                    {Object.entries(allocatedStats).map(([st, val]) => (
-                      <div key={st} className="p-2.5 bg-slate-800/70 border border-slate-700/50 rounded-lg text-center">
-                        <div className="text-[10px] text-slate-400 uppercase">{st.slice(0, 3)}</div>
-                        <div className="text-base font-bold text-white py-1">{val}</div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">Race</label>
+                    <select
+                      value={newCharRace}
+                      onChange={e => handleRaceChange(e.target.value as TRace)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="HUMAN">Humain (Équilibré · Base 8/8/5/8/8/9)</option>
+                      <option value="ELF">Elfe (I.Q. & Piété · Base 7/10/10/6/9/6)</option>
+                      <option value="DWARF">Nain (Force & Vitalité · Base 10/7/10/10/5/6)</option>
+                      <option value="GNOME">Gnome (Piété & Agilité · Base 7/7/10/8/10/7)</option>
+                      <option value="HOBBIT">Hobbit (Chance extrême · Base 5/7/7/6/10/15)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">Alignement</label>
+                    <select
+                      value={newCharAlign}
+                      onChange={e => setNewCharAlign(e.target.value as TAlign)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="GOOD">Bon (Requis pour Seigneur / Lord)</option>
+                      <option value="NEUTRAL">Neutre (Idéal pour Guerrier / Voleur)</option>
+                      <option value="EVIL">Mauvais (Requis pour Ninja)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {!isRollingStats ? (
+                  <div className="pt-2">
+                    <button
+                      onClick={startRollStats}
+                      className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg hover:shadow-amber-600/20"
+                    >
+                      <Flame className="w-4 h-4" />
+                      <span>Tirer les dés de Caractéristiques</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4 pt-3 border-t border-slate-800">
+                    {/* Toolbar for Bonus Points Redistribution & Reroll */}
+                    <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">Réserve :</span>
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono border ${
+                          bonusPoints > 0 
+                            ? 'bg-amber-950/70 border-amber-600/60 text-amber-300 animate-pulse' 
+                            : 'bg-slate-800 border-slate-700 text-slate-400'
+                        }`}>
+                          {bonusPoints} point{bonusPoints > 1 ? 's' : ''} restant{bonusPoints > 1 ? 's' : ''} sur {totalBonusRolled}
+                        </span>
+                      </div>
+
+                      {/* Actions: Reroll Dice & Reset Distribution */}
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleAddStat(st as any)}
-                          disabled={bonusPoints <= 0 || val >= 18}
-                          className="w-full py-1 bg-amber-600/30 hover:bg-amber-600 text-amber-200 hover:text-white rounded text-xs font-bold disabled:opacity-30 disabled:pointer-events-none transition"
+                          type="button"
+                          onClick={handleRerollBonusPoints}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 hover:border-amber-500"
+                          title="Relancer le tirage aléatoire des dés pour obtenir un nouveau score bonus (ex: 18-29 pour Samurai/Ninja)"
                         >
-                          +1
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Relancer le Tirage (Dés)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleResetAttributeAllocation}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 hover:border-slate-500"
+                          title="Remettre les caractéristiques aux valeurs de base et replacer tous les points dans la réserve"
+                        >
+                          <Undo2 className="w-3.5 h-3.5" />
+                          <span>Réinitialiser la Répartition</span>
                         </button>
                       </div>
-                    ))}
-                  </div>
+                    </div>
 
-                  <div className="space-y-2 pt-2">
-                    <label className="text-xs text-slate-400 block">Choisissez la Classe Éligible :</label>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { cls: 'FIGHTER' as const, req: allocatedStats.STRENGTH >= 11 },
-                        { cls: 'MAGE' as const, req: allocatedStats.IQ >= 11 },
-                        { cls: 'PRIEST' as const, req: allocatedStats.PIETY >= 11 && newCharAlign !== 'NEUTRAL' },
-                        { cls: 'THIEF' as const, req: allocatedStats.AGILITY >= 11 && newCharAlign !== 'GOOD' },
-                        { cls: 'BISHOP' as const, req: allocatedStats.IQ >= 12 && allocatedStats.PIETY >= 12 },
-                        { cls: 'SAMURAI' as const, req: allocatedStats.STRENGTH >= 15 && allocatedStats.VITALITY >= 14 },
-                        { cls: 'LORD' as const, req: allocatedStats.STRENGTH >= 15 && allocatedStats.PIETY >= 12 && newCharAlign === 'GOOD' },
-                        { cls: 'NINJA' as const, req: allocatedStats.STRENGTH >= 17 && allocatedStats.AGILITY >= 17 && newCharAlign === 'EVIL' }
-                      ].map(item => (
-                        <button
-                          key={item.cls}
-                          disabled={!item.req}
-                          onClick={() => handleCreateNewHero(item.cls)}
-                          className="px-3.5 py-1.5 bg-slate-800 hover:bg-amber-600 text-white rounded-lg text-xs font-bold disabled:opacity-25 disabled:pointer-events-none transition border border-slate-700"
-                        >
-                          Devenir {item.cls}
-                        </button>
-                      ))}
+                    {/* Characteristic Allocation Grid with + and - buttons */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                      {Object.entries(allocatedStats).map(([st, val]) => {
+                        const baseVal = RACE_BASE_ATTRIBUTES[newCharRace][st] || 8;
+                        const added = val - baseVal;
+                        const statLabels: Record<string, { label: string; abbr: string }> = {
+                          STRENGTH: { label: 'Force', abbr: 'FOR' },
+                          IQ: { label: 'Intelligence', abbr: 'INT' },
+                          PIETY: { label: 'Piété', abbr: 'PIE' },
+                          VITALITY: { label: 'Vitalité', abbr: 'VIT' },
+                          AGILITY: { label: 'Agilité', abbr: 'AGI' },
+                          LUCK: { label: 'Chance', abbr: 'CHA' }
+                        };
+                        const info = statLabels[st] || { label: st, abbr: st.slice(0, 3) };
+
+                        return (
+                          <div key={st} className="p-3 bg-slate-800/80 border border-slate-700/60 rounded-xl text-center flex flex-col justify-between shadow-sm">
+                            <div>
+                              <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">{info.label}</div>
+                              <div className="text-[10px] text-slate-500 font-mono">({info.abbr})</div>
+                            </div>
+
+                            <div className="py-2">
+                              <div className="text-xl font-black text-white font-mono">{val}</div>
+                              <div className="text-[10px] flex items-center justify-center gap-1 font-semibold">
+                                {added > 0 ? (
+                                  <span className="text-amber-400 font-bold">+{added} bonus</span>
+                                ) : (
+                                  <span className="text-slate-500">Base ({baseVal})</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Decrement and Increment Buttons */}
+                            <div className="grid grid-cols-2 gap-1.5 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveStat(st as any)}
+                                disabled={val <= baseVal}
+                                className="py-1 px-2 bg-slate-700/70 hover:bg-slate-600 text-slate-200 rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-slate-600/50 flex items-center justify-center"
+                                title={`Diminuer ${info.label} (-1) et récupérer 1 point bonus`}
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleAddStat(st as any)}
+                                disabled={bonusPoints <= 0 || val >= 18}
+                                className="py-1 px-2 bg-amber-600/80 hover:bg-amber-500 text-white rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-amber-500/50 flex items-center justify-center shadow-sm"
+                                title={`Augmenter ${info.label} (+1) en dépensant 1 point bonus`}
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Classes Eligibility Selection */}
+                    <div className="space-y-2 pt-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                          Classes Éligibles selon les Caractéristiques Allouées :
+                        </label>
+                        {bonusPoints > 0 && (
+                          <span className="text-[11px] text-amber-400 font-medium italic">
+                            Astuce : dépensez tous vos points bonus pour maximiser votre héros !
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {[
+                          { cls: 'FIGHTER' as const, name: 'Guerrier', req: allocatedStats.STRENGTH >= 11, desc: 'FOR 11+' },
+                          { cls: 'MAGE' as const, name: 'Mage', req: allocatedStats.IQ >= 11, desc: 'INT 11+' },
+                          { cls: 'PRIEST' as const, name: 'Prêtre', req: allocatedStats.PIETY >= 11 && newCharAlign !== 'NEUTRAL', desc: 'PIE 11+, Pas Neutre' },
+                          { cls: 'THIEF' as const, name: 'Voleur', req: allocatedStats.AGILITY >= 11 && newCharAlign !== 'GOOD', desc: 'AGI 11+, Pas Bon' },
+                          { cls: 'BISHOP' as const, name: 'Évêque', req: allocatedStats.IQ >= 12 && allocatedStats.PIETY >= 12, desc: 'INT 12+, PIE 12+' },
+                          { cls: 'SAMURAI' as const, name: 'Samouraï', req: allocatedStats.STRENGTH >= 15 && allocatedStats.VITALITY >= 14, desc: 'FOR 15+, VIT 14+' },
+                          { cls: 'LORD' as const, req: allocatedStats.STRENGTH >= 15 && allocatedStats.PIETY >= 12 && newCharAlign === 'GOOD', name: 'Seigneur', desc: 'FOR 15+, PIE 12+, Bon' },
+                          { cls: 'NINJA' as const, req: allocatedStats.STRENGTH >= 17 && allocatedStats.AGILITY >= 17 && newCharAlign === 'EVIL', name: 'Ninja', desc: 'FOR 17+, AGI 17+, Mauvais' }
+                        ].map(item => (
+                          <button
+                            key={item.cls}
+                            disabled={!item.req}
+                            onClick={() => handleCreateNewHero(item.cls)}
+                            className={`p-2.5 rounded-xl text-left border transition flex flex-col justify-between ${
+                              item.req
+                                ? 'bg-slate-800 hover:bg-amber-600/90 text-white border-amber-600/40 hover:border-amber-400 cursor-pointer shadow-sm hover:scale-[1.02]'
+                                : 'bg-slate-900/60 text-slate-500 border-slate-800 opacity-40 cursor-not-allowed'
+                            }`}
+                          >
+                            <div className="font-bold text-xs flex items-center justify-between">
+                              <span>{item.name}</span>
+                              <span className="text-[10px] font-mono uppercase text-slate-400">{item.cls}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-1">{item.desc}</div>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* MODE 2: RESPEC EXISTING HERO */}
+            {trainingMode === 'RESPEC' && (
+              <div className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-5">
+                <div>
+                  <h2 className="text-lg font-serif font-bold text-white">Réattribution des Caractéristiques d'un Héros</h2>
+                  <p className="text-xs text-slate-400">Modifiez la distribution des points ou relancez le tirage pour optimiser un membre existant de votre guilde.</p>
                 </div>
-              )}
-            </div>
+
+                {/* Hero Selector */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">Choisir l'aventurier à réentraîner :</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    {allCharacters.map(h => (
+                      <button
+                        key={h.id}
+                        type="button"
+                        onClick={() => handleSelectCharForRespec(h.id)}
+                        className={`p-2.5 rounded-xl border text-left transition ${
+                          respecCharId === h.id
+                            ? 'bg-amber-950/60 border-amber-500 text-amber-300 ring-1 ring-amber-500'
+                            : 'bg-slate-800/80 border-slate-700/60 text-slate-300 hover:text-white'
+                        }`}
+                      >
+                        <div className="font-bold text-xs truncate">{h.name}</div>
+                        <div className="text-[10px] text-slate-400">{h.race} · {h.class}</div>
+                        <div className="text-[9px] text-amber-400 font-mono">Niv. {h.charLevel}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {respecCharId && (
+                  <div className="space-y-4 pt-3 border-t border-slate-800">
+                    {/* Action Bar for Respec */}
+                    <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-400">Points disponibles :</span>
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono border ${
+                          respecBonusAvailable > 0
+                            ? 'bg-amber-950/70 border-amber-600/60 text-amber-300 animate-pulse'
+                            : 'bg-slate-800 border-slate-700 text-slate-400'
+                        }`}>
+                          {respecBonusAvailable} point{respecBonusAvailable > 1 ? 's' : ''} restant{respecBonusAvailable > 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleRespecReroll}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 hover:border-amber-500"
+                          title="Tirer de nouveaux dés bonus pour ce héros"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Relancer le Tirage</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleRespecResetToBase}
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 hover:border-slate-500"
+                          title="Remettre aux bases de la race et replacer tous les points dans la réserve"
+                        >
+                          <Undo2 className="w-3.5 h-3.5" />
+                          <span>Remettre à Zéro</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleSaveRespec}
+                          className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-md hover:shadow-emerald-600/20"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Enregistrer</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Respec Stats Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                      {Object.keys(respecStats).map(st => {
+                        const val = respecStats[st] ?? 8;
+                        const hero = allCharacters.find(c => c.id === respecCharId) || party.find(c => c.id === respecCharId);
+                        const raceBase = hero ? (RACE_BASE_ATTRIBUTES[hero.race][st] || 8) : 8;
+                        const added = val - raceBase;
+                        const statLabels: Record<string, { label: string; abbr: string }> = {
+                          STRENGTH: { label: 'Force', abbr: 'FOR' },
+                          IQ: { label: 'Intelligence', abbr: 'INT' },
+                          PIETY: { label: 'Piété', abbr: 'PIE' },
+                          VITALITY: { label: 'Vitalité', abbr: 'VIT' },
+                          AGILITY: { label: 'Agilité', abbr: 'AGI' },
+                          LUCK: { label: 'Chance', abbr: 'CHA' }
+                        };
+                        const info = statLabels[st] || { label: st, abbr: st.slice(0, 3) };
+
+                        return (
+                          <div key={st} className="p-3 bg-slate-800/80 border border-slate-700/60 rounded-xl text-center flex flex-col justify-between shadow-sm">
+                            <div>
+                              <div className="text-[11px] font-bold text-slate-300 uppercase tracking-wider">{info.label}</div>
+                              <div className="text-[10px] text-slate-500 font-mono">({info.abbr})</div>
+                            </div>
+
+                            <div className="py-2">
+                              <div className="text-xl font-black text-white font-mono">{val}</div>
+                              <div className="text-[10px] flex items-center justify-center gap-1 font-semibold">
+                                {added > 0 ? (
+                                  <span className="text-amber-400 font-bold">+{added} bonus</span>
+                                ) : (
+                                  <span className="text-slate-500">Base ({raceBase})</span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-1.5 pt-1">
+                              <button
+                                type="button"
+                                onClick={() => handleRespecRemoveStat(st)}
+                                disabled={val <= raceBase}
+                                className="py-1 px-2 bg-slate-700/70 hover:bg-slate-600 text-slate-200 rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-slate-600/50 flex items-center justify-center"
+                                title={`Diminuer ${info.label} (-1) et récupérer 1 point`}
+                              >
+                                <Minus className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRespecAddStat(st)}
+                                disabled={respecBonusAvailable <= 0 || val >= 18}
+                                className="py-1 px-2 bg-amber-600/80 hover:bg-amber-500 text-white rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-amber-500/50 flex items-center justify-center shadow-sm"
+                                title={`Augmenter ${info.label} (+1) en dépensant 1 point`}
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -705,44 +1363,134 @@ export const CastleView: React.FC<CastleViewProps> = ({
             <div className="space-y-3">
               {allCharacters.map(h => {
                 const isInActiveParty = party.some(p => p.id === h.id);
+                const isLostInDungeon = h.lostLocation && h.lostLocation.level > 0;
+
                 return (
-                  <div key={h.id} className="p-3 bg-slate-800/60 border border-slate-700/50 rounded-lg flex items-center justify-between text-xs">
+                  <div key={h.id} className="p-3 bg-slate-800/60 border border-slate-700/50 rounded-lg flex items-center justify-between text-xs gap-3">
                     <div>
-                      <div className="font-bold text-white">{h.name} · {h.race} {h.class} (Niv.{h.charLevel})</div>
-                      <div className="text-slate-400">Alignement : {h.align} · PV: {h.hpLeft}/{h.hpMax} · {h.gold} PO</div>
+                      <div className="font-bold text-white flex items-center gap-2">
+                        <span>{h.name} · {h.race} {h.class} (Niv.{h.charLevel})</span>
+                        {isLostInDungeon && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-950/90 text-red-300 border border-red-700/60 flex items-center gap-1">
+                            <Skull className="w-3 h-3 text-red-400" />
+                            Perdu dans le Donjon
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-slate-400">
+                        {isLostInDungeon ? (
+                          <span className="text-red-400/90 font-medium">
+                            Gît au Niveau {h.lostLocation?.level}, coordonnées ({h.lostLocation?.x}, {h.lostLocation?.y}) · Envoyez des secours !
+                          </span>
+                        ) : (
+                          <span>Alignement : {h.align} · PV: {h.hpLeft}/{h.hpMax} · {h.gold} PO</span>
+                        )}
+                      </div>
                     </div>
-                    {isInActiveParty ? (
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => {
-                          setParty(party.filter(p => p.id !== h.id));
+                          setInspectingRosterHero(h);
                           sounds.playTurn();
                         }}
-                        className="px-3 py-1 bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-700/50 rounded text-xs transition"
+                        className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-cyan-300 hover:text-white rounded text-xs font-semibold transition flex items-center gap-1 border border-slate-600"
+                        title="Voir les caractéristiques FOR, INT, PIE, VIT, AGI, CHA"
                       >
-                        Retirer du groupe
+                        <User className="w-3 h-3" />
+                        Fiche
                       </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          if (party.length >= 6) {
-                            setMessage('Le groupe est déjà au maximum de 6 aventuriers.');
-                            return;
-                          }
-                          setParty([...party, h]);
-                          sounds.playTurn();
-                        }}
-                        className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded text-xs transition"
-                      >
-                        Ajouter au groupe
-                      </button>
-                    )}
+
+                      {isLostInDungeon ? (
+                        <div 
+                          className="px-2.5 py-1 bg-red-950/40 border border-red-900/60 rounded text-[11px] text-red-400 font-semibold cursor-help"
+                          title="Ce héros est tombé au combat dans le dédale. Formez une escouade de secours pour rapporter sa dépouille !"
+                        >
+                          Corps perdu
+                        </div>
+                      ) : isInActiveParty ? (
+                        <button
+                          onClick={() => {
+                            setParty(party.filter(p => p.id !== h.id));
+                            sounds.playTurn();
+                          }}
+                          className="px-3 py-1 bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-700/50 rounded text-xs transition font-semibold"
+                        >
+                          Retirer
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (party.length >= 6) {
+                              setMessage('Le groupe est déjà au maximum de 6 aventuriers.');
+                              return;
+                            }
+                            setParty([...party, h]);
+                            sounds.playTurn();
+                          }}
+                          className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded text-xs transition"
+                        >
+                          Recruter
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
         )}
+
+        {/* JOURNAL D'AVENTURES */}
+        {currentTab === 'JOURNAL' && (
+          <AdventureJournal
+            events={adventureEvents}
+            onClearEvents={onClearAdventureEvents}
+            onEnterMaze={onEnterMaze}
+          />
+        )}
       </div>
+
+      {/* Detailed Character Sheet Modal for Party Members */}
+      {inspectingPartyIndex !== null && party[inspectingPartyIndex] && (
+        <CharacterSheetModal
+          character={party[inspectingPartyIndex]}
+          party={party}
+          currentIndex={inspectingPartyIndex}
+          onSelectCharacter={(idx) => {
+            setInspectingPartyIndex(idx);
+            setSelectedCharIndex(idx);
+          }}
+          onUpdateCharacter={(updated) => {
+            const nextParty = [...party];
+            nextParty[inspectingPartyIndex] = updated;
+            setParty(nextParty);
+            const nextAll = allCharacters.map(c => c.id === updated.id ? updated : c);
+            setAllCharacters(nextAll);
+          }}
+          onClose={() => setInspectingPartyIndex(null)}
+        />
+      )}
+
+      {/* Detailed Character Sheet Modal for Tavern/Roster Heroes */}
+      {inspectingRosterHero && (
+        <CharacterSheetModal
+          character={inspectingRosterHero}
+          party={allCharacters}
+          currentIndex={allCharacters.findIndex(c => c.id === inspectingRosterHero.id)}
+          onSelectCharacter={(idx) => setInspectingRosterHero(allCharacters[idx])}
+          onUpdateCharacter={(updated) => {
+            const nextAll = allCharacters.map(c => c.id === updated.id ? updated : c);
+            setAllCharacters(nextAll);
+            const pIdx = party.findIndex(p => p.id === updated.id);
+            if (pIdx !== -1) {
+              const nextParty = [...party];
+              nextParty[pIdx] = updated;
+              setParty(nextParty);
+            }
+          }}
+          onClose={() => setInspectingRosterHero(null)}
+        />
+      )}
     </div>
   );
 };

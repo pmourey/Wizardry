@@ -6,7 +6,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   TCharacter, 
   GameLocation, 
-  TMazeFloor 
+  TMazeFloor,
+  AdventureLogEvent,
+  AdventureLogCategory
 } from './types/wizardry';
 import { 
   DEFAULT_PARTY, 
@@ -27,6 +29,7 @@ import {
   ChestReward 
 } from './engine/chestEngine';
 import { sounds } from './utils/soundEffects';
+import { applyPoisonDamage } from './engine/statusSystem';
 import confetti from 'canvas-confetti';
 import { 
   ShieldAlert, 
@@ -35,7 +38,9 @@ import {
   FileCode, 
   Compass, 
   Volume2, 
-  VolumeX 
+  VolumeX,
+  Skull,
+  Users
 } from 'lucide-react';
 
 export default function App() {
@@ -78,14 +83,85 @@ export default function App() {
   // Modals & Sound
   const [showPySide6Export, setShowPySide6Export] = useState<boolean>(false);
   const [soundOn, setSoundOn] = useState<boolean>(true);
+  const [lastWipeoutInfo, setLastWipeoutInfo] = useState<{ x: number; y: number; level: number; heroes: string[] } | null>(null);
+
+  // Adventure Journal Events (persisted in localStorage)
+  const [adventureEvents, setAdventureEvents] = useState<AdventureLogEvent[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('wiz1_adventure_journal');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      }
+    }
+    return [
+      {
+        id: 'init-1',
+        timestamp: '08:00',
+        dateStr: 'Décret Royal',
+        category: 'CASTLE',
+        title: "Proclamation de l'Overlord Trebor",
+        description: "Par décret souverain, la création de votre guilde d'aventuriers a été ratifiée. L'accès aux Proving Grounds vous est accordé pour terrasser le sorcier Werdna.",
+        details: "Objectif suprême : Récupérer l'Amulette au 10e sous-sol"
+      },
+      {
+        id: 'init-2',
+        timestamp: '08:15',
+        dateStr: 'Préparatifs',
+        category: 'DISCOVERY',
+        title: "Constitution de l'Escouade & Fourbissage",
+        description: "Vos héros se sont rassemblés à la Taverne de Gilgamesh et ont acquis leurs premières armes chez Boltac avant de franchir la grille de fer.",
+        details: "6 aventuriers prêts à braver les pièges et les bêtes du dédale"
+      }
+    ];
+  });
+
+  const addAdventureEvent = (
+    category: AdventureLogCategory,
+    title: string,
+    description: string,
+    details?: string,
+    level?: number,
+    coordinates?: { x: number; y: number }
+  ) => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const newEvent: AdventureLogEvent = {
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      timestamp: timeStr,
+      dateStr: "Aujourd'hui",
+      category,
+      title,
+      description,
+      details,
+      level,
+      coordinates
+    };
+
+    setAdventureEvents(prev => [newEvent, ...prev].slice(0, 50));
+  };
+
+  // Persistent explored map tiles (Level 1)
+  const [visitedTiles, setVisitedTiles] = useState<boolean[][]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('wiz1_visited_level1');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      }
+    }
+    const initial = Array.from({ length: 20 }, () => Array(20).fill(false));
+    initial[0][0] = true;
+    return initial;
+  });
 
   // Save to localStorage on changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('wiz1_party', JSON.stringify(party));
       localStorage.setItem('wiz1_roster', JSON.stringify(allCharacters));
+      localStorage.setItem('wiz1_visited_level1', JSON.stringify(visitedTiles));
+      localStorage.setItem('wiz1_adventure_journal', JSON.stringify(adventureEvents));
     }
-  }, [party, allCharacters]);
+  }, [party, allCharacters, visitedTiles, adventureEvents]);
 
   // Check victory condition: Amulet of Werdna (id 94) in inventory at Castle
   useEffect(() => {
@@ -95,6 +171,12 @@ export default function App() {
         setLocation('VICTORY');
         confetti({ particleCount: 150, spread: 80 });
         sounds.playFanfare();
+        addAdventureEvent(
+          'DISCOVERY',
+          "Victoire Suprême : L'Amulette de Werdna est nôtre !",
+          "Le sorcier maléfique Werdna a été vaincu ! Votre escouade triomphante rapporte l'Amulette sacrée à l'Overlord Trebor. Le royaume est sauvé !",
+          "Récompense royale : 250 000 XP et insigne suprême de la couronne"
+        );
       }
     }
   }, [location, party]);
@@ -127,10 +209,26 @@ export default function App() {
           }
         });
         sounds.playBump();
+        addAdventureEvent(
+          'LOSS',
+          'Chute dans une fosse piégée !',
+          `Le sol s'est brusquement dérobé sous les pas de l'escouade. Vos héros subissent des dégâts de chute.`,
+          undefined,
+          dungeonLevel,
+          { x: newX, y: newY }
+        );
       } else if (sqrDef.type === 'TRANSFER') {
         setPosX(sqrDef.aux2);
         setPosY(sqrDef.aux1);
         sounds.playSpellCast();
+        addAdventureEvent(
+          'DISCOVERY',
+          'Téléportation magique mystique',
+          `Un tourbillon arcanique a instantanément projeté l'escouade aux coordonnées (${sqrDef.aux2}, ${sqrDef.aux1}).`,
+          undefined,
+          dungeonLevel,
+          { x: sqrDef.aux2, y: sqrDef.aux1 }
+        );
         return;
       }
     }
@@ -142,6 +240,35 @@ export default function App() {
     if (lightLevel > 0) {
       setLightLevel(prev => Math.max(0, prev - 1));
     }
+
+    // Authentic Wizardry poison step damage: each step drains HP for poisoned heroes
+    let poisonDeaths = 0;
+    const updatedParty = party.map(h => {
+      if (h.poisonAmount > 0 && h.status !== 'DEAD' && h.status !== 'ASHES' && h.status !== 'STONED') {
+        const { damage, died } = applyPoisonDamage(h);
+        if (died) {
+          poisonDeaths++;
+        }
+      }
+      return h;
+    });
+
+    if (poisonDeaths > 0) {
+      sounds.playHit();
+      if (updatedParty.every(p => p.status === 'DEAD' || p.status === 'ASHES')) {
+        addAdventureEvent(
+          'LOSS',
+          "Hécatombe causée par le poison",
+          "Le venin a insidieusement drainé les dernières forces de l'escouade. Tous vos héros se sont effondrés.",
+          `Lieu du drame : Niveau ${dungeonLevel}, position (${newX}, ${newY})`,
+          dungeonLevel,
+          { x: newX, y: newY }
+        );
+        handlePartyWipedOut(updatedParty, newX, newY, dungeonLevel);
+        return;
+      }
+    }
+    setParty([...updatedParty]);
 
     // Encounter chance: 15% random step chance or fixed room encounter
     const isEncounterSquare = sqrDef?.type === 'ENCOUNTE' || maze.fights[newX][newY] === 1;
@@ -173,22 +300,84 @@ export default function App() {
     setLocation('COMBAT');
   };
 
+  const handlePartyWipedOut = (fallenParty: TCharacter[], wipeX: number, wipeY: number, wipeLevel: number) => {
+    sounds.playBell();
+    const deadHeroes: TCharacter[] = fallenParty.map(h => ({
+      ...h,
+      status: (h.status === 'ASHES' ? 'ASHES' : 'DEAD') as 'DEAD' | 'ASHES',
+      hpLeft: 0,
+      lostLocation: { x: wipeX, y: wipeY, level: wipeLevel },
+      inMaze: false
+    }));
+
+    // Update master roster with the lost coordinates
+    setAllCharacters(prev => {
+      const idMap = new Map(deadHeroes.map(h => [h.id, h]));
+      return prev.map(c => idMap.get(c.id) || c);
+    });
+
+    setLastWipeoutInfo({
+      x: wipeX,
+      y: wipeY,
+      level: wipeLevel,
+      heroes: deadHeroes.map(h => h.name)
+    });
+
+    addAdventureEvent(
+      'LOSS',
+      "Décimation complète de l'escouade au combat",
+      `Tous vos aventuriers ont succombé. Leurs corps sans vie gisent dans les ténèbres du donjon.`,
+      `Victimes : ${deadHeroes.map(h => h.name).join(', ')} · Lieu : Niveau ${wipeLevel}, position (${wipeX}, ${wipeY})`,
+      wipeLevel,
+      { x: wipeX, y: wipeY }
+    );
+
+    // Per Pascal Wizardry 1: Decimated party cannot move or act; slot is cleared
+    setParty([]);
+    setLocation('GAME_OVER');
+  };
+
   const handleCombatEnd = (won: boolean, fled: boolean, alarmTriggered: boolean) => {
     if (fled) {
+      addAdventureEvent(
+        'COMBAT',
+        'Repli stratégique devant les monstres',
+        `Face aux périls du donjon, votre escouade a prudemment fui l'affrontement pour préserver sa survie.`,
+        undefined,
+        dungeonLevel,
+        { x: posX, y: posY }
+      );
       setLocation('MAZE');
       return;
     }
 
     if (!won) {
-      // Party died -> Cemetery
-      sounds.playBell();
-      setLocation('GAME_OVER');
+      // Party died -> Wipeout registered at current coordinates
+      handlePartyWipedOut(party, posX, posY, dungeonLevel);
       return;
     }
 
     // Battle won! Calculate chest chance
+    const monstersDesc = combatGroups.map(g => `${g.count}x ${g.monster.name}`).join(', ');
+    addAdventureEvent(
+      'COMBAT',
+      `Victoire contre ${monstersDesc || 'des monstres'}`,
+      `Vos braves ont terrassé l'ennemi au terme d'un rude corps-à-corps dans les couloirs de pierre.`,
+      `Monstres éliminés : ${monstersDesc || 'Créatures du donjon'}`,
+      dungeonLevel,
+      { x: posX, y: posY }
+    );
+
     if (alarmTriggered) {
       // Alarm calls another fight immediately!
+      addAdventureEvent(
+        'COMBAT',
+        "Alarme du donjon déclenchée !",
+        "Un cri strident a alerté une nouvelle meute de créatures prêtes à bondir !",
+        undefined,
+        dungeonLevel,
+        { x: posX, y: posY }
+      );
       triggerBattleEncounter();
       return;
     }
@@ -199,6 +388,20 @@ export default function App() {
   };
 
   const handleFinishChest = (alarmTriggered: boolean) => {
+    if (chestReward) {
+      const itemDesc = chestReward.itemFound 
+        ? `Objet : ${chestReward.itemFound.name}` 
+        : 'Aucun équipement';
+      addAdventureEvent(
+        'DISCOVERY',
+        `Coffre de monstre ouvert (+${chestReward.goldFound} PO)`,
+        `Votre escouade a inspecté et fouillé le coffre abandonné par les monstres.`,
+        `Trésor : +${chestReward.goldFound} PO · ${itemDesc}`,
+        dungeonLevel,
+        { x: posX, y: posY }
+      );
+    }
+
     if (alarmTriggered) {
       triggerBattleEncounter();
     } else {
@@ -213,12 +416,28 @@ export default function App() {
 
     if (sqrDef?.type === 'STAIRS') {
       if (posX === 0 && posY === 0) {
+        addAdventureEvent(
+          'DISCOVERY',
+          "Escalier vers le Château emprunté",
+          "Vos héros regagnent la sécurité de la Grande Cour et de la garnison de Trebor.",
+          undefined,
+          dungeonLevel,
+          { x: posX, y: posY }
+        );
         setLocation('CASTLE');
       } else {
         alert('Escalier vers les niveaux inférieurs du Labyrinthe.');
       }
     } else if (sqrDef?.type === 'SCNMSG') {
       alert('Une statue gravée d’une inscription de Trebor : « Seul le porteur de l’amulette verra la lumière céleste. »');
+      addAdventureEvent(
+        'DISCOVERY',
+        'Statue gravée de Trebor inspectée',
+        'Une inscription gravée dans la pierre a été déchiffrée : « Seul le porteur de l\'amulette verra la lumière céleste. »',
+        undefined,
+        dungeonLevel,
+        { x: posX, y: posY }
+      );
     } else {
       // Trigger encounter check on search
       if (Math.random() < 0.3) {
@@ -227,13 +446,50 @@ export default function App() {
     }
   };
 
+  const handleEmergencyGuardRetrieval = () => {
+    // Trebor's elite palace guard retrieves the fallen bodies from the maze
+    sounds.playFanfare();
+    const retrieved: TCharacter[] = [];
+    setAllCharacters(prev => prev.map(h => {
+      if (h.lostLocation) {
+        const cleared = { ...h, lostLocation: undefined, inMaze: false };
+        retrieved.push(cleared);
+        return cleared;
+      }
+      return h;
+    }));
+
+    // Put up to 6 retrieved bodies in party to bring to Temple of Cant
+    if (retrieved.length > 0) {
+      setParty(retrieved.slice(0, 6));
+    }
+
+    addAdventureEvent(
+      'RESCUE',
+      "Rapatriement royal par la garde de Trebor",
+      `Les vétérans d'élite du château sont descendus dans les ténèbres pour remonter les dépouilles au Château.`,
+      `Rapatriés : ${retrieved.map(r => r.name).join(', ') || 'Aventuriers'} · Prêts pour le Temple de Cant`,
+      1,
+      { x: 0, y: 0 }
+    );
+
+    setLocation('CASTLE');
+    setPosX(0);
+    setPosY(0);
+    setDirection(0);
+  };
+
   const handleReviveAllParty = () => {
-    // Revives party after game over for smooth continuing
-    setParty(prev => prev.map(h => ({
+    // Quick recovery fallback
+    const revived = allCharacters.map(h => ({
       ...h,
-      status: 'OK',
-      hpLeft: h.hpMax
-    })));
+      status: 'OK' as const,
+      hpLeft: h.hpMax,
+      lostLocation: undefined,
+      inMaze: false
+    }));
+    setAllCharacters(revived);
+    setParty(revived.slice(0, 6));
     setLocation('CASTLE');
     setPosX(0);
     setPosY(0);
@@ -287,6 +543,9 @@ export default function App() {
             setParty={setParty}
             allCharacters={allCharacters}
             setAllCharacters={setAllCharacters}
+            adventureEvents={adventureEvents}
+            onClearAdventureEvents={() => setAdventureEvents([])}
+            onAddAdventureEvent={addAdventureEvent}
             onEnterMaze={() => {
               setLocation('MAZE');
               sounds.playDoor();
@@ -299,12 +558,17 @@ export default function App() {
           <DungeonView
             party={party}
             setParty={setParty}
+            allCharacters={allCharacters}
+            setAllCharacters={setAllCharacters}
             maze={maze}
             x={posX}
             y={posY}
             direction={direction}
             lightLevel={lightLevel}
             acModifier={acModifier}
+            visitedTiles={visitedTiles}
+            setVisitedTiles={setVisitedTiles}
+            onAddAdventureEvent={addAdventureEvent}
             onMove={handleMove}
             onRotate={handleRotate}
             onKickDoor={handleKickDoor}
@@ -337,26 +601,63 @@ export default function App() {
           />
         )}
 
-        {/* GAME OVER CEMETERY SCREEN */}
+        {/* GAME OVER CEMETERY SCREEN (WIZARDRY 1 AUTHENTIC BODY RECOVERY) */}
         {location === 'GAME_OVER' && (
-          <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 bg-black">
-            <div className="p-4 bg-red-950/60 border border-red-700 rounded-full text-red-500 animate-pulse">
-              <ShieldAlert className="w-16 h-16" />
+          <div className="flex flex-col items-center justify-center h-full p-6 text-center space-y-5 bg-black overflow-y-auto">
+            <div className="p-4 bg-red-950/80 border-2 border-red-700 rounded-full text-red-500 animate-pulse">
+              <Skull className="w-14 h-14" />
             </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-serif font-bold text-white tracking-widest">
-                LE CIMETIÈRE DE TREBOR
+            <div className="space-y-2 max-w-xl">
+              <h2 className="text-2xl font-serif font-black text-white tracking-widest uppercase">
+                Escouade Décimée dans le Dédale
               </h2>
-              <p className="text-sm text-red-400 max-w-md mx-auto">
-                Tous vos aventuriers sont tombés dans les ténèbres du labyrinthe...
+              {lastWipeoutInfo ? (
+                <div className="p-3 bg-red-950/40 border border-red-900/60 rounded-xl text-xs text-red-300 space-y-1">
+                  <div className="font-bold text-red-200">
+                    Dernières coordonnées connues : Niveau {lastWipeoutInfo.level}, position ({lastWipeoutInfo.x}, {lastWipeoutInfo.y})
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Héros tombés : {lastWipeoutInfo.heroes.join(', ')}
+                  </div>
+                </div>
+              ) : null}
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Selon le code originel de Wizardry, un groupe d'aventuriers anéanti ne peut plus se déplacer, combattre ni regagner le château.
+                Leurs corps restent étendus dans le donjon à moins qu'une <strong>escouade de secours</strong> ne vienne les récupérer (chaque dépouille occupe un emplacement du groupe).
               </p>
             </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 max-w-lg w-full pt-2">
+              <button
+                onClick={() => {
+                  setLocation('CASTLE');
+                  setPosX(0);
+                  setPosY(0);
+                  setDirection(0);
+                }}
+                className="flex-1 py-3 px-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-2"
+                title="Former une escouade de secours à la taverne et s'aventurer dans le donjon"
+              >
+                <Users className="w-4 h-4" />
+                <span>Former une escouade de secours</span>
+              </button>
+
+              <button
+                onClick={handleEmergencyGuardRetrieval}
+                className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-amber-600/40 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+                title="Rapatrier les corps au château pour les ressusciter au Temple de Cant"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Rapatrier par les gardes de Trebor</span>
+              </button>
+            </div>
+
             <button
               onClick={handleReviveAllParty}
-              className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-sm transition shadow-lg flex items-center gap-2"
+              className="text-[11px] text-slate-500 hover:text-slate-300 underline pt-2"
+              title="Réanimation complète instantanée (facilité de test)"
             >
-              <RotateCcw className="w-4 h-4" />
-              Réanimer l'escouade au Château
+              Mode entraînement : Réanimer miraculeusement toute l'équipe sur place
             </button>
           </div>
         )}

@@ -2,11 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   TCharacter, 
   TMazeFloor, 
-  TItem 
+  TItem,
+  AdventureLogCategory
 } from '../types/wizardry';
 import { DungeonRenderer3D } from '../engine/dungeonRenderer3D';
 import { ITEMS_DATABASE, SPELLS } from '../data/wizardryData';
 import { sounds } from '../utils/soundEffects';
+import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
+import { MiniMap } from './MiniMap';
 import { 
   Compass, 
   Eye, 
@@ -26,18 +29,33 @@ import {
   ArrowRight,
   Shield,
   Coins,
-  Heart
+  Heart,
+  ArrowRightLeft,
+  Skull,
+  Package
 } from 'lucide-react';
 
 interface DungeonViewProps {
   party: TCharacter[];
   setParty: React.Dispatch<React.SetStateAction<TCharacter[]>>;
+  allCharacters?: TCharacter[];
+  setAllCharacters?: React.Dispatch<React.SetStateAction<TCharacter[]>>;
   maze: TMazeFloor;
   x: number;
   y: number;
   direction: number; // 0: N, 1: E, 2: S, 3: W
   lightLevel: number;
   acModifier: number;
+  visitedTiles?: boolean[][];
+  setVisitedTiles?: React.Dispatch<React.SetStateAction<boolean[][]>>;
+  onAddAdventureEvent?: (
+    category: AdventureLogCategory,
+    title: string,
+    description: string,
+    details?: string,
+    level?: number,
+    coordinates?: { x: number; y: number }
+  ) => void;
   onMove: (dx: number, dy: number, isDoor: boolean) => void;
   onRotate: (deltaDir: number) => void;
   onKickDoor: () => void;
@@ -49,12 +67,17 @@ interface DungeonViewProps {
 export const DungeonView: React.FC<DungeonViewProps> = ({
   party,
   setParty,
+  allCharacters = [],
+  setAllCharacters,
   maze,
   x,
   y,
   direction,
   lightLevel,
   acModifier,
+  visitedTiles: propVisitedTiles,
+  setVisitedTiles: propSetVisitedTiles,
+  onAddAdventureEvent,
   onMove,
   onRotate,
   onKickDoor,
@@ -64,22 +87,41 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 }) => {
   const [wireframeMode, setWireframeMode] = useState<boolean>(false);
   const [showMinimap, setShowMinimap] = useState<boolean>(false);
+  const [hudMinimapVisible, setHudMinimapVisible] = useState<boolean>(true);
   const [showCamp, setShowCamp] = useState<boolean>(false);
   const [campCharIdx, setCampCharIdx] = useState<number>(0);
+  const [campTargetIdx, setCampTargetIdx] = useState<number>(0);
   const [campMessage, setCampMessage] = useState<string>('');
-  const [visitedTiles, setVisitedTiles] = useState<boolean[][]>(() => 
+  const [transferringSlotIdx, setTransferringSlotIdx] = useState<number | null>(null);
+  const [localVisitedTiles, setLocalVisitedTiles] = useState<boolean[][]>(() => 
     Array.from({ length: 20 }, () => Array(20).fill(false))
   );
+
+  const visitedTiles = propVisitedTiles || localVisitedTiles;
+  const setVisitedTiles = propSetVisitedTiles || setLocalVisitedTiles;
+
+  // Fallen heroes from any party wipeout lying at current coordinates
+  const fallenHeroesHere = allCharacters.filter(c => 
+    c.lostLocation && 
+    c.lostLocation.level === maze.level && 
+    c.lostLocation.x === x && 
+    c.lostLocation.y === y &&
+    !party.some(p => p.id === c.id)
+  );
+
+  const fallenMarkers = allCharacters
+    .filter(c => c.lostLocation && c.lostLocation.level === maze.level && !party.some(p => p.id === c.id))
+    .map(c => ({ x: c.lostLocation!.x, y: c.lostLocation!.y, name: c.name }));
 
   // Mark current tile visited
   useEffect(() => {
     setVisitedTiles(prev => {
-      if (prev[x][y]) return prev;
+      if (prev[x]?.[y]) return prev;
       const next = prev.map(row => [...row]);
-      next[x][y] = true;
+      if (next[x]) next[x][y] = true;
       return next;
     });
-  }, [x, y]);
+  }, [x, y, setVisitedTiles]);
 
   // Check if current tile is dark
   const sqrType = maze.extraDefs[maze.sqrExtra[x][y]]?.type || 'NORMAL';
@@ -168,7 +210,89 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     setParty([...party]);
   };
 
+  const handleTransferItem = (slotIdx: number, targetHeroId: string) => {
+    const slot = activeCampHero.possessions[slotIdx];
+    if (!slot) return;
+    const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+    if (!itm) return;
+
+    if (slot.equipped && slot.cursed) {
+      setCampMessage(`L'objet ${itm.name} est MAUDIT ! Impossible de le transférer.`);
+      return;
+    }
+
+    const targetHero = party.find(p => p.id === targetHeroId);
+    if (!targetHero) return;
+
+    if (targetHero.possessions.length >= 8) {
+      setCampMessage(`Le sac de ${targetHero.name} est plein (8/8 objets maximum) !`);
+      return;
+    }
+
+    sounds.playTurn();
+
+    // If equipped, unequip first
+    if (slot.equipped) {
+      slot.equipped = false;
+      activeCampHero.armorClass += itm.armorMod;
+    }
+
+    // Remove from activeCampHero
+    activeCampHero.possessions.splice(slotIdx, 1);
+
+    // Add to targetHero (unequipped)
+    targetHero.possessions.push({
+      equipped: false,
+      cursed: slot.cursed,
+      identified: slot.identified,
+      itemIndex: slot.itemIndex
+    });
+
+    setTransferringSlotIdx(null);
+    setParty([...party]);
+    setCampMessage(`📦 ${slot.identified ? itm.name : itm.nameUnknown} a été donné à ${targetHero.name} (${targetHero.possessions.length}/8) !`);
+  };
+
+  const handleRecoverBody = (fallenId: string) => {
+    if (party.length >= 6) {
+      alert("Votre escouade est au complet (6/6) ! Vous devez avoir un emplacement libre pour transporter un corps.");
+      return;
+    }
+    const fallen = allCharacters.find(c => c.id === fallenId);
+    if (!fallen) return;
+
+    sounds.playFanfare();
+    const recovered: TCharacter = {
+      ...fallen,
+      lostLocation: undefined,
+      inMaze: true
+    };
+
+    const nextParty = [...party, recovered];
+    const nextAll = allCharacters.map(c => c.id === fallenId ? recovered : c);
+
+    setParty(nextParty);
+    if (setAllCharacters) {
+      setAllCharacters(nextAll);
+    }
+    setCampMessage(`💀 Le corps de ${fallen.name} a été hissé dans votre escouade (${nextParty.length}/6). Ramenez-le au Temple de Cant au Château pour le ressusciter !`);
+    onAddAdventureEvent?.(
+      'RESCUE',
+      `Dépouille de ${fallen.name} récupérée dans le dédale`,
+      `L'escouade de secours a localisé le corps sans vie de ${fallen.name} au Niveau ${maze.level} (${x}, ${y}) et l'a hissé pour le ramener au sanctuaire de Cant.`,
+      `Statut : Escouade à ${nextParty.length}/6 membres`,
+      maze.level,
+      { x, y }
+    );
+  };
+
   const handleCampCastSpell = (spell: any, targetHero: TCharacter) => {
+    const castCheck = canHeroCastSpells(activeCampHero);
+    if (!castCheck.canCast) {
+      setCampMessage(`Impossible de lancer le sort : ${castCheck.reason}`);
+      return;
+    }
+
     sounds.playSpellCast();
     if (spell.spellType === 'PRIEST') {
       activeCampHero.priestSpells[spell.tier]--;
@@ -179,15 +303,39 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (spell.name === 'DIOS') targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + Math.floor(Math.random() * 8) + 1);
     if (spell.name === 'DIAL') targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + Math.floor(Math.random() * 16) + 2);
     if (spell.name === 'DIALMA') targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + Math.floor(Math.random() * 24) + 3);
-    if (spell.name === 'MADI') {
-      targetHero.hpLeft = targetHero.hpMax;
-      targetHero.poisonAmount = 0;
+    if (spell.name === 'DIALKO') {
       if (targetHero.status === 'PLYZE' || targetHero.status === 'ASLEEP') targetHero.status = 'OK';
     }
     if (spell.name === 'LATUMOFI') targetHero.poisonAmount = 0;
+    if (spell.name === 'MADI') {
+      targetHero.hpLeft = targetHero.hpMax;
+      targetHero.poisonAmount = 0;
+      targetHero.silencedRounds = 0;
+      if (targetHero.status === 'PLYZE' || targetHero.status === 'ASLEEP' || targetHero.status === 'AFRAID') targetHero.status = 'OK';
+    }
+
+    if (spell.name === 'DUMAPIC') {
+      const dirNames = ['NORD', 'EST', 'SUD', 'OUEST'];
+      setVisitedTiles(prev => {
+        const next = prev.map(row => [...row]);
+        for (let dx = -2; dx <= 2; dx++) {
+          for (let dy = -2; dy <= 2; dy++) {
+            const tx = x + dx;
+            const ty = y + dy;
+            if (tx >= 0 && tx < 20 && ty >= 0 && ty < 20) {
+              next[tx][ty] = true;
+            }
+          }
+        }
+        return next;
+      });
+      setParty([...party]);
+      setCampMessage(`✨ DUMAPIC : Coordonnées (X=${x}, Y=${y}) · Orientation ${dirNames[direction]} · Étage ${maze.level} ! Les couloirs environnants sont révélés.`);
+      return;
+    }
 
     setParty([...party]);
-    setCampMessage(`${spell.name} soigné sur ${targetHero.name} (${targetHero.hpLeft}/${targetHero.hpMax} PV) !`);
+    setCampMessage(`${spell.name} lancé sur ${targetHero.name} (${targetHero.hpLeft}/${targetHero.hpMax} PV) !`);
   };
 
   const handleBishopIdentify = (slotIdx: number) => {
@@ -251,6 +399,19 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           )}
 
           <button
+            onClick={() => { setHudMinimapVisible(prev => !prev); sounds.playTurn(); }}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-[11px] font-bold transition ${
+              hudMinimapVisible 
+                ? 'bg-amber-950 text-amber-300 border-amber-600/50' 
+                : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
+            }`}
+            title="Afficher/masquer la minicarte HUD (M)"
+          >
+            <Map className="w-3.5 h-3.5" />
+            <span>Minicarte {hudMinimapVisible ? 'Active' : ''}</span>
+          </button>
+
+          <button
             onClick={() => { setWireframeMode(!wireframeMode); sounds.playTurn(); }}
             className={`px-2.5 py-1 rounded border text-[11px] font-bold transition ${wireframeMode ? 'bg-emerald-950 text-emerald-400 border-emerald-500' : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'}`}
           >
@@ -262,7 +423,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       {/* Center Zone: 3D Viewport & Side Control Pad */}
       <div className="flex-1 flex overflow-hidden">
         {/* 3D First Person Dungeon Viewport */}
-        <div className="flex-1 relative bg-black">
+        <div className="flex-1 relative bg-black overflow-hidden">
           <DungeonRenderer3D
             maze={maze}
             x={x}
@@ -272,6 +433,75 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             isDarkZone={isDarkZone}
             wireframeMode={wireframeMode}
           />
+
+          {/* Fallen Heroes / Lost Bodies Recovery Box */}
+          {fallenHeroesHere.length > 0 && (
+            <div className="absolute top-4 left-4 z-20 max-w-sm bg-red-950/90 border-2 border-red-600/80 rounded-xl p-3.5 shadow-2xl backdrop-blur-md text-xs space-y-2.5 animate-fadeIn">
+              <div className="flex items-center gap-2 font-bold text-red-200">
+                <Skull className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
+                <span className="tracking-wide uppercase">Corps d'aventuriers découverts !</span>
+              </div>
+              <p className="text-red-200/90 text-[11px] leading-relaxed">
+                Les dépouilles de vos anciens compagnons gisent ici dans la poussière du donjon :
+              </p>
+              <div className="space-y-1.5">
+                {fallenHeroesHere.map(fallen => (
+                  <div key={fallen.id} className="flex items-center justify-between bg-black/60 border border-red-900/60 p-2 rounded-lg gap-2">
+                    <div>
+                      <span className="font-bold text-white">{fallen.name}</span>
+                      <span className="text-[10px] text-slate-400 ml-1.5">({fallen.race} {fallen.class} Niv.{fallen.charLevel})</span>
+                    </div>
+                    <button
+                      onClick={() => handleRecoverBody(fallen.id)}
+                      disabled={party.length >= 6}
+                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 disabled:opacity-50 text-white font-bold rounded text-[11px] transition shrink-0"
+                      title={party.length >= 6 ? 'Groupe complet (6/6)' : 'Prendre le corps dans le groupe'}
+                    >
+                      {party.length >= 6 ? 'Groupe 6/6' : 'Hisser le corps'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {party.length >= 6 ? (
+                <div className="text-[10px] text-amber-400 italic">
+                  ⚠️ Votre escouade est au complet (6/6). Vous devez avoir au moins 1 emplacement libre pour transporter une dépouille.
+                </div>
+              ) : (
+                <div className="text-[10px] text-emerald-400">
+                  ✓ Hisser le corps occupe 1 emplacement dans votre escouade ({party.length}/6). Ramenez-le au Temple de Cant !
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Persistent On-Screen Mini-Map HUD Overlay */}
+          {hudMinimapVisible && (
+            <div className="absolute top-4 right-4 z-20 pointer-events-auto max-w-[280px] drop-shadow-2xl">
+              <MiniMap
+                maze={maze}
+                x={x}
+                y={y}
+                direction={direction}
+                visitedTiles={visitedTiles}
+                variant="hud"
+                fallenMarkers={fallenMarkers}
+                onClose={() => setHudMinimapVisible(false)}
+                onExpand={() => setShowMinimap(true)}
+              />
+            </div>
+          )}
+
+          {/* Collapsed HUD Mini-Map button */}
+          {!hudMinimapVisible && (
+            <button
+              onClick={() => { setHudMinimapVisible(true); sounds.playTurn(); }}
+              className="absolute top-4 right-4 z-20 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-amber-400 text-xs font-bold flex items-center gap-1.5 shadow-xl backdrop-blur-md transition hover:scale-105"
+              title="Ouvrir la minicarte (M)"
+            >
+              <Map className="w-3.5 h-3.5" />
+              <span>Ouvrir Minicarte</span>
+            </button>
+          )}
         </div>
 
         {/* Tactical Control Pad */}
@@ -399,6 +629,19 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                     {hero.status}
                   </span>
                 </div>
+
+                {/* Active Status Badges */}
+                <div className="flex flex-wrap gap-1 pt-1 min-h-[16px]">
+                  {getActiveStatusEffects(hero).map(eff => (
+                    <span 
+                      key={eff.id}
+                      className={`text-[9px] font-bold px-1 py-0.2 rounded border ${eff.bgColor} ${eff.borderColor} ${eff.color}`}
+                      title={eff.description}
+                    >
+                      {eff.badge}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
@@ -456,28 +699,71 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
                 {/* Spells available to cast in Camp */}
                 <div className="space-y-2">
-                  <div className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
-                    Sorts Disponibles au Campement :
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
+                      Sorts Disponibles :
+                    </span>
+                    <div className="flex items-center gap-1.5 text-[11px]">
+                      <span className="text-slate-400">Cible :</span>
+                      <select
+                        value={campTargetIdx}
+                        onChange={e => setCampTargetIdx(Number(e.target.value))}
+                        className="bg-slate-800 border border-slate-700 text-amber-300 px-2 py-0.5 rounded text-xs focus:outline-none"
+                      >
+                        {party.map((p, idx) => (
+                          <option key={p.id} value={idx}>
+                            {p.name} ({p.hpLeft}/{p.hpMax} PV {p.status !== 'OK' ? `[${p.status}]` : ''}{p.poisonAmount > 0 ? ` [POISON x${p.poisonAmount}]` : ''})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+
+                  {/* Active Silenced / Afflicted check */}
+                  {(() => {
+                    const castCheck = canHeroCastSpells(activeCampHero);
+                    if (!castCheck.canCast) {
+                      return (
+                        <div className="p-2 bg-red-950/60 border border-red-800/60 rounded text-red-300 text-xs flex items-center gap-2">
+                          <span>⚠️ {castCheck.reason}</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   <div className="space-y-1.5">
                     {SPELLS.filter(sp => sp.camp && activeCampHero.spellsKnown[sp.id]).length === 0 && (
                       <p className="text-slate-500 italic">Aucun sort de soin ou utilitaire appris.</p>
                     )}
-                    {SPELLS.filter(sp => sp.camp && activeCampHero.spellsKnown[sp.id]).map(sp => (
-                      <div key={sp.id} className="p-2.5 bg-slate-800/70 border border-slate-700/50 rounded-lg flex items-center justify-between">
-                        <div>
-                          <div className="font-bold text-white">{sp.name} (T{sp.tier})</div>
-                          <div className="text-[11px] text-slate-400">{sp.description}</div>
+                    {SPELLS.filter(sp => sp.camp && activeCampHero.spellsKnown[sp.id]).map(sp => {
+                      const targetHero = party[campTargetIdx] || activeCampHero;
+                      const hasSlots = sp.spellType === 'PRIEST' 
+                        ? activeCampHero.priestSpells[sp.tier] > 0 
+                        : activeCampHero.mageSpells[sp.tier] > 0;
+                      const canCast = canHeroCastSpells(activeCampHero).canCast && hasSlots;
+
+                      return (
+                        <div key={sp.id} className="p-2.5 bg-slate-800/70 border border-slate-700/50 rounded-lg flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-white flex items-center gap-2">
+                              <span>{sp.name} (T{sp.tier})</span>
+                              <span className="text-[10px] text-amber-400">
+                                {sp.spellType === 'PRIEST' ? `${activeCampHero.priestSpells[sp.tier]} slots` : `${activeCampHero.mageSpells[sp.tier]} slots`}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-400">{sp.description}</div>
+                          </div>
+                          <button
+                            onClick={() => handleCampCastSpell(sp, targetHero)}
+                            disabled={!canCast}
+                            className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-bold transition disabled:opacity-30 disabled:pointer-events-none"
+                          >
+                            Lancer
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleCampCastSpell(sp, activeCampHero)}
-                          disabled={sp.spellType === 'PRIEST' ? activeCampHero.priestSpells[sp.tier] <= 0 : activeCampHero.mageSpells[sp.tier] <= 0}
-                          className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-bold transition disabled:opacity-30 disabled:pointer-events-none"
-                        >
-                          Lancer
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -488,36 +774,94 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                   Équipement & Sac ({activeCampHero.possessions.length}/8) :
                 </div>
                 <div className="space-y-1.5">
+                  {activeCampHero.possessions.length === 0 && (
+                    <p className="text-slate-500 italic py-4 text-center">Sac vide.</p>
+                  )}
                   {activeCampHero.possessions.map((slot, sIdx) => {
                     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
                     if (!itm) return null;
+                    const isTransferringThis = transferringSlotIdx === sIdx;
                     return (
-                      <div key={sIdx} className="p-2.5 bg-slate-800/70 border border-slate-700/50 rounded-lg flex items-center justify-between">
-                        <div>
-                          <div className="font-bold text-white flex items-center gap-1.5">
-                            <span>{slot.identified ? itm.name : itm.nameUnknown}</span>
-                            {slot.equipped && <span className="text-[10px] text-emerald-400 font-bold">[Équipé]</span>}
-                            {slot.cursed && <span className="text-[10px] text-red-400 font-bold">[Maudit]</span>}
+                      <div key={sIdx} className="p-2.5 bg-slate-800/70 border border-slate-700/50 rounded-lg flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-bold text-white flex items-center gap-1.5">
+                              <span>{slot.identified ? itm.name : itm.nameUnknown}</span>
+                              {slot.equipped && <span className="text-[10px] text-emerald-400 font-bold">[Équipé]</span>}
+                              {slot.cursed && <span className="text-[10px] text-red-400 font-bold">[Maudit]</span>}
+                            </div>
+                            <div className="text-[11px] text-slate-400">{itm.objType} {itm.armorMod ? `· CA -${itm.armorMod}` : ''}</div>
                           </div>
-                          <div className="text-[11px] text-slate-400">{itm.objType} {itm.armorMod ? `· CA -${itm.armorMod}` : ''}</div>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleEquipSlot(sIdx)}
+                              className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-semibold transition"
+                            >
+                              {slot.equipped ? 'Retirer' : 'Équiper'}
+                            </button>
+                            {activeCampHero.class === 'BISHOP' && !slot.identified && (
+                              <button
+                                onClick={() => handleBishopIdentify(sIdx)}
+                                className="px-2.5 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-xs font-semibold transition"
+                              >
+                                Identifier
+                              </button>
+                            )}
+                            {party.length > 1 && (
+                              <button
+                                onClick={() => setTransferringSlotIdx(isTransferringThis ? null : sIdx)}
+                                className={`px-2.5 py-1 rounded text-xs font-semibold transition flex items-center gap-1 ${
+                                  isTransferringThis 
+                                    ? 'bg-amber-600 text-white shadow-sm' 
+                                    : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30'
+                                }`}
+                                title="Donner cet objet à un autre compagnon"
+                              >
+                                <ArrowRightLeft className="w-3 h-3" />
+                                <span>Donner</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => handleEquipSlot(sIdx)}
-                            className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-semibold transition"
-                          >
-                            {slot.equipped ? 'Retirer' : 'Équiper'}
-                          </button>
-                          {activeCampHero.class === 'BISHOP' && !slot.identified && (
-                            <button
-                              onClick={() => handleBishopIdentify(sIdx)}
-                              className="px-2.5 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-xs font-semibold transition"
-                            >
-                              Identifier
-                            </button>
-                          )}
-                        </div>
+                        {/* Inline transfer recipient selection */}
+                        {isTransferringThis && (
+                          <div className="pt-2 border-t border-slate-700/50 bg-slate-900/80 p-2.5 rounded-lg space-y-1.5 animate-fadeIn">
+                            <div className="text-[11px] text-slate-300 font-semibold flex items-center justify-between">
+                              <span className="flex items-center gap-1 text-amber-400">
+                                <Package className="w-3.5 h-3.5" />
+                                Transférer à quel compagnon ?
+                              </span>
+                              <button 
+                                onClick={() => setTransferringSlotIdx(null)}
+                                className="text-slate-400 hover:text-white text-[10px] underline"
+                              >
+                                Annuler
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {party.filter(p => p.id !== activeCampHero.id).map(target => {
+                                const isFull = target.possessions.length >= 8;
+                                const isCursedEquipped = slot.equipped && slot.cursed;
+                                return (
+                                  <button
+                                    key={target.id}
+                                    onClick={() => handleTransferItem(sIdx, target.id)}
+                                    disabled={isFull || isCursedEquipped}
+                                    className="px-2.5 py-1 bg-slate-800 hover:bg-amber-600/90 disabled:opacity-40 disabled:pointer-events-none border border-slate-700 hover:border-amber-500 text-white rounded text-xs font-semibold transition flex items-center gap-1.5"
+                                    title={isFull ? 'Inventaire de ce héros plein (8/8)' : isCursedEquipped ? 'Impossible de transférer un objet maudit équipé' : `Transférer à ${target.name}`}
+                                  >
+                                    <span>{target.name}</span>
+                                    <span className={`text-[10px] font-mono ${isFull ? 'text-red-400 font-bold' : 'text-slate-400'}`}>
+                                      ({target.possessions.length}/8)
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -528,41 +872,19 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         </div>
       )}
 
-      {/* MINIMAP MODAL */}
+      {/* FULL TACTICAL CARTOGRAPHY MODAL */}
       {showMinimap && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-700 p-6 rounded-xl shadow-2xl flex flex-col items-center space-y-4">
-            <div className="flex items-center justify-between w-full">
-              <h3 className="text-base font-bold text-white">Carte du Labyrinthe (Étage {maze.level})</h3>
-              <button onClick={() => setShowMinimap(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* 20x20 Grid */}
-            <div className="grid grid-cols-20 gap-0.5 bg-black p-2 rounded-lg border border-slate-800">
-              {Array.from({ length: 20 }).map((_, rIdx) => {
-                const py = 19 - rIdx; // Display North at top
-                return Array.from({ length: 20 }).map((_, px) => {
-                  const isPlayerHere = px === x && py === y;
-                  const visited = visitedTiles[px][py];
-                  return (
-                    <div
-                      key={`${px}-${py}`}
-                      className={`w-3.5 h-3.5 flex items-center justify-center text-[8px] font-bold ${isPlayerHere ? 'bg-amber-500 text-black' : visited ? 'bg-slate-800 text-slate-500' : 'bg-slate-950'}`}
-                      title={`(${px}, ${py})`}
-                    >
-                      {isPlayerHere ? ['↑', '→', '↓', '←'][direction] : ''}
-                    </div>
-                  );
-                });
-              })}
-            </div>
-
-            <div className="text-xs text-slate-400">
-              Coordonnées actuelles : ({x}, {y}) · Direction : {['NORD', 'EST', 'SUD', 'OUEST'][direction]}
-            </div>
-          </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn">
+          <MiniMap
+            maze={maze}
+            x={x}
+            y={y}
+            direction={direction}
+            visitedTiles={visitedTiles}
+            variant="modal"
+            fallenMarkers={fallenMarkers}
+            onClose={() => setShowMinimap(false)}
+          />
         </div>
       )}
     </div>

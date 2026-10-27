@@ -28,6 +28,7 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
   const mazeObjectsRef = useRef<THREE.Group | null>(null);
   const torchLightRef = useRef<THREE.PointLight | null>(null);
   const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
+  const targetTorchIntensityRef = useRef<number>(3.8);
 
   // Animation target values for smooth interpolation
   const targetPosRef = useRef<THREE.Vector3>(new THREE.Vector3(x * 4, 1.6, -y * 4));
@@ -45,14 +46,14 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
   useEffect(() => {
     // Generate high quality procedural textures
     if (!texturesRef.current && typeof document !== 'undefined') {
-      // 1. Stone Wall Texture
+      // 1. Stone Wall Texture (Bright, clear dungeon stone)
       const wallCanvas = document.createElement('canvas');
       wallCanvas.width = 512;
       wallCanvas.height = 512;
       const wCtx = wallCanvas.getContext('2d')!;
       
-      // Base dark stone color
-      wCtx.fillStyle = '#1e242d';
+      // Base warm stone mortar
+      wCtx.fillStyle = '#334155';
       wCtx.fillRect(0, 0, 512, 512);
       
       // Brick pattern
@@ -68,15 +69,15 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
           
           // Brick gradient
           const grad = wCtx.createLinearGradient(bx, by, bx, by + bh);
-          const tone = 30 + Math.floor(Math.random() * 25);
-          grad.addColorStop(0, `rgb(${tone + 20}, ${tone + 20}, ${tone + 25})`);
+          const tone = 70 + Math.floor(Math.random() * 30);
+          grad.addColorStop(0, `rgb(${tone + 35}, ${tone + 35}, ${tone + 40})`);
           grad.addColorStop(1, `rgb(${tone - 10}, ${tone - 10}, ${tone - 5})`);
           wCtx.fillStyle = grad;
           wCtx.fillRect(bx, by, bw, bh);
 
           // Subtle noise specs
-          wCtx.fillStyle = 'rgba(0,0,0,0.25)';
-          for (let p = 0; p < 80; p++) {
+          wCtx.fillStyle = 'rgba(0,0,0,0.18)';
+          for (let p = 0; p < 60; p++) {
             wCtx.fillRect(bx + Math.random() * bw, by + Math.random() * bh, 2, 2);
           }
         }
@@ -88,33 +89,33 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       doorCanvas.height = 512;
       const dCtx = doorCanvas.getContext('2d')!;
       
-      dCtx.fillStyle = '#14181f';
+      dCtx.fillStyle = '#22160d';
       dCtx.fillRect(0, 0, 512, 512);
 
       // Wooden planks
       for (let p = 0; p < 6; p++) {
         const px = 40 + p * 72;
         const pGrad = dCtx.createLinearGradient(px, 30, px + 68, 512);
-        pGrad.addColorStop(0, '#533118');
-        pGrad.addColorStop(0.5, '#3b2210');
-        pGrad.addColorStop(1, '#2c180a');
+        pGrad.addColorStop(0, '#78431f');
+        pGrad.addColorStop(0.5, '#5c3114');
+        pGrad.addColorStop(1, '#45220c');
         dCtx.fillStyle = pGrad;
         dCtx.fillRect(px, 30, 68, 482);
       }
 
       // Iron frame & rivets
-      dCtx.strokeStyle = '#64748b';
+      dCtx.strokeStyle = '#94a3b8';
       dCtx.lineWidth = 14;
       dCtx.strokeRect(30, 25, 452, 487);
       
       // Iron crossbands
-      dCtx.fillStyle = '#334155';
+      dCtx.fillStyle = '#475569';
       dCtx.fillRect(30, 140, 452, 28);
       dCtx.fillRect(30, 360, 452, 28);
 
       // Bronze ring handle
-      dCtx.strokeStyle = '#d97706';
-      dCtx.lineWidth = 12;
+      dCtx.strokeStyle = '#f59e0b';
+      dCtx.lineWidth = 14;
       dCtx.beginPath();
       dCtx.arc(380, 260, 28, 0, Math.PI * 2);
       dCtx.stroke();
@@ -124,11 +125,11 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       floorCanvas.width = 512;
       floorCanvas.height = 512;
       const fCtx = floorCanvas.getContext('2d')!;
-      fCtx.fillStyle = '#0f1318';
+      fCtx.fillStyle = '#1e293b';
       fCtx.fillRect(0, 0, 512, 512);
       for (let fx = 0; fx < 512; fx += 128) {
         for (let fy = 0; fy < 512; fy += 128) {
-          fCtx.fillStyle = `rgba(255, 255, 255, ${0.03 + Math.random() * 0.04})`;
+          fCtx.fillStyle = `rgba(255, 255, 255, ${0.08 + Math.random() * 0.07})`;
           fCtx.fillRect(fx + 2, fy + 2, 124, 124);
         }
       }
@@ -138,8 +139,11 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       ceilCanvas.width = 256;
       ceilCanvas.height = 256;
       const cCtx = ceilCanvas.getContext('2d')!;
-      cCtx.fillStyle = '#080a0d';
+      cCtx.fillStyle = '#1e293b';
       cCtx.fillRect(0, 0, 256, 256);
+      cCtx.fillStyle = '#0f172a';
+      cCtx.fillRect(0, 0, 256, 18);
+      cCtx.fillRect(0, 120, 256, 18);
 
       texturesRef.current = {
         stone: new THREE.CanvasTexture(wallCanvas),
@@ -162,8 +166,8 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     const height = containerRef.current.clientHeight || 400;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x05070a);
-    scene.fog = new THREE.FogExp2(0x05070a, 0.08);
+    scene.background = new THREE.Color(0x0a0f1d);
+    scene.fog = new THREE.FogExp2(0x0a0f1d, 0.025);
 
     const camera = new THREE.PerspectiveCamera(65, width / height, 0.1, 100);
     camera.position.set(x * 4, 1.6, -y * 4);
@@ -173,16 +177,16 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 1.45;
 
     containerRef.current.innerHTML = '';
     containerRef.current.appendChild(renderer.domElement);
 
-    // Lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+    // Brightened ambient luminescence & warm torchlight
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambientLight);
 
-    const torchLight = new THREE.PointLight(0xff9933, 2.4, 28, 1.8);
+    const torchLight = new THREE.PointLight(0xffdfa0, 3.8, 38, 1.2);
     torchLight.position.set(x * 4, 1.8, -y * 4);
     scene.add(torchLight);
 
@@ -215,11 +219,11 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
         currentRotYRef.current += diff * Math.min(1, delta * 14);
         cameraRef.current.rotation.y = currentRotYRef.current;
 
-        // Torch light follows player with organic flicker
+        // Torch light follows player with organic flicker based on current target intensity
         if (torchLightRef.current) {
           torchLightRef.current.position.copy(cameraRef.current.position);
-          const flicker = Math.sin(elapsed * 10) * 0.15 + Math.cos(elapsed * 23) * 0.08;
-          torchLightRef.current.intensity = Math.max(0, 2.2 + flicker);
+          const flicker = Math.sin(elapsed * 7) * 0.1;
+          torchLightRef.current.intensity = Math.max(0.1, targetTorchIntensityRef.current * (1 + flicker * 0.05));
         }
       }
 
@@ -257,16 +261,19 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     if (!sceneRef.current || !torchLightRef.current || !ambientLightRef.current) return;
 
     if (isDarkZone) {
-      sceneRef.current.fog = new THREE.FogExp2(0x000000, 0.4);
-      torchLightRef.current.distance = 4;
-      torchLightRef.current.intensity = 0.3;
-      ambientLightRef.current.intensity = 0.02;
+      sceneRef.current.fog = new THREE.FogExp2(0x000000, 0.35);
+      torchLightRef.current.distance = 6;
+      targetTorchIntensityRef.current = 0.5;
+      ambientLightRef.current.intensity = 0.06;
     } else {
-      const extraLight = Math.min(lightLevel * 0.1, 1.5);
-      sceneRef.current.fog = new THREE.FogExp2(wireframeMode ? 0x001100 : 0x05070a, wireframeMode ? 0.03 : 0.07 - extraLight * 0.02);
-      torchLightRef.current.distance = 24 + lightLevel * 4;
-      torchLightRef.current.intensity = 2.4 + extraLight;
-      ambientLightRef.current.intensity = 0.15 + extraLight * 0.1;
+      const extraLight = Math.min(lightLevel * 0.15, 2.0);
+      sceneRef.current.fog = new THREE.FogExp2(
+        wireframeMode ? 0x001100 : 0x0a0f1d, 
+        wireframeMode ? 0.025 : Math.max(0.015, 0.035 - extraLight * 0.015)
+      );
+      torchLightRef.current.distance = 38 + lightLevel * 6;
+      targetTorchIntensityRef.current = 3.8 + extraLight;
+      ambientLightRef.current.intensity = 0.8 + extraLight * 0.2;
     }
   }, [lightLevel, isDarkZone, wireframeMode]);
 

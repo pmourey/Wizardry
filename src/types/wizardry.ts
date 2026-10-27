@@ -112,8 +112,14 @@ export interface TCharacter {
   wepDamage: THPRec;
   hitMod: number;
   poisonAmount: number;
+  silencedRounds?: number;
   awards: number[]; // chevrons for winning / special milestones
   avatarId?: number;
+  lostLocation?: {
+    x: number;
+    y: number;
+    level: number;
+  };
 }
 
 export type TSpellType = 'MAGE' | 'PRIEST';
@@ -160,6 +166,7 @@ export interface TMonster {
     stone?: boolean;
     poison?: boolean;
     paralyze?: boolean;
+    sleep?: boolean;
     criticalHit?: boolean;
     sleepResist?: boolean;
     fleeChance?: boolean;
@@ -224,3 +231,17 @@ export type GameLocation =
   | 'GAME_OVER'
   | 'VICTORY'
   | 'PYSIDE6_EXPORT';
+
+export type AdventureLogCategory = 'COMBAT' | 'DISCOVERY' | 'LOSS' | 'RESCUE' | 'CASTLE';
+
+export interface AdventureLogEvent {
+  id: string;
+  timestamp: string; // e.g. "14:32"
+  dateStr: string;   // e.g. "Jour 1" or formatted
+  category: AdventureLogCategory;
+  title: string;
+  description: string;
+  details?: string;
+  level?: number;
+  coordinates?: { x: number; y: number };
+}
