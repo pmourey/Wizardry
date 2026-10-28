@@ -2,19 +2,19 @@
  * Wizardry I: Proving Grounds of the Mad Overlord
  * Main Application Component
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   TCharacter, 
   GameLocation, 
   TMazeFloor,
-  AdventureLogEvent,
+  AdventureLogEvent, TMazeEvent,
   AdventureLogCategory
 } from './types/wizardry';
 import { 
   DEFAULT_PARTY, 
   generateLevel1Maze, 
   getMazeForFloor,
-  MONSTERS_DATABASE 
+  MONSTERS_DATABASE, ITEMS_DATABASE 
 } from './data/wizardryData';
 import { CastleView } from './components/CastleView';
 import { DungeonView } from './components/DungeonView';
@@ -315,6 +315,90 @@ export default function App() {
     sounds.setEnabled(next);
   };
 
+  // Per-square usage counters for scenario events (key: level:x:y)
+  const eventUsesRef = useRef<Record<string, number>>(
+    (() => {
+      try {
+        return JSON.parse(localStorage.getItem('wiz1_event_uses') || '{}');
+      } catch {
+        return {};
+      }
+    })()
+  );
+  const markEventUsed = (key: string, count: number) => {
+    eventUsesRef.current[key] = count;
+    localStorage.setItem('wiz1_event_uses', JSON.stringify(eventUsesRef.current));
+  };
+
+  const giveItemToParty = (itemId: number): string | null => {
+    const item = ITEMS_DATABASE.find(i => i.id === itemId);
+    const hero = party.find(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.possessions.length < 8);
+    if (!item || !hero) return null;
+    hero.possessions.push({ equipped: false, cursed: false, identified: true, itemIndex: item.id });
+    setParty([...party]);
+    return `${hero.name} reçoit : ${item.name}`;
+  };
+
+  /** Handles a scenario special square. Returns true when a combat/transition started. */
+  const handleSquareEvent = (ev: TMazeEvent, x: number, y: number, searching: boolean): boolean => {
+    const key = `${dungeonLevel}:${x}:${y}`;
+    const used = eventUsesRef.current[key] || 0;
+    const text = ev.message?.join(' ').replace(/\s+/g, ' ').trim();
+
+    if (ev.type === 'ENCOUNTE') {
+      if (ev.aux0 >= 0 && used >= ev.aux0) return false;
+      markEventUsed(key, used + 1);
+      const id = ev.aux2 + Math.floor(Math.random() * Math.max(1, ev.aux1));
+      triggerBattleEncounter(id);
+      return true;
+    }
+    if (ev.type !== 'SCNMSG') return false;
+
+    const onceOnly = ev.uses === 'ONCE';
+    if (ev.uses === 'DISABLED') return false;
+
+    switch (ev.kind) {
+      case 'MESSAGE':
+      case 'LOOKOUT':
+      case 'ITEM_TO_PASS':
+        if (onceOnly && used > 0) return false;
+        markEventUsed(key, used + 1);
+        if (text) addAdventureEvent('DISCOVERY', 'Inscription ou vision', text, undefined, dungeonLevel, { x, y });
+        return false;
+      case 'ITEM_PICKUP': {
+        if (used > 0) return false;
+        markEventUsed(key, used + 1);
+        const got = ev.itemId !== undefined ? giveItemToParty(ev.itemId) : null;
+        addAdventureEvent('DISCOVERY', 'Un objet est trouvé', text || 'Un objet gît ici.', got || undefined, dungeonLevel, { x, y });
+        return false;
+      }
+      case 'BACK_TO_CASTLE':
+        if (text) addAdventureEvent('DISCOVERY', 'Une lueur étrange', text, undefined, dungeonLevel, { x, y });
+        handleTakeStairs(0, 0, 0);
+        return true;
+      case 'SEARCH_FIGHT': {
+        if (!searching) {
+          if (text) addAdventureEvent('DISCOVERY', 'Une salle singulière', text, 'Fouillez (Inspecter) pour en savoir plus.', dungeonLevel, { x, y });
+          return false;
+        }
+        if (ev.monsterId !== undefined && used === 0) {
+          markEventUsed(key, used + 1);
+          triggerBattleEncounter(ev.monsterId);
+          return true;
+        }
+        if (ev.itemId !== undefined && used === 0) {
+          markEventUsed(key, used + 1);
+          const got = giveItemToParty(ev.itemId);
+          addAdventureEvent('DISCOVERY', 'Fouille fructueuse', text || '', got || undefined, dungeonLevel, { x, y });
+        }
+        return false;
+      }
+      default:
+        if (text) addAdventureEvent('DISCOVERY', 'Message', text, undefined, dungeonLevel, { x, y });
+        return false;
+    }
+  };
+
   // Movement handler in dungeon
   const handleMove = (dx: number, dy: number, isDoor: boolean) => {
     const newX = (posX + dx + 20) % 20;
@@ -324,31 +408,70 @@ export default function App() {
     const sqrCode = maze.sqrExtra[newX][newY];
     const sqrDef = maze.extraDefs[sqrCode];
 
+    // Squares that require an item to enter (doors, locked rooms, level transporter)
+    const gate = maze.events?.find(ev => ev.x === newX && ev.y === newY && ev.kind === 'ITEM_TO_PASS');
+    if (gate && gate.itemId !== undefined) {
+      const hasItem = party.some(h => h.possessions.some(p => p.itemIndex === gate.itemId));
+      if (!hasItem) {
+        sounds.playBump();
+        addAdventureEvent(
+          'DISCOVERY',
+          'Passage bloqué',
+          gate.message?.join(' ').replace(/\s+/g, ' ').trim() || 'Il manque un objet pour passer.',
+          `Objet requis : ${ITEMS_DATABASE.find(i => i.id === gate.itemId)?.name ?? gate.itemId}`,
+          dungeonLevel,
+          { x: newX, y: newY }
+        );
+        return;
+      }
+    }
+
     if (sqrDef) {
-      if (sqrDef.type === 'SPINNER') {
+      if (sqrDef.type === 'CHUTE') {
+        sounds.playBump();
+        addAdventureEvent('LOSS', 'Chute dans un puits !', `Le sol cède : l'escouade tombe au niveau ${sqrDef.aux0}.`, undefined, dungeonLevel, { x: newX, y: newY });
+        handleTakeStairs(sqrDef.aux0, newX, newY);
+        return;
+      } else if (sqrDef.type === 'BUTTONZ') {
+        // Elevator: aux2..aux1 are the reachable levels
+        const answer = window.prompt(`Ascenseur : choisissez un niveau (${sqrDef.aux2} à ${sqrDef.aux1}), ou annulez pour sortir.`);
+        const lvl = answer ? parseInt(answer, 10) : NaN;
+        if (lvl >= sqrDef.aux2 && lvl <= sqrDef.aux1 && lvl !== dungeonLevel) {
+          handleTakeStairs(lvl, newX, newY);
+          return;
+        }
+      } else if (sqrDef.type === 'SPINNER') {
         // Randomize facing direction
         setDirection(Math.floor(Math.random() * 4));
         sounds.playBump();
       } else if (sqrDef.type === 'PIT') {
-        // Pit trap damage
+        // Pit trap: aux0 + aux2 d aux1 damage per hero
+        let totalDamage = 0;
         party.forEach(h => {
           if (h.status === 'OK') {
-            h.hpLeft = Math.max(1, h.hpLeft - (Math.floor(Math.random() * 6) + 1));
+            let dmg = sqrDef.aux0;
+            for (let i = 0; i < Math.max(1, sqrDef.aux2); i++) dmg += Math.floor(Math.random() * Math.max(1, sqrDef.aux1)) + 1;
+            h.hpLeft = Math.max(1, h.hpLeft - dmg);
+            totalDamage += dmg;
           }
         });
         sounds.playBump();
         addAdventureEvent(
           'LOSS',
           'Chute dans une fosse piégée !',
-          `Le sol s'est brusquement dérobé sous les pas de l'escouade. Vos héros subissent des dégâts de chute.`,
+          `Le sol s'est brusquement dérobé sous les pas de l'escouade. Vos héros subissent des dégâts de chute (${totalDamage} PV au total).`,
           undefined,
           dungeonLevel,
           { x: newX, y: newY }
         );
       } else if (sqrDef.type === 'TRANSFER') {
+        sounds.playSpellCast();
+        if (sqrDef.aux0 !== dungeonLevel && sqrDef.aux0 > 0) {
+          handleTakeStairs(sqrDef.aux0, sqrDef.aux2, sqrDef.aux1);
+          return;
+        }
         setPosX(sqrDef.aux2);
         setPosY(sqrDef.aux1);
-        sounds.playSpellCast();
         addAdventureEvent(
           'DISCOVERY',
           'Téléportation magique mystique',
@@ -398,9 +521,12 @@ export default function App() {
     }
     setParty([...updatedParty]);
 
-    // Encounter chance: 15% random step chance or fixed room encounter
-    const isEncounterSquare = sqrDef?.type === 'ENCOUNTE' || maze.fights[newX][newY] === 1;
-    if (isEncounterSquare || Math.random() < 0.12) {
+    // Scenario special squares (messages, items, fixed fights)
+    const event = maze.events?.find(ev => ev.x === newX && ev.y === newY);
+    if (event && handleSquareEvent(event, newX, newY, false)) return;
+
+    // Random encounters only happen on squares flagged as fight zones
+    if (maze.fights[newX][newY] === 1 && Math.random() < 0.15) {
       triggerBattleEncounter();
     }
   };
@@ -422,7 +548,7 @@ export default function App() {
 
   const triggerBattleEncounter = (specialMonsterId?: number) => {
     sounds.playHit();
-    const encounter = initCombatEncounter(dungeonLevel, specialMonsterId);
+    const encounter = initCombatEncounter(dungeonLevel, specialMonsterId, { enemyCalc: maze.enemyCalc });
     setCombatGroups(encounter.groups);
     setCombatSurprise(encounter.surprise);
     setLocation('COMBAT');
@@ -615,14 +741,8 @@ export default function App() {
     if (sqrDef?.type === 'STAIRS') {
       handleTakeStairs(sqrDef.aux0, sqrDef.aux2, sqrDef.aux1);
     } else if (sqrDef?.type === 'SCNMSG') {
-      addAdventureEvent(
-        'DISCOVERY',
-        'Statue gravée de Trebor inspectée',
-        'Une inscription gravée dans la pierre a été déchiffrée : « Seul le porteur de l\'amulette verra la lumière céleste. »',
-        undefined,
-        dungeonLevel,
-        { x: posX, y: posY }
-      );
+      const ev = maze.events?.find(e => e.x === posX && e.y === posY);
+      if (ev) handleSquareEvent(ev, posX, posY, true);
     } else {
       // Trigger encounter check on search
       if (Math.random() < 0.3) {
