@@ -10,6 +10,7 @@ import {
   executeCombatRound 
 } from '../engine/combatEngine';
 import { SPELLS } from '../data/wizardryData';
+import { CombatEffects, isFriendlySingleSpell } from '../engine/spellEngine';
 import { sounds } from '../utils/soundEffects';
 import { 
   Swords, 
@@ -33,7 +34,10 @@ interface CombatViewProps {
   setParty: React.Dispatch<React.SetStateAction<TCharacter[]>>;
   groups: CombatGroup[];
   surprise: 'PARTY' | 'MONSTERS' | 'NONE';
-  onCombatEnd: (won: boolean, fled: boolean, alarmTriggered: boolean) => void;
+  mazeLevel?: number;
+  acModifier?: number;
+  onSpellEffects?: (effects: CombatEffects) => void;
+  onCombatEnd: (won: boolean, fled: boolean, alarmTriggered: boolean, effects?: CombatEffects) => void;
 }
 
 export const CombatView: React.FC<CombatViewProps> = ({
@@ -41,8 +45,22 @@ export const CombatView: React.FC<CombatViewProps> = ({
   setParty,
   groups,
   surprise,
+  mazeLevel = 1,
+  acModifier = 0,
+  onSpellEffects,
   onCombatEnd
 }) => {
+  const [pendingSpell, setPendingSpell] = useState<TSpell | null>(null);
+  const acModifierRef = React.useRef(acModifier);
+  acModifierRef.current = acModifier;
+
+  // Temporary combat AC bonuses only last for one battle
+  useEffect(() => {
+    party.forEach(h => { h.combatAcMod = 0; });
+    return () => { party.forEach(h => { h.combatAcMod = 0; }); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [currentHeroIdx, setCurrentHeroIdx] = useState<number>(0);
   const [actions, setActions] = useState<PlayerCombatAction[]>([]);
   const [roundLog, setRoundLog] = useState<string[]>([]);
@@ -78,7 +96,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
   const safeHeroIdx = Math.min(currentHeroIdx, Math.max(0, livingHeroes.length - 1));
   const activeHero = livingHeroes[safeHeroIdx];
 
-  const handleSelectAction = (type: PlayerCombatAction['actionType'], spellId?: number, targetGrpIdx?: number) => {
+  const handleSelectAction = (type: PlayerCombatAction['actionType'], spellId?: number, targetGrpIdx?: number, targetCharIdx?: number) => {
     sounds.playTurn();
     if (!activeHero) return;
     const heroIndexInParty = party.findIndex(p => p.id === activeHero.id);
@@ -89,12 +107,14 @@ export const CombatView: React.FC<CombatViewProps> = ({
       charIndex: heroIndexInParty,
       actionType: type,
       targetGroupIndex: targetGroup,
+      targetCharIndex: targetCharIdx,
       spellId
     };
 
     const nextActions = [...actions, newAction];
     setActions(nextActions);
     setSelectingSpell(false);
+    setPendingSpell(null);
 
     if (currentHeroIdx + 1 < livingHeroes.length) {
       setCurrentHeroIdx(currentHeroIdx + 1);
@@ -109,13 +129,20 @@ export const CombatView: React.FC<CombatViewProps> = ({
     sounds.playHit();
 
     // Execute combat round with current surprise state
-    const result = executeCombatRound(party, groups, finalActions, currentSurprise);
+    const result = executeCombatRound(party, groups, finalActions, currentSurprise, { mazeLevel, acModifier: acModifierRef.current });
+    const fx = result.effects;
+    if (fx.lightAdd || fx.lightMax || fx.acModifier) onSpellEffects?.(fx);
     setParty([...party]);
     setRoundLog(result.combatLog);
 
     // CRITICAL: Surprise only applies to round 1! From round 2 onward, surprise is always NONE
     if (currentSurprise !== 'NONE') {
       setCurrentSurprise('NONE');
+    }
+
+    if (fx.malor || fx.loktofeit) {
+      setTimeout(() => onCombatEnd(false, true, false, fx), 2000);
+      return;
     }
 
     if (result.fled) {
@@ -522,11 +549,31 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   Annuler
                 </button>
               </div>
+              {pendingSpell && (
+                <div className="p-2.5 bg-slate-900 border border-purple-700 rounded-lg space-y-2">
+                  <div className="text-xs font-bold text-purple-300">{pendingSpell.name} : choisissez le personnage ciblé</div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {party.map((p, idx) => (
+                      <button
+                        key={p.id}
+                        onClick={() => handleSelectAction('SPELL', pendingSpell.id, selectedTargetGroupIdx, idx)}
+                        className="p-2 bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition"
+                      >
+                        <div className="font-bold text-white">{idx + 1}. {p.name}</div>
+                        <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} PV{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {availableSpells.map(sp => (
                   <button
                     key={sp.id}
-                    onClick={() => handleSelectAction('SPELL', sp.id, selectedTargetGroupIdx)}
+                    onClick={() => {
+                      if (isFriendlySingleSpell(sp.name)) setPendingSpell(sp);
+                      else handleSelectAction('SPELL', sp.id, selectedTargetGroupIdx);
+                    }}
                     className="p-2.5 bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition"
                   >
                     <div className="font-bold text-white flex justify-between">

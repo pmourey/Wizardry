@@ -3,6 +3,7 @@
  */
 import { TCharacter, TMonster, TSpell, TStatus } from '../types/wizardry';
 import { MONSTERS_DATABASE, SPELLS } from '../data/wizardryData';
+import { castCombatSpell, CombatEffects, SpellContext } from './spellEngine';
 
 export interface CombatMonsterInstance {
   monsterId: number;
@@ -36,6 +37,7 @@ export interface CombatRoundResult {
   monstersAlive: boolean;
   fled: boolean;
   alarmTriggered: boolean;
+  effects: CombatEffects;
 }
 
 export interface EncounterOptions {
@@ -115,9 +117,11 @@ export function executeCombatRound(
   party: TCharacter[],
   groups: CombatGroup[],
   actions: PlayerCombatAction[],
-  surprise: 'PARTY' | 'MONSTERS' | 'NONE'
+  surprise: 'PARTY' | 'MONSTERS' | 'NONE',
+  ctx: SpellContext = { mazeLevel: 1, acModifier: 0 }
 ): CombatRoundResult {
   const log: string[] = [];
+  const effects: CombatEffects = { lightAdd: 0 };
   let fled = false;
   let alarmTriggered = false;
 
@@ -176,7 +180,7 @@ export function executeCombatRound(
     // Check if battle still ongoing
     const partyHasConscious = party.some(p => p.status === 'OK' && p.hpLeft > 0);
     const monstersRemaining = groups.some(g => g.aliveCount > 0);
-    if (!partyHasConscious || !monstersRemaining || fled) break;
+    if (!partyHasConscious || !monstersRemaining || fled || effects.malor || effects.loktofeit) break;
 
     if (unit.isPlayer) {
       const hero = party[unit.charIndex];
@@ -196,8 +200,8 @@ export function executeCombatRound(
           log.push(`${hero.name} tente de fuir mais les monstres bloquent le passage !`);
         }
       } else if (action.actionType === 'PARRY') {
-        hero.armorClass -= 2;
-        log.push(`${hero.name} se met en garde défensive (-2 CA).`);
+        hero.combatAcMod = (hero.combatAcMod || 0) + 2;
+        log.push(`${hero.name} se met en garde défensive (-2 CA pour le combat).`);
       } else if (action.actionType === 'DISPELL') {
         // Dispell undead ability for Priest, Bishop, Lord
         const targetGroup = groups[action.targetGroupIndex ?? 0];
@@ -222,7 +226,7 @@ export function executeCombatRound(
         const spell = SPELLS.find(s => s.id === action.spellId);
         if (spell) {
           log.push(`${hero.name} entonne le sort ${spell.name} !`);
-          executePlayerSpell(hero, spell, action, groups, party, log);
+          castCombatSpell(hero, spell, action, groups, party, log, ctx, effects);
         }
       } else if (action.actionType === 'FIGHT') {
         // According to Pascal Wizardry 1 (line 4446: IF MYCHARX < 3 THEN FIGHT):
@@ -258,7 +262,7 @@ export function executeCombatRound(
       const monsterInst = group.instances[unit.instanceIndex];
       if (!monsterInst || monsterInst.status !== 'OK' || monsterInst.hpLeft <= 0) continue;
 
-      executeMonsterTurn(group, monsterInst, party, log, () => { alarmTriggered = true; });
+      executeMonsterTurn(group, monsterInst, party, log, () => { alarmTriggered = true; }, ctx.acModifier + (effects.acModifier ?? 0));
     }
   }
 
@@ -316,7 +320,8 @@ export function executeCombatRound(
     partyAlive,
     monstersAlive,
     fled,
-    alarmTriggered
+    alarmTriggered,
+    effects
   };
 }
 
@@ -341,7 +346,7 @@ function executeHeroAttack(
     const roll = Math.floor(Math.random() * 20) + 1;
     if (roll >= toHitThreshold) {
       hitsLanded++;
-      const dam = hero.wepDamage.hpMinAdd + Math.floor(Math.random() * hero.wepDamage.hpFac * hero.wepDamage.level) + 1;
+      const dam = Math.max(1, rollDice(hero.wepDamage));
       // 1.5x bonus damage against helpless target
       totalDamage += isHelpless ? Math.floor(dam * 1.5) : dam;
 
@@ -381,222 +386,13 @@ function executeHeroAttack(
   }
 }
 
-function executePlayerSpell(
-  hero: TCharacter,
-  spell: TSpell,
-  action: PlayerCombatAction,
-  groups: CombatGroup[],
-  party: TCharacter[],
-  log: string[]
-) {
-  // Check if hero is silenced
-  if (hero.silencedRounds && hero.silencedRounds > 0) {
-    log.push(`🔇 ${hero.name} est sous l'effet du silence magique (MONTINO) et ne peut prononcer aucune incantation !`);
-    return;
-  }
-
-  // Deduct spell slot
-  if (spell.spellType === 'MAGE') {
-    hero.mageSpells[spell.tier] = Math.max(0, (hero.mageSpells[spell.tier] || 0) - 1);
-  } else {
-    hero.priestSpells[spell.tier] = Math.max(0, (hero.priestSpells[spell.tier] || 0) - 1);
-  }
-
-  // Execute spell effect
-  switch (spell.name) {
-    case 'HALITO': {
-      const group = groups[action.targetGroupIndex ?? 0];
-      const target = group?.instances.find(i => i.status !== 'DEAD' && i.hpLeft > 0);
-      if (target) {
-        const dmg = Math.floor(Math.random() * 8) + 1;
-        target.hpLeft -= dmg;
-        if (target.status === 'ASLEEP') target.status = 'OK';
-        log.push(`Une boule de feu s’abat sur ${group.identified ? group.monster.name : group.monster.nameUnknown} pour ${dmg} dégâts !`);
-        if (target.hpLeft <= 0) {
-          target.status = 'DEAD';
-          group.aliveCount = Math.max(0, group.aliveCount - 1);
-          log.push(`L'ennemi est consumé par les flammes !`);
-        }
-      }
-      break;
-    }
-    case 'KATINO': {
-      const group = groups[action.targetGroupIndex ?? 0];
-      if (group) {
-        let count = 0;
-        group.instances.forEach(inst => {
-          if (inst.status === 'OK' && Math.random() * 100 < 65) {
-            inst.status = 'ASLEEP';
-            count++;
-          }
-        });
-        log.push(`💤 KATINO plonge ${count} monstre(s) dans un profond sommeil magique.`);
-      }
-      break;
-    }
-    case 'MANIFO': {
-      const group = groups[action.targetGroupIndex ?? 0];
-      if (group) {
-        let count = 0;
-        group.instances.forEach(inst => {
-          if (inst.status === 'OK' && Math.random() * 100 < 55) {
-            inst.status = 'PLYZE';
-            count++;
-          }
-        });
-        log.push(`⚡ MANIFO paralyse et immobilise ${count} monstre(s) !`);
-      }
-      break;
-    }
-    case 'MONTINO': {
-      const group = groups[action.targetGroupIndex ?? 0];
-      if (group) {
-        let count = 0;
-        group.instances.forEach(inst => {
-          if (inst.status !== 'DEAD' && Math.random() * 100 < 70) {
-            inst.silencedRounds = 3;
-            count++;
-          }
-        });
-        log.push(`🔇 MONTINO étouffe la parole magique de ${count} monstre(s) pour 3 tours !`);
-      }
-      break;
-    }
-    case 'LATUMOFI': {
-      const targetHero = party[action.targetCharIndex ?? 0] || hero;
-      if (targetHero.poisonAmount > 0) {
-        targetHero.poisonAmount = 0;
-        log.push(`🌿 Le sort LATUMOFI neutralise totalement le poison dans le sang de ${targetHero.name} !`);
-      } else {
-        log.push(`${targetHero.name} n'était pas empoisonné.`);
-      }
-      break;
-    }
-    case 'DIALKO': {
-      const targetHero = party[action.targetCharIndex ?? 0] || hero;
-      let cured = false;
-      if (targetHero.status === 'PLYZE') {
-        targetHero.status = 'OK';
-        cured = true;
-        log.push(`✨ Le sort DIALKO dissipe la paralysie de ${targetHero.name} !`);
-      }
-      if (targetHero.status === 'ASLEEP') {
-        targetHero.status = 'OK';
-        cured = true;
-        log.push(`☀️ Le sort DIALKO réveille ${targetHero.name} de son sommeil magique !`);
-      }
-      if (!cured) {
-        log.push(`${targetHero.name} n'était ni paralysé ni endormi.`);
-      }
-      break;
-    }
-    case 'MAHALITO':
-    case 'MOLITO':
-    case 'LAHALITO':
-    case 'MADALTO':
-    case 'LITOKAN':
-    case 'LORTO': {
-      const group = groups[action.targetGroupIndex ?? 0];
-      if (group) {
-        const diceCount = spell.name === 'MAHALITO' ? 4 : spell.name === 'MADALTO' ? 8 : 6;
-        const diceSides = spell.name === 'MADALTO' ? 8 : 6;
-        let groupDmg = 0;
-        for (let d = 0; d < diceCount; d++) groupDmg += Math.floor(Math.random() * diceSides) + 1;
-        
-        let defeated = 0;
-        group.instances.forEach(inst => {
-          if (inst.status !== 'DEAD' && inst.hpLeft > 0) {
-            inst.hpLeft -= groupDmg;
-            if (inst.status === 'ASLEEP') inst.status = 'OK';
-            if (inst.hpLeft <= 0) {
-              inst.status = 'DEAD';
-              defeated++;
-            }
-          }
-        });
-        group.aliveCount = Math.max(0, group.aliveCount - defeated);
-        log.push(`Le sort dévaste le groupe pour ${groupDmg} dégâts chacun ! (${defeated} terrassé(s))`);
-      }
-      break;
-    }
-    case 'TILTOWAI':
-    case 'MALIKTO': {
-      // Nuclear blast hitting all monsters in all groups
-      log.push(`💥 UNE EXPLOSION TITANESQUE RAYE LE CHAMP DE BATAILLE !`);
-      groups.forEach(grp => {
-        let def = 0;
-        grp.instances.forEach(inst => {
-          if (inst.status !== 'DEAD' && inst.hpLeft > 0) {
-            let dmg = 0;
-            for (let d = 0; d < 10; d++) dmg += Math.floor(Math.random() * 15) + 1;
-            inst.hpLeft -= dmg;
-            if (inst.status === 'ASLEEP') inst.status = 'OK';
-            if (inst.hpLeft <= 0) {
-              inst.status = 'DEAD';
-              def++;
-            }
-          }
-        });
-        grp.aliveCount = Math.max(0, grp.aliveCount - def);
-      });
-      break;
-    }
-    case 'MAKANITO': {
-      // Chokes enemies under level 8
-      let killed = 0;
-      groups.forEach(grp => {
-        if (grp.monster.level <= 7) {
-          grp.instances.forEach(inst => {
-            if (inst.status !== 'DEAD') {
-              inst.status = 'DEAD';
-              inst.hpLeft = 0;
-              killed++;
-            }
-          });
-          grp.aliveCount = 0;
-        }
-      });
-      log.push(`Un gaz asphyxiant étouffe instantanément ${killed} créature(s) de faible niveau !`);
-      break;
-    }
-    case 'DIOS':
-    case 'DIAL':
-    case 'DIALMA':
-    case 'MADI': {
-      const targetHero = party[action.targetCharIndex ?? 0] || hero;
-      const healAmt = spell.name === 'DIOS' ? Math.floor(Math.random() * 8) + 1 :
-                      spell.name === 'DIAL' ? Math.floor(Math.random() * 16) + 2 :
-                      spell.name === 'DIALMA' ? Math.floor(Math.random() * 24) + 3 :
-                      targetHero.hpMax;
-      targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + healAmt);
-      if (spell.name === 'MADI') {
-        targetHero.poisonAmount = 0;
-        targetHero.silencedRounds = 0;
-        if (targetHero.status === 'PLYZE' || targetHero.status === 'ASLEEP' || targetHero.status === 'AFRAID') {
-          targetHero.status = 'OK';
-        }
-      }
-      log.push(`${targetHero.name} reçoit la grâce divine et récupère ${healAmt} PV (${targetHero.hpLeft}/${targetHero.hpMax}) !`);
-      break;
-    }
-    case 'LATUMAPI': {
-      groups.forEach(g => { g.identified = true; });
-      log.push(`Une illumination divine révèle l’identité exacte de tous les monstres !`);
-      break;
-    }
-    default: {
-      log.push(`L'énergie mystique crépite.`);
-      break;
-    }
-  }
-}
-
 function executeMonsterTurn(
   group: CombatGroup,
   inst: CombatMonsterInstance,
   party: TCharacter[],
   log: string[],
-  onAlarm: () => void
+  onAlarm: () => void,
+  acModifier = 0
 ) {
   const monster = group.monster;
   const monsterName = group.identified ? monster.name : monster.nameUnknown;
@@ -674,8 +470,7 @@ function executeMonsterTurn(
   const eligibleMeleeTargets = frontRankCandidates.length > 0 ? frontRankCandidates : livingHeroes;
   const chosenTarget = eligibleMeleeTargets[Math.floor(Math.random() * eligibleMeleeTargets.length)].hero;
 
-  const targetAC = chosenTarget.armorClass;
-  const toHitThreshold = Math.max(1, Math.min(19, 20 - targetAC - monster.level));
+  const toHitThreshold = Math.max(1, Math.min(19, 20 - chosenTarget.armorClass - monster.level + (chosenTarget.combatAcMod || 0) + acModifier));
 
   let totalDmg = 0;
   let hits = 0;
@@ -685,7 +480,7 @@ function executeMonsterTurn(
     if (roll >= toHitThreshold) {
       hits++;
       const attackSpec = monster.attacks[a] || { level: 1, hpFac: 6, hpMinAdd: 1 };
-      const dam = attackSpec.hpMinAdd + Math.floor(Math.random() * attackSpec.hpFac * attackSpec.level) + 1;
+      const dam = Math.max(1, rollDice(attackSpec));
       totalDmg += dam;
     }
   }

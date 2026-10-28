@@ -107,6 +107,7 @@ export interface TCharacter {
   spellsKnown: boolean[]; // 0..50
   mageSpells: number[]; // 1..7 (slots left per tier)
   priestSpells: number[]; // 1..7 (slots left per tier)
+  combatAcMod?: number; // temporary AC bonus during a combat (positive = better protection)
   armorClass: number; // AC: 10 is unarmored, lower is better, negative is very strong
   healPts: number;
   critHit: boolean;

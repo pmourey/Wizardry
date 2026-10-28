@@ -2,6 +2,7 @@
  * Wizardry I: Proving Grounds of the Mad Overlord
  * Main Application Component
  */
+import { CombatEffects } from './engine/spellEngine';
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   TCharacter, 
@@ -603,7 +604,23 @@ export default function App() {
     setLocation('GAME_OVER');
   };
 
-  const handleCombatEnd = (won: boolean, fled: boolean, alarmTriggered: boolean) => {
+  const handleCombatSpellEffects = (fx: CombatEffects) => {
+    if (fx.lightAdd) setLightLevel(prev => prev + fx.lightAdd);
+    if (fx.lightMax) setLightLevel(32000);
+    if (fx.acModifier) setAcModifier(fx.acModifier);
+  };
+
+  const handleCombatEnd = (won: boolean, fled: boolean, alarmTriggered: boolean, fx?: CombatEffects) => {
+    if (fx?.loktofeit) {
+      setParty(prev => prev.map(h => ({ ...h, gold: 0, possessions: [] })));
+      setAllCharacters(prev => prev.map(c => party.some(p => p.id === c.id) ? { ...c, gold: 0, possessions: [] } : c));
+      handleTakeStairs(0, 0, 0);
+      return;
+    }
+    if (fx?.malor) {
+      handleTakeStairs(fx.malor.level, fx.malor.x, fx.malor.y);
+      return;
+    }
     if (fled) {
       addAdventureEvent(
         'COMBAT',
@@ -915,6 +932,9 @@ export default function App() {
             setParty={setParty}
             groups={combatGroups}
             surprise={combatSurprise}
+            mazeLevel={dungeonLevel}
+            acModifier={acModifier}
+            onSpellEffects={handleCombatSpellEffects}
             onCombatEnd={handleCombatEnd}
           />
         )}
