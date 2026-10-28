@@ -544,8 +544,13 @@ export default function App() {
   };
 
   const handleKickDoor = () => {
+    const wall = [maze.n, maze.e, maze.s, maze.w][direction][posX][posY];
+    // Kicking only works on a door (visible or secret), never on a plain wall or open passage
+    if (wall !== 'DOOR' && wall !== 'HIDEDOOR') {
+      sounds.playBump();
+      return;
+    }
     sounds.playDoor();
-    // Try opening door directly ahead
     handleMove(
       direction === 1 ? 1 : direction === 3 ? -1 : 0,
       direction === 0 ? 1 : direction === 2 ? -1 : 0,
