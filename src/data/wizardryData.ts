@@ -1,7 +1,8 @@
 /**
  * Authentic Wizardry I Data Tables matching Pascal reverse engineering
  */
-import { TItem, TMonster, TRace, TClass, TAlign, TSpell, TCharacter, TMazeFloor } from '../types/wizardry';
+import { TItem, TMonster, TRace, TClass, TAlign, TSpell, TCharacter, TMazeFloor, TReward, PGMessage, TWall } from '../types/wizardry';
+import { PG_ITEMS, PG_MONSTERS, PG_REWARDS, PG_MESSAGES, PG_MAZES, PG_SPELL_TABLE } from './provingGroundsData';
 
 export const RACE_BASE_ATTRIBUTES: Record<TRace, Record<string, number>> = {
   HUMAN:  { STRENGTH: 8,  IQ: 8,  PIETY: 5,  VITALITY: 8,  AGILITY: 8,  LUCK: 9 },
@@ -24,7 +25,7 @@ export const EXP_TABLES: Record<TClass, number[]> = {
 };
 
 // All 50 Spells from Pascal source (0..50)
-export const SPELLS: TSpell[] = [
+const SPELL_TEXTS: TSpell[] = [
   // Dummy / 0
   { id: 0, name: 'NONE', tier: 0, spellType: 'MAGE', target: 'GENERIC', hash: 0, combat: false, camp: false, description: '' },
   // Mage Spells Tier 1 (1..4)
@@ -94,694 +95,32 @@ export const SPELLS: TSpell[] = [
   { id: 50, name: 'KADORTO', tier: 7, spellType: 'PRIEST', target: 'PERSON', hash: 6673, combat: false, camp: true, description: 'Ressuscitation suprême d’un corps ou de cendres avec PV max.' }
 ];
 
-export const ITEMS_DATABASE: TItem[] = [
-  {
-    id: 0,
-    name: 'BROKEN ITEM',
-    nameUnknown: 'DEBRIS',
-    objType: 'MISC',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 0,
-    boltacStock: 0,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: true, PRIEST: true, THIEF: true, BISHOP: true, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 0,
-    wepHitMod: 0,
-    wepHpDam: { level: 1, hpFac: 1, hpMinAdd: 0 },
-    extraSwings: 0,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 1,
-    name: 'DAGGER',
-    nameUnknown: 'KNIFE',
-    objType: 'WEAPON',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 5,
-    boltacStock: 10,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: true, PRIEST: false, THIEF: true, BISHOP: true, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 0,
-    wepHitMod: 0,
-    wepHpDam: { level: 1, hpFac: 4, hpMinAdd: 1 },
-    extraSwings: 1,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 2,
-    name: 'SHORT SWORD',
-    nameUnknown: 'SWORD',
-    objType: 'WEAPON',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 15,
-    boltacStock: 8,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: false, THIEF: true, BISHOP: false, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 0,
-    wepHitMod: 0,
-    wepHpDam: { level: 1, hpFac: 6, hpMinAdd: 1 },
-    extraSwings: 1,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 3,
-    name: 'LONG SWORD',
-    nameUnknown: 'BLADE',
-    objType: 'WEAPON',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 25,
-    boltacStock: 6,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: false, THIEF: false, BISHOP: false, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 0,
-    wepHitMod: 0,
-    wepHpDam: { level: 1, hpFac: 8, hpMinAdd: 1 },
-    extraSwings: 1,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 4,
-    name: 'ANOINTED MACE',
-    nameUnknown: 'MACE',
-    objType: 'WEAPON',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 30,
-    boltacStock: 6,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: true, THIEF: false, BISHOP: true, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 0,
-    wepHitMod: 0,
-    wepHpDam: { level: 2, hpFac: 3, hpMinAdd: 1 },
-    extraSwings: 1,
-    critHit: false,
-    wepVsType: [10] // Vs Undead
-  },
-  {
-    id: 5,
-    name: 'STAFF',
-    nameUnknown: 'STICK',
-    objType: 'WEAPON',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 10,
-    boltacStock: 10,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: true, PRIEST: true, THIEF: true, BISHOP: true, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 0,
-    wepHitMod: 0,
-    wepHpDam: { level: 1, hpFac: 5, hpMinAdd: 0 },
-    extraSwings: 1,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 6,
-    name: 'ROBES',
-    nameUnknown: 'CLOTHING',
-    objType: 'ARMOR',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 15,
-    boltacStock: 10,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: true, PRIEST: true, THIEF: true, BISHOP: true, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 1, // AC 9
-    wepHitMod: 0,
-    wepHpDam: { level: 0, hpFac: 0, hpMinAdd: 0 },
-    extraSwings: 0,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 7,
-    name: 'LEATHER ARMOR',
-    nameUnknown: 'LEATHER',
-    objType: 'ARMOR',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 50,
-    boltacStock: 6,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: true, THIEF: true, BISHOP: true, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 2, // AC 8
-    wepHitMod: 0,
-    wepHpDam: { level: 0, hpFac: 0, hpMinAdd: 0 },
-    extraSwings: 0,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 8,
-    name: 'CHAIN MAIL',
-    nameUnknown: 'CHAIN SUIT',
-    objType: 'ARMOR',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 90,
-    boltacStock: 5,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: true, THIEF: false, BISHOP: false, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 4, // AC 6
-    wepHitMod: 0,
-    wepHpDam: { level: 0, hpFac: 0, hpMinAdd: 0 },
-    extraSwings: 0,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 9,
-    name: 'BREASTPLATE',
-    nameUnknown: 'PLATE SUIT',
-    objType: 'ARMOR',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 200,
-    boltacStock: 4,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: true, THIEF: false, BISHOP: false, SAMURAI: true, LORD: true, NINJA: false },
-    healPts: 0,
-    armorMod: 5, // AC 5
-    wepHitMod: 0,
-    wepHpDam: { level: 0, hpFac: 0, hpMinAdd: 0 },
-    extraSwings: 0,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 10,
-    name: 'SMALL SHIELD',
-    nameUnknown: 'SHIELD',
-    objType: 'SHIELD',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 20,
-    boltacStock: 6,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: true, THIEF: true, BISHOP: false, SAMURAI: true, LORD: true, NINJA: false },
-    healPts: 0,
-    armorMod: 1, // -1 AC
-    wepHitMod: 0,
-    wepHpDam: { level: 0, hpFac: 0, hpMinAdd: 0 },
-    extraSwings: 0,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 11,
-    name: 'IRON HELMET',
-    nameUnknown: 'HELMET',
-    objType: 'HELMET',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 100,
-    boltacStock: 4,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: true, THIEF: false, BISHOP: false, SAMURAI: true, LORD: true, NINJA: false },
-    healPts: 0,
-    armorMod: 1, // -1 AC
-    wepHitMod: 0,
-    wepHpDam: { level: 0, hpFac: 0, hpMinAdd: 0 },
-    extraSwings: 0,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 12,
-    name: 'COPPER GLOVES',
-    nameUnknown: 'GAUNTLETS',
-    objType: 'GAUNTLET',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 60,
-    boltacStock: 4,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: true, THIEF: false, BISHOP: false, SAMURAI: true, LORD: true, NINJA: false },
-    healPts: 0,
-    armorMod: 1,
-    wepHitMod: 0,
-    wepHpDam: { level: 0, hpFac: 0, hpMinAdd: 0 },
-    extraSwings: 0,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 13,
-    name: 'POTION OF DIOS',
-    nameUnknown: 'POTION',
-    objType: 'SPECIAL',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 100,
-    price: 50,
-    boltacStock: 10,
-    spellPower: 23, // DIOS
-    classUse: { FIGHTER: true, MAGE: true, PRIEST: true, THIEF: true, BISHOP: true, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 0,
-    wepHitMod: 0,
-    wepHpDam: { level: 0, hpFac: 0, hpMinAdd: 0 },
-    extraSwings: 0,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 14,
-    name: 'POTION OF LATUMOFI',
-    nameUnknown: 'ELIXIR',
-    objType: 'SPECIAL',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 100,
-    price: 150,
-    boltacStock: 5,
-    spellPower: 37, // LATUMOFI
-    classUse: { FIGHTER: true, MAGE: true, PRIEST: true, THIEF: true, BISHOP: true, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 0,
-    wepHitMod: 0,
-    wepHpDam: { level: 0, hpFac: 0, hpMinAdd: 0 },
-    extraSwings: 0,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 15,
-    name: 'SILVER SWORD +1',
-    nameUnknown: 'GLOWING BLADE',
-    objType: 'WEAPON',
-    align: 'GOOD',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 1500,
-    boltacStock: 2,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: false, THIEF: false, BISHOP: false, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 0,
-    wepHitMod: 1,
-    wepHpDam: { level: 2, hpFac: 5, hpMinAdd: 2 },
-    extraSwings: 2,
-    critHit: false,
-    wepVsType: [10] // Undead
-  },
-  {
-    id: 16,
-    name: 'SWORD OF SLICING',
-    nameUnknown: 'CURSED SWORD',
-    objType: 'WEAPON',
-    align: 'EVIL',
-    cursed: true,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 300,
-    boltacStock: 1,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: false, THIEF: true, BISHOP: false, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: -2,
-    wepHitMod: -2,
-    wepHpDam: { level: 1, hpFac: 4, hpMinAdd: 0 },
-    extraSwings: 1,
-    critHit: false,
-    wepVsType: []
-  },
-  {
-    id: 17,
-    name: 'BLADE CUSINART',
-    nameUnknown: 'WHIRLING BLADE',
-    objType: 'WEAPON',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 0,
-    changeTo: 0,
-    changeChance: 0,
-    price: 15000,
-    boltacStock: 1,
-    spellPower: 0,
-    classUse: { FIGHTER: true, MAGE: false, PRIEST: false, THIEF: false, BISHOP: false, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 0,
-    armorMod: 0,
-    wepHitMod: 3,
-    wepHpDam: { level: 3, hpFac: 9, hpMinAdd: 4 },
-    extraSwings: 4,
-    critHit: true,
-    wepVsType: []
-  },
-  {
-    id: 18,
-    name: 'MURASAMA BLADE',
-    nameUnknown: 'KATANA',
-    objType: 'WEAPON',
-    align: 'GOOD',
-    cursed: false,
-    special: 1, // Strengh booster
-    changeTo: 0,
-    changeChance: 0,
-    price: 50000,
-    boltacStock: 1,
-    spellPower: 0,
-    classUse: { FIGHTER: false, MAGE: false, PRIEST: false, THIEF: false, BISHOP: false, SAMURAI: true, LORD: false, NINJA: false },
-    healPts: 1,
-    armorMod: 0,
-    wepHitMod: 4,
-    wepHpDam: { level: 4, hpFac: 10, hpMinAdd: 5 },
-    extraSwings: 5,
-    critHit: true,
-    wepVsType: []
-  },
-  {
-    id: 94,
-    name: 'AMULET OF WERDNA',
-    nameUnknown: 'ANCIENT AMULET',
-    objType: 'SPECIAL',
-    align: 'UNALIGN',
-    cursed: false,
-    special: 21,
-    changeTo: 0,
-    changeChance: 0,
-    price: 100000,
-    boltacStock: 0,
-    spellPower: 20, // MAHAMAN
-    classUse: { FIGHTER: true, MAGE: true, PRIEST: true, THIEF: true, BISHOP: true, SAMURAI: true, LORD: true, NINJA: true },
-    healPts: 5,
-    armorMod: 5,
-    wepHitMod: 5,
-    wepHpDam: { level: 5, hpFac: 10, hpMinAdd: 10 },
-    extraSwings: 5,
-    critHit: true,
-    wepVsType: []
-  }
-];
+// Tier, target and hash come from the scenario database; names/descriptions are kept above
+export const SPELLS: TSpell[] = SPELL_TEXTS.map(sp => {
+  const rec = PG_SPELL_TABLE[sp.id];
+  return sp.id > 0 && rec ? { ...sp, hash: rec.hash, tier: rec.tier, target: rec.target } : sp;
+});
 
-export const MONSTERS_DATABASE: TMonster[] = [
-  {
-    id: 0,
-    name: 'BUBBLY SLIME',
-    namePlural: 'BUBBLY SLIMES',
-    nameUnknown: 'SLIME',
-    nameUnknownPlural: 'SLIMES',
-    picId: 1,
-    level: 1,
-    hp: { level: 1, hpFac: 2, hpMinAdd: 1 },
-    monsterClass: 6,
-    ac: 12,
-    attackCount: 1,
-    attacks: [{ level: 1, hpFac: 2, hpMinAdd: 0 }],
-    expReward: 35,
-    drainAmount: 0,
-    healPts: 0,
-    reward1: 1,
-    reward2: 1,
-    teamId: 0,
-    teamPercent: 0,
-    mageSpells: 0,
-    priestSpells: 0,
-    unique: 0,
-    breathe: 0,
-    magicResistance: 0,
-    specialPower: {}
-  },
-  {
-    id: 1,
-    name: 'ORC',
-    namePlural: 'ORCS',
-    nameUnknown: 'HUMANOID',
-    nameUnknownPlural: 'HUMANOIDS',
-    picId: 2,
-    level: 1,
-    hp: { level: 1, hpFac: 6, hpMinAdd: 2 },
-    monsterClass: 0,
-    ac: 9,
-    attackCount: 1,
-    attacks: [{ level: 1, hpFac: 6, hpMinAdd: 0 }],
-    expReward: 95,
-    drainAmount: 0,
-    healPts: 0,
-    reward1: 1,
-    reward2: 1,
-    teamId: 2, // calls Kobolds
-    teamPercent: 40,
-    mageSpells: 0,
-    priestSpells: 0,
-    unique: 0,
-    breathe: 0,
-    magicResistance: 0,
-    specialPower: {}
-  },
-  {
-    id: 2,
-    name: 'KOBOLD',
-    namePlural: 'KOBOLDS',
-    nameUnknown: 'LITTLE BEAST',
-    nameUnknownPlural: 'LITTLE BEASTS',
-    picId: 3,
-    level: 1,
-    hp: { level: 1, hpFac: 4, hpMinAdd: 1 },
-    monsterClass: 0,
-    ac: 10,
-    attackCount: 1,
-    attacks: [{ level: 1, hpFac: 4, hpMinAdd: 0 }],
-    expReward: 70,
-    drainAmount: 0,
-    healPts: 0,
-    reward1: 1,
-    reward2: 1,
-    teamId: 0,
-    teamPercent: 0,
-    mageSpells: 0,
-    priestSpells: 0,
-    unique: 0,
-    breathe: 0,
-    magicResistance: 0,
-    specialPower: {}
-  },
-  {
-    id: 3,
-    name: 'SKELETON',
-    namePlural: 'SKELETONS',
-    nameUnknown: 'BONES',
-    nameUnknownPlural: 'BONES',
-    picId: 4,
-    level: 2,
-    hp: { level: 2, hpFac: 4, hpMinAdd: 2 },
-    monsterClass: 10, // Undead
-    ac: 8,
-    attackCount: 1,
-    attacks: [{ level: 1, hpFac: 6, hpMinAdd: 1 }],
-    expReward: 160,
-    drainAmount: 0,
-    healPts: 0,
-    reward1: 2,
-    reward2: 2,
-    teamId: 4, // Zombie
-    teamPercent: 30,
-    mageSpells: 0,
-    priestSpells: 0,
-    unique: 0,
-    breathe: 0,
-    magicResistance: 0,
-    specialPower: { sleepResist: true }
-  },
-  {
-    id: 4,
-    name: 'ZOMBIE',
-    namePlural: 'ZOMBIES',
-    nameUnknown: 'ROTTING CORPSE',
-    nameUnknownPlural: 'ROTTING CORPSES',
-    picId: 5,
-    level: 2,
-    hp: { level: 2, hpFac: 8, hpMinAdd: 4 },
-    monsterClass: 10, // Undead
-    ac: 7,
-    attackCount: 1,
-    attacks: [{ level: 1, hpFac: 7, hpMinAdd: 1 }],
-    expReward: 220,
-    drainAmount: 0,
-    healPts: 0,
-    reward1: 2,
-    reward2: 2,
-    teamId: 0,
-    teamPercent: 0,
-    mageSpells: 0,
-    priestSpells: 0,
-    unique: 0,
-    breathe: 0,
-    magicResistance: 10,
-    specialPower: { paralyze: true, sleepResist: true }
-  },
-  {
-    id: 5,
-    name: 'CREEPING CRUD',
-    namePlural: 'CREEPING CRUDS',
-    nameUnknown: 'SLUDGE',
-    nameUnknownPlural: 'SLUDGES',
-    picId: 6,
-    level: 3,
-    hp: { level: 3, hpFac: 8, hpMinAdd: 4 },
-    monsterClass: 6,
-    ac: 6,
-    attackCount: 2,
-    attacks: [{ level: 1, hpFac: 6, hpMinAdd: 1 }, { level: 1, hpFac: 6, hpMinAdd: 1 }],
-    expReward: 480,
-    drainAmount: 0,
-    healPts: 1,
-    reward1: 3,
-    reward2: 3,
-    teamId: 0,
-    teamPercent: 0,
-    mageSpells: 0,
-    priestSpells: 0,
-    unique: 0,
-    breathe: 0,
-    magicResistance: 25,
-    specialPower: { poison: true }
-  },
-  {
-    id: 6,
-    name: 'GAS DRAGON',
-    namePlural: 'GAS DRAGONS',
-    nameUnknown: 'DRAGON',
-    nameUnknownPlural: 'DRAGONS',
-    picId: 7,
-    level: 7,
-    hp: { level: 7, hpFac: 10, hpMinAdd: 20 },
-    monsterClass: 8,
-    ac: 1,
-    attackCount: 3,
-    attacks: [{ level: 2, hpFac: 8, hpMinAdd: 4 }, { level: 2, hpFac: 8, hpMinAdd: 4 }, { level: 3, hpFac: 8, hpMinAdd: 6 }],
-    expReward: 4500,
-    drainAmount: 0,
-    healPts: 2,
-    reward1: 6,
-    reward2: 7,
-    teamId: 0,
-    teamPercent: 0,
-    mageSpells: 3,
-    priestSpells: 0,
-    unique: 0,
-    breathe: 1, // Fire breath
-    magicResistance: 40,
-    specialPower: { poison: true }
-  },
-  {
-    id: 7,
-    name: 'VAMPIRE',
-    namePlural: 'VAMPIRES',
-    nameUnknown: 'PALE FIGURE',
-    nameUnknownPlural: 'PALE FIGURES',
-    picId: 8,
-    level: 9,
-    hp: { level: 9, hpFac: 10, hpMinAdd: 30 },
-    monsterClass: 10, // Undead
-    ac: -1,
-    attackCount: 2,
-    attacks: [{ level: 3, hpFac: 8, hpMinAdd: 5 }, { level: 3, hpFac: 8, hpMinAdd: 5 }],
-    expReward: 12000,
-    drainAmount: 2, // Drains 2 levels per hit!
-    healPts: 4,
-    reward1: 8,
-    reward2: 8,
-    teamId: 0,
-    teamPercent: 0,
-    mageSpells: 5,
-    priestSpells: 4,
-    unique: 0,
-    breathe: 0,
-    magicResistance: 60,
-    specialPower: { paralyze: true, criticalHit: true, sleepResist: true }
-  },
-  {
-    id: 8,
-    name: 'WERDNA',
-    namePlural: 'WERDNA',
-    nameUnknown: 'MAD OVERLORD',
-    nameUnknownPlural: 'MAD OVERLORDS',
-    picId: 9,
-    level: 10,
-    hp: { level: 10, hpFac: 12, hpMinAdd: 50 },
-    monsterClass: 1, // Arch-Mage
-    ac: -4,
-    attackCount: 2,
-    attacks: [{ level: 4, hpFac: 10, hpMinAdd: 10 }, { level: 4, hpFac: 10, hpMinAdd: 10 }],
-    expReward: 50000,
-    drainAmount: 0,
-    healPts: 5,
-    reward1: 9,
-    reward2: 9,
-    teamId: 7, // Vampire allies
-    teamPercent: 100,
-    mageSpells: 7, // Casts TILTOWAI!
-    priestSpells: 7,
-    unique: 1,
-    breathe: 1,
-    magicResistance: 85,
-    specialPower: { callHelp: true, stone: true }
+// Official scenario data (SCENARIO.DATA of Wizardry I v3.2), see scripts/extract_pgmo.py
+export const ITEMS_DATABASE: TItem[] = PG_ITEMS;
+
+export const MONSTERS_DATABASE: TMonster[] = PG_MONSTERS;
+
+/** Treasure tables referenced by monster reward1/reward2 */
+export const REWARDS_DATABASE: TReward[] = PG_REWARDS;
+
+/** Raw scenario message lines (SCENARIO.MESGS) */
+export const SCENARIO_MESSAGES: PGMessage[] = PG_MESSAGES;
+
+/** Returns the lines of the (multi-line) scenario message starting at index */
+export function getScenarioMessage(index: number): string[] {
+  const lines: string[] = [];
+  for (let i = index; i >= 0 && i < PG_MESSAGES.length; i++) {
+    lines.push(PG_MESSAGES[i].text);
+    if (PG_MESSAGES[i].end) break;
   }
-];
+  return lines;
+}
 
 // Balanced Pre-built Level 1 Starter Party
 export const DEFAULT_PARTY: TCharacter[] = [
@@ -804,7 +143,7 @@ export const DEFAULT_PARTY: TCharacter[] = [
     spellsKnown: new Array(51).fill(false),
     mageSpells: [0, 0, 0, 0, 0, 0, 0, 0],
     priestSpells: [0, 0, 0, 0, 0, 0, 0, 0],
-    armorClass: 5, // Chain mail + small shield
+    armorClass: 5, // Chain Mail + small shield
     healPts: 0,
     critHit: false,
     swingCount: 1,
@@ -814,9 +153,9 @@ export const DEFAULT_PARTY: TCharacter[] = [
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
     possessions: [
-      { equipped: true, cursed: false, identified: true, itemIndex: 3 }, // Long sword
-      { equipped: true, cursed: false, identified: true, itemIndex: 8 }, // Chain mail
-      { equipped: true, cursed: false, identified: true, itemIndex: 10 } // Small shield
+      { equipped: true, cursed: false, identified: true, itemIndex: 1 }, // Long Sword
+      { equipped: true, cursed: false, identified: true, itemIndex: 11 }, // Chain Mail
+      { equipped: true, cursed: false, identified: true, itemIndex: 7 } // Small Shield
     ]
   },
   {
@@ -848,8 +187,8 @@ export const DEFAULT_PARTY: TCharacter[] = [
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
     possessions: [
-      { equipped: true, cursed: false, identified: true, itemIndex: 3 }, // Long sword
-      { equipped: true, cursed: false, identified: true, itemIndex: 8 }  // Chain mail
+      { equipped: true, cursed: false, identified: true, itemIndex: 1 }, // Long Sword
+      { equipped: true, cursed: false, identified: true, itemIndex: 11 }  // Chain Mail
     ]
   },
   {
@@ -888,9 +227,9 @@ export const DEFAULT_PARTY: TCharacter[] = [
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
     possessions: [
-      { equipped: true, cursed: false, identified: true, itemIndex: 4 }, // Anointed Mace
-      { equipped: true, cursed: false, identified: true, itemIndex: 8 }, // Chain Mail
-      { equipped: true, cursed: false, identified: true, itemIndex: 10 } // Small Shield
+      { equipped: true, cursed: false, identified: true, itemIndex: 3 }, // Anointed Mace
+      { equipped: true, cursed: false, identified: true, itemIndex: 11 }, // Chain Mail
+      { equipped: true, cursed: false, identified: true, itemIndex: 7 } // Small Shield
     ]
   },
   {
@@ -912,7 +251,7 @@ export const DEFAULT_PARTY: TCharacter[] = [
     spellsKnown: new Array(51).fill(false),
     mageSpells: [0, 0, 0, 0, 0, 0, 0, 0],
     priestSpells: [0, 0, 0, 0, 0, 0, 0, 0],
-    armorClass: 7, // Leather armor + Small shield
+    armorClass: 7, // Leather Armor + Small shield
     healPts: 0,
     critHit: false,
     swingCount: 1,
@@ -923,8 +262,8 @@ export const DEFAULT_PARTY: TCharacter[] = [
     inMaze: false,
     possessions: [
       { equipped: true, cursed: false, identified: true, itemIndex: 2 }, // Short sword
-      { equipped: true, cursed: false, identified: true, itemIndex: 7 }, // Leather armor
-      { equipped: true, cursed: false, identified: true, itemIndex: 10 } // Small shield
+      { equipped: true, cursed: false, identified: true, itemIndex: 10 }, // Leather Armor
+      { equipped: true, cursed: false, identified: true, itemIndex: 7 } // Small Shield
     ]
   },
   {
@@ -963,8 +302,8 @@ export const DEFAULT_PARTY: TCharacter[] = [
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
     possessions: [
-      { equipped: true, cursed: false, identified: true, itemIndex: 1 }, // Dagger
-      { equipped: true, cursed: false, identified: true, itemIndex: 6 }  // Robes
+      { equipped: true, cursed: false, identified: true, itemIndex: 6 }, // Dagger
+      { equipped: true, cursed: false, identified: true, itemIndex: 9 }  // Robes
     ]
   },
   {
@@ -1004,325 +343,34 @@ export const DEFAULT_PARTY: TCharacter[] = [
     inMaze: false,
     possessions: [
       { equipped: true, cursed: false, identified: true, itemIndex: 5 }, // Staff
-      { equipped: true, cursed: false, identified: true, itemIndex: 7 }  // Leather armor
+      { equipped: true, cursed: false, identified: true, itemIndex: 10 }  // Leather Armor
     ]
   }
 ];
 
-/**
- * Generate Level 1 Maze based on faithful Wizardry 1 Level 1 map (20x20)
- * Level 1 has stairs to Castle at (0,0), Murphy's Ghost on higher levels, keys, and doors
- */
-export function generateLevel1Maze(): TMazeFloor {
-  const size = 20;
-  const w: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const s: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const e: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const n: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const fights: number[][] = Array.from({ length: size }, () => Array(size).fill(0));
-  const sqrExtra: number[][] = Array.from({ length: size }, () => Array(size).fill(0));
-
-  // Outer boundary walls
-  for (let i = 0; i < size; i++) {
-    s[i][0] = 'WALL';
-    n[i][size - 1] = 'WALL';
-    w[0][i] = 'WALL';
-    e[size - 1][i] = 'WALL';
-  }
-
-  // Internal dungeon rooms and corridors faithful to Level 1 Proving Grounds
-  // Add major rooms with doors:
-  // (0,0) Stairs Room: 3x3 room around (0,0)-(2,2) with a door North at (1,2) and East at (2,1)
-  for (let x = 0; x <= 2; x++) {
-    for (let y = 0; y <= 2; y++) {
-      if (y === 2 && x !== 1) n[x][y] = 'WALL';
-      if (y === 2 && x === 1) n[x][y] = 'DOOR';
-      if (x === 2 && y !== 1) e[x][y] = 'WALL';
-      if (x === 2 && y === 1) e[x][y] = 'DOOR';
-    }
-  }
-
-  // Create grid of corridors & rooms
-  for (let x = 3; x < 18; x += 4) {
-    for (let y = 0; y < size; y++) {
-      e[x][y] = (y % 4 === 1) ? 'DOOR' : (y % 4 === 3) ? 'OPEN' : 'WALL';
-    }
-  }
-  for (let y = 3; y < 18; y += 4) {
-    for (let x = 0; x < size; x++) {
-      n[x][y] = (x % 4 === 2) ? 'DOOR' : (x % 4 === 0) ? 'OPEN' : 'WALL';
-    }
-  }
-
-  // Secret doors and special room
-  n[10][10] = 'HIDEDOOR';
-  e[12][12] = 'HIDEDOOR';
-  w[14][8] = 'HIDEDOOR';
-
-  // Synchronize wall pairs (N of [x][y] is S of [x][y+1], etc.)
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      if (y < size - 1) s[x][y + 1] = n[x][y];
-      if (x < size - 1) w[x + 1][y] = e[x][y];
-      if (y > 0) n[x][y - 1] = s[x][y];
-      if (x > 0) e[x - 1][y] = w[x][y];
-    }
-  }
-
-  // Set encounters (fights = 1 on specific rooms)
-  fights[5][5] = 1;
-  fights[5][10] = 1;
-  fights[10][5] = 1;
-  fights[12][12] = 1;
-  fights[15][15] = 1;
-  fights[16][4] = 1;
-  fights[8][16] = 1;
-
-  // Square special definitions
-  const extraDefs = [
-    { type: 'NORMAL' as const, aux0: 0, aux1: 0, aux2: 0 },
-    { type: 'STAIRS' as const, aux0: 0, aux1: 0, aux2: 0 },   // Stairs to Castle (0,0)
-    { type: 'STAIRS' as const, aux0: 2, aux1: 5, aux2: 5 },   // Stairs to Level 2 at (18,18)
-    { type: 'PIT' as const, aux0: 1, aux1: 6, aux2: 2 },      // Pit trap (deals damage)
-    { type: 'DARK' as const, aux0: 0, aux1: 0, aux2: 0 },     // Dark zone
-    { type: 'SPINNER' as const, aux0: 0, aux1: 0, aux2: 0 },  // Spinner
-    { type: 'ENCOUNTE' as const, aux0: 1, aux1: 1, aux2: 3 }, // Fixed encounter with Skeletons
-    { type: 'SCNMSG' as const, aux0: 1, aux1: 1, aux2: 0 }    // Statue inscription
-  ];
-
-  sqrExtra[0][0] = 1; // Stairs up to Castle
-  sqrExtra[18][18] = 2; // Stairs down to Level 2
-  sqrExtra[4][6] = 3; // Pit
-  sqrExtra[12][8] = 3; // Pit
-  sqrExtra[7][7] = 4; // Dark room
-  sqrExtra[8][7] = 4;
-  sqrExtra[7][8] = 4;
-  sqrExtra[8][8] = 4;
-  sqrExtra[9][14] = 5; // Spinner
-  sqrExtra[14][9] = 5; // Spinner
-  sqrExtra[15][15] = 6; // Fixed encounter
-  sqrExtra[10][11] = 7; // Statue message
-
-  return {
-    level: 1,
-    w,
-    s,
-    e,
-    n,
-    fights,
-    sqrExtra,
-    extraDefs,
-    enemyCalc: [
-      { minEnemy: 0, multWorse: 1, worse01: 2, range0n: 3, percWorse: 40 },
-      { minEnemy: 1, multWorse: 1, worse01: 2, range0n: 3, percWorse: 50 },
-      { minEnemy: 2, multWorse: 1, worse01: 2, range0n: 3, percWorse: 60 }
-    ]
-  };
-}
+const WALL_CODES: TWall[] = ['OPEN', 'WALL', 'DOOR', 'HIDEDOOR'];
 
 /**
- * Generate Level 2 Maze: The Testing Grounds & Murphy's Domain (20x20)
- * Stairs UP at (5,5) returning to Level 1 (18,18)
- * Stairs DOWN at (14,14) leading to Level 3 (4,4)
- */
-export function generateLevel2Maze(): TMazeFloor {
-  const size = 20;
-  const w: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const s: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const e: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const n: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const fights: number[][] = Array.from({ length: size }, () => Array(size).fill(0));
-  const sqrExtra: number[][] = Array.from({ length: size }, () => Array(size).fill(0));
-
-  // Outer boundary walls
-  for (let i = 0; i < size; i++) {
-    s[i][0] = 'WALL';
-    n[i][size - 1] = 'WALL';
-    w[0][i] = 'WALL';
-    e[size - 1][i] = 'WALL';
-  }
-
-  // Corridors and Rooms on Level 2
-  for (let x = 2; x < 18; x += 3) {
-    for (let y = 0; y < size; y++) {
-      e[x][y] = (y % 3 === 1) ? 'DOOR' : (y % 3 === 2) ? 'OPEN' : 'WALL';
-    }
-  }
-  for (let y = 2; y < 18; y += 3) {
-    for (let x = 0; x < size; x++) {
-      n[x][y] = (x % 3 === 0) ? 'DOOR' : (x % 3 === 2) ? 'OPEN' : 'WALL';
-    }
-  }
-
-  // Room around (5,5) landing stairs
-  n[5][5] = 'OPEN';
-  s[5][5] = 'OPEN';
-  e[5][5] = 'OPEN';
-  w[5][5] = 'OPEN';
-
-  // Room around (14,14) descending stairs
-  n[14][14] = 'OPEN';
-  s[14][14] = 'OPEN';
-  e[14][14] = 'DOOR';
-  w[14][14] = 'OPEN';
-
-  // Secret doors on Level 2
-  w[6][5] = 'HIDEDOOR';
-  n[13][4] = 'HIDEDOOR'; // Entrance to Murphy's chamber
-  s[14][14] = 'HIDEDOOR';
-
-  // Synchronize wall pairs
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      if (y < size - 1) s[x][y + 1] = n[x][y];
-      if (x < size - 1) w[x + 1][y] = e[x][y];
-      if (y > 0) n[x][y - 1] = s[x][y];
-      if (x > 0) e[x - 1][y] = w[x][y];
-    }
-  }
-
-  // Encounters
-  fights[13][4] = 1; // Murphy's Ghost chamber
-  fights[8][8] = 1;
-  fights[11][15] = 1;
-  fights[4][16] = 1;
-  fights[16][10] = 1;
-
-  // Square special definitions for Level 2
-  const extraDefs = [
-    { type: 'NORMAL' as const, aux0: 0, aux1: 0, aux2: 0 },
-    { type: 'STAIRS' as const, aux0: 1, aux1: 18, aux2: 18 },  // Stairs UP to Level 1 at (18,18)
-    { type: 'STAIRS' as const, aux0: 3, aux1: 4, aux2: 4 },    // Stairs DOWN to Level 3 at (4,4)
-    { type: 'PIT' as const, aux0: 2, aux1: 8, aux2: 3 },       // Pit trap
-    { type: 'DARK' as const, aux0: 0, aux1: 0, aux2: 0 },      // Dark corridor
-    { type: 'SPINNER' as const, aux0: 0, aux1: 0, aux2: 0 },   // Spinner
-    { type: 'ENCOUNTE' as const, aux0: 2, aux1: 1, aux2: 4 },  // Fixed battle
-    { type: 'SCNMSG' as const, aux0: 2, aux1: 1, aux2: 0 }     // Level 2 inscription
-  ];
-
-  sqrExtra[5][5] = 1;    // Stairs UP to Level 1 (18,18)
-  sqrExtra[14][14] = 2;  // Stairs DOWN to Level 3 (4,4)
-  sqrExtra[6][8] = 3;    // Pit
-  sqrExtra[15][7] = 3;   // Pit
-  sqrExtra[10][10] = 4;  // Dark room
-  sqrExtra[11][10] = 4;
-  sqrExtra[10][11] = 4;
-  sqrExtra[11][11] = 4;
-  sqrExtra[8][14] = 5;   // Spinner
-  sqrExtra[16][12] = 5;  // Spinner
-  sqrExtra[13][4] = 6;   // Murphy's ghost encounter
-  sqrExtra[7][12] = 7;   // Inscription
-
-  return {
-    level: 2,
-    w,
-    s,
-    e,
-    n,
-    fights,
-    sqrExtra,
-    extraDefs,
-    enemyCalc: [
-      { minEnemy: 1, multWorse: 1, worse01: 2, range0n: 4, percWorse: 50 },
-      { minEnemy: 2, multWorse: 1, worse01: 3, range0n: 4, percWorse: 60 },
-      { minEnemy: 3, multWorse: 1, worse01: 3, range0n: 5, percWorse: 70 }
-    ]
-  };
-}
-
-/**
- * Generate Level 3 Maze (20x20)
- * Stairs UP at (4,4) returning to Level 2 (14,14)
- * Stairs DOWN at (17,17) leading to Level 4 (2,2)
- */
-export function generateLevel3Maze(): TMazeFloor {
-  const size = 20;
-  const w: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const s: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const e: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const n: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
-  const fights: number[][] = Array.from({ length: size }, () => Array(size).fill(0));
-  const sqrExtra: number[][] = Array.from({ length: size }, () => Array(size).fill(0));
-
-  for (let i = 0; i < size; i++) {
-    s[i][0] = 'WALL';
-    n[i][size - 1] = 'WALL';
-    w[0][i] = 'WALL';
-    e[size - 1][i] = 'WALL';
-  }
-
-  for (let x = 1; x < 19; x += 4) {
-    for (let y = 0; y < size; y++) {
-      e[x][y] = (y % 4 === 2) ? 'DOOR' : (y % 4 === 0) ? 'OPEN' : 'WALL';
-    }
-  }
-  for (let y = 1; y < 19; y += 4) {
-    for (let x = 0; x < size; x++) {
-      n[x][y] = (x % 4 === 1) ? 'DOOR' : (x % 4 === 3) ? 'OPEN' : 'WALL';
-    }
-  }
-
-  // Stairs rooms
-  n[4][4] = 'OPEN';
-  s[4][4] = 'OPEN';
-  e[4][4] = 'OPEN';
-  w[4][4] = 'OPEN';
-
-  n[17][17] = 'OPEN';
-  s[17][17] = 'OPEN';
-  e[17][17] = 'OPEN';
-  w[17][17] = 'OPEN';
-
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      if (y < size - 1) s[x][y + 1] = n[x][y];
-      if (x < size - 1) w[x + 1][y] = e[x][y];
-      if (y > 0) n[x][y - 1] = s[x][y];
-      if (x > 0) e[x - 1][y] = w[x][y];
-    }
-  }
-
-  fights[6][6] = 1;
-  fights[12][12] = 1;
-  fights[15][8] = 1;
-
-  const extraDefs = [
-    { type: 'NORMAL' as const, aux0: 0, aux1: 0, aux2: 0 },
-    { type: 'STAIRS' as const, aux0: 2, aux1: 14, aux2: 14 },  // Stairs UP to Level 2 at (14,14)
-    { type: 'STAIRS' as const, aux0: 4, aux1: 2, aux2: 2 },    // Stairs DOWN to Level 4 at (2,2)
-    { type: 'PIT' as const, aux0: 3, aux1: 10, aux2: 4 },      // Pit trap
-    { type: 'DARK' as const, aux0: 0, aux1: 0, aux2: 0 },      // Dark room
-    { type: 'SPINNER' as const, aux0: 0, aux1: 0, aux2: 0 }    // Spinner
-  ];
-
-  sqrExtra[4][4] = 1;    // Stairs UP to Level 2 (14,14)
-  sqrExtra[17][17] = 2;  // Stairs DOWN to Level 4 (2,2)
-  sqrExtra[8][8] = 3;
-  sqrExtra[9][9] = 4;
-  sqrExtra[10][10] = 5;
-
-  return {
-    level: 3,
-    w,
-    s,
-    e,
-    n,
-    fights,
-    sqrExtra,
-    extraDefs,
-    enemyCalc: [
-      { minEnemy: 2, multWorse: 1, worse01: 3, range0n: 4, percWorse: 60 },
-      { minEnemy: 3, multWorse: 1, worse01: 4, range0n: 5, percWorse: 70 },
-      { minEnemy: 4, multWorse: 1, worse01: 4, range0n: 6, percWorse: 80 }
-    ]
-  };
-}
-
-/**
- * Retrieve the maze layout for any dungeon level
+ * Builds a maze floor (1..10) from the official scenario data.
+ * Grids are indexed [x][y] where x is East and y is North (0..19).
  */
 export function getMazeForFloor(level: number): TMazeFloor {
-  if (level === 2) return generateLevel2Maze();
-  if (level === 3) return generateLevel3Maze();
-  return generateLevel1Maze();
+  const raw = PG_MAZES[Math.min(PG_MAZES.length, Math.max(1, level)) - 1];
+  const walls = (cols: string[]): TWall[][] => cols.map(c => Array.from(c, ch => WALL_CODES[Number(ch)]));
+  return {
+    level: raw.level,
+    w: walls(raw.w),
+    s: walls(raw.s),
+    e: walls(raw.e),
+    n: walls(raw.n),
+    fights: raw.fights.map(c => Array.from(c, Number)),
+    sqrExtra: raw.sqrExtra.map(c => Array.from(c, ch => parseInt(ch, 16))),
+    extraDefs: raw.extraDefs.map(d => ({ ...d })),
+    enemyCalc: raw.enemyCalc.map(c => ({ ...c })),
+    events: raw.events.map(ev => ({ ...ev }))
+  };
+}
+
+export function generateLevel1Maze(): TMazeFloor {
+  return getMazeForFloor(1);
 }

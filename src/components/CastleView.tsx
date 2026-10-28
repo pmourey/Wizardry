@@ -528,7 +528,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
       awards: [0, 0, 0, 0, 0],
       inMaze: false,
       possessions: [
-        { equipped: true, cursed: false, identified: true, itemIndex: 1 } // Dagger
+        { equipped: true, cursed: false, identified: true, itemIndex: 6 } // Dagger
       ]
     };
 
@@ -841,7 +841,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
               <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">Articles en vente</h3>
                 <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-                  {ITEMS_DATABASE.filter(it => it.price > 0 && it.boltacStock > 0).map(item => (
+                  {ITEMS_DATABASE.filter(it => it.price > 0 && it.boltacStock !== 0 && !it.cursed).map(item => (
                     <div key={item.id} className="p-2.5 bg-slate-800/50 border border-slate-700/40 rounded-lg flex items-center justify-between text-xs">
                       <div>
                         <div className="font-semibold text-white">{item.name}</div>
