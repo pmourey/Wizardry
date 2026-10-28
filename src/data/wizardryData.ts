@@ -61,15 +61,15 @@ const SPELL_TEXTS: TSpell[] = [
   { id: 22, name: 'KALKI', tier: 1, spellType: 'PRIEST', target: 'GENERIC', hash: 1449, combat: true, camp: false, description: 'Bénit l’équipe en améliorant leur CA de 1.' },
   { id: 23, name: 'DIOS', tier: 1, spellType: 'PRIEST', target: 'PERSON', hash: 2301, combat: true, camp: true, description: 'Soigne 1-8 points de vie sur un héros.' },
   { id: 24, name: 'BADIOS', tier: 1, spellType: 'PRIEST', target: 'PERSON', hash: 3675, combat: true, camp: false, description: 'Inflige 1-8 points de dégâts spirituels à un ennemi.' },
-  { id: 25, name: 'MILWA', tier: 1, spellType: 'PRIEST', target: 'GENERIC', hash: 2889, combat: false, camp: true, description: 'Illumine les couloirs du donjon et détecte les portes secrètes.' },
+  { id: 25, name: 'MILWA', tier: 1, spellType: 'PRIEST', target: 'GENERIC', hash: 2889, combat: true, camp: true, description: 'Illumine les couloirs du donjon (15 à 29 pas).' },
   { id: 26, name: 'PORFIC', tier: 1, spellType: 'PRIEST', target: 'GENERIC', hash: 2287, combat: true, camp: false, description: 'Créé un bouclier divin pour le prêtre (-4 AC).' },
   // Priest Spells Tier 2 (27..30)
   { id: 27, name: 'MATU', tier: 2, spellType: 'PRIEST', target: 'GENERIC', hash: 3139, combat: true, camp: false, description: 'Bénédiction majeure réduisant la CA de l’équipe de 2.' },
-  { id: 28, name: 'CALFO', tier: 2, spellType: 'PRIEST', target: 'GENERIC', hash: 0, combat: false, camp: true, description: 'Révèle avec certitude la nature du piège sur un coffre.' },
+  { id: 28, name: 'CALFO', tier: 2, spellType: 'PRIEST', target: 'GENERIC', hash: 0, combat: false, camp: false, description: 'Révèle avec certitude la nature du piège sur un coffre.' },
   { id: 29, name: 'MANIFO', tier: 2, spellType: 'PRIEST', target: 'GROUP', hash: 2619, combat: true, camp: false, description: 'Paralyse et immobilise un groupe de créatures.' },
   { id: 30, name: 'MONTINO', tier: 2, spellType: 'PRIEST', target: 'GROUP', hash: 5970, combat: true, camp: false, description: 'Réduit un groupe ennemi au silence magique.' },
   // Priest Spells Tier 3 (31..34)
-  { id: 31, name: 'LOMILWA', tier: 3, spellType: 'PRIEST', target: 'GENERIC', hash: 5333, combat: false, camp: true, description: 'Lumière divine permanente révélant le donjon pour toute l’expédition.' },
+  { id: 31, name: 'LOMILWA', tier: 3, spellType: 'PRIEST', target: 'GENERIC', hash: 5333, combat: true, camp: true, description: 'Lumière divine permanente révélant le donjon pour toute l’expédition.' },
   { id: 32, name: 'DIALKO', tier: 3, spellType: 'PRIEST', target: 'PERSON', hash: 2718, combat: true, camp: true, description: 'Guérit la paralysie et réveille du sommeil.' },
   { id: 33, name: 'LATUMAPI', tier: 3, spellType: 'PRIEST', target: 'GENERIC', hash: 6491, combat: true, camp: false, description: 'Identifie tous les monstres en combat et révèle leurs vrais noms.' },
   { id: 34, name: 'BAMATU', tier: 3, spellType: 'PRIEST', target: 'GENERIC', hash: 5169, combat: true, camp: false, description: 'Prière de guerre diminuant la CA de l’équipe de 4.' },

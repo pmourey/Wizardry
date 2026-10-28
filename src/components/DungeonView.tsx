@@ -399,18 +399,92 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       activeCampHero.mageSpells[spell.tier]--;
     }
 
-    if (spell.name === 'DIOS') targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + Math.floor(Math.random() * 8) + 1);
-    if (spell.name === 'DIAL') targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + Math.floor(Math.random() * 16) + 2);
-    if (spell.name === 'DIALMA') targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + Math.floor(Math.random() * 24) + 3);
+    const rollDice = (n: number, sides: number) => {
+      let t = 0;
+      for (let i = 0; i < n; i++) t += Math.floor(Math.random() * sides) + 1;
+      return t;
+    };
+    const isGone = (h: TCharacter) => h.status === 'DEAD' || h.status === 'ASHES' || h.status === 'LOST';
+
+    if (spell.name === 'DIOS' || spell.name === 'DIAL' || spell.name === 'DIALMA') {
+      if (isGone(targetHero)) {
+        setParty([...party]);
+        setCampMessage(`${spell.name} n'a aucun effet sur ${targetHero.name}.`);
+        return;
+      }
+      const healed = rollDice(spell.name === 'DIOS' ? 1 : spell.name === 'DIAL' ? 2 : 3, 8);
+      targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + healed);
+      setParty([...party]);
+      setCampMessage(`${spell.name} : ${targetHero.name} récupère ${healed} PV (${targetHero.hpLeft}/${targetHero.hpMax}).`);
+      return;
+    }
     if (spell.name === 'DIALKO') {
       if (targetHero.status === 'PLYZE' || targetHero.status === 'ASLEEP') targetHero.status = 'OK';
     }
     if (spell.name === 'LATUMOFI') targetHero.poisonAmount = 0;
     if (spell.name === 'MADI') {
+      if (isGone(targetHero)) {
+        setParty([...party]);
+        setCampMessage(`MADI n'a aucun effet sur ${targetHero.name}.`);
+        return;
+      }
       targetHero.hpLeft = targetHero.hpMax;
       targetHero.poisonAmount = 0;
       targetHero.silencedRounds = 0;
-      if (targetHero.status === 'PLYZE' || targetHero.status === 'ASLEEP' || targetHero.status === 'AFRAID') targetHero.status = 'OK';
+      targetHero.status = 'OK';
+    }
+
+    if (spell.name === 'DI' || spell.name === 'KADORTO') {
+      const isDi = spell.name === 'DI';
+      const dead = targetHero.status === 'DEAD';
+      const ashes = targetHero.status === 'ASHES';
+      if (targetHero.status === 'LOST') {
+        setCampMessage(`${targetHero.name} est perdu à jamais.`);
+      } else if (!dead && !(ashes && !isDi)) {
+        setCampMessage(ashes ? `"KADORTO" est nécessaire pour ${targetHero.name}.` : `${targetHero.name} n'est pas mort.`);
+      } else if (Math.floor(Math.random() * 100) <= 4 * targetHero.attrib.VITALITY) {
+        targetHero.hpLeft = isDi ? 1 : targetHero.hpMax;
+        targetHero.status = 'OK';
+        if (targetHero.attrib.VITALITY <= 3) targetHero.status = 'LOST';
+        else targetHero.attrib.VITALITY -= 1;
+        setCampMessage(targetHero.status === 'OK' ? `EXCELSIOR ! ${targetHero.name} est ressuscité.` : `${targetHero.name} est perdu à jamais.`);
+      } else {
+        targetHero.status = dead ? 'ASHES' : 'LOST';
+        setCampMessage(`OUPS ! Le sort échoue : ${targetHero.name} est ${targetHero.status === 'ASHES' ? 'réduit en cendres' : 'perdu'}.`);
+      }
+      setParty([...party]);
+      return;
+    }
+
+    if (spell.name === 'KANDI') {
+      const lost = allCharacters.filter(c => c.lostLocation);
+      setCampMessage(lost.length === 0
+        ? 'KANDI ne détecte aucune âme perdue.'
+        : 'KANDI : ' + lost.map(c => `${c.name} (niveau ${c.lostLocation!.level}, E${c.lostLocation!.x} N${c.lostLocation!.y})`).join(' ; '));
+      setParty([...party]);
+      return;
+    }
+
+    if (spell.name === 'MALOR') {
+      const input = window.prompt('MALOR — déplacement : Nord(+)/Sud(-), Est(+)/Ouest(-), étages vers le bas(+)/haut(-)\nFormat : nord est étages  (ex. 3 -2 0)');
+      const parts = (input || '').trim().split(/\s+/).map(Number);
+      if (!input || parts.length !== 3 || parts.some(n => !Number.isInteger(n))) {
+        setParty([...party]);
+        setCampMessage('MALOR : destination invalide, le sort est perdu.');
+        return;
+      }
+      const [dn, de, dl] = parts;
+      const tx = x + de;
+      const ty = y + dn;
+      const tl = maze.level + dl;
+      setParty([...party]);
+      if (tl < 0 || tl > 10 || tx < 0 || tx > 19 || ty < 0 || ty > 19) {
+        setCampMessage('MALOR : le sort échoue.');
+        return;
+      }
+      setShowCamp(false);
+      onTakeStairs?.(tl, tx, ty);
+      return;
     }
 
     if (spell.name === 'DUMAPIC') {
@@ -434,18 +508,19 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     }
 
     if (spell.name === 'MILWA') {
-      setLightLevel?.(prev => Math.min(60, prev + 25));
+      const milwaSteps = 15 + Math.floor(Math.random() * 15);
+      setLightLevel?.(milwaSteps);
       setParty([...party]);
-      setCampMessage(`✨ MILWA : Une douce lueur magique emplit les couloirs (+25 lumière) !`);
-      onAddAdventureEvent?.('DISCOVERY', 'Sortilège de Lumière', `${activeCampHero.name} lance MILWA, repoussant l'obscurité.`, '+25 Lumière', maze.level, { x, y });
+      setCampMessage(`✨ MILWA : Une douce lueur magique emplit les couloirs (${milwaSteps} pas) !`);
+      onAddAdventureEvent?.('DISCOVERY', 'Sortilège de Lumière', `${activeCampHero.name} lance MILWA, repoussant l'obscurité.`, 'Lumière temporaire', maze.level, { x, y });
       return;
     }
 
     if (spell.name === 'LOMILWA') {
-      setLightLevel?.(prev => Math.min(100, prev + 75));
+      setLightLevel?.(32000);
       setParty([...party]);
-      setCampMessage(`✨ LOMILWA : Une vive clarté magique inonde le donjon (+75 lumière) !`);
-      onAddAdventureEvent?.('DISCOVERY', 'Sortilège de Clarté Éternelle', `${activeCampHero.name} lance LOMILWA, illuminant durablement le donjon.`, '+75 Lumière', maze.level, { x, y });
+      setCampMessage(`✨ LOMILWA : Une vive clarté magique inonde le donjon !`);
+      onAddAdventureEvent?.('DISCOVERY', 'Sortilège de Clarté Éternelle', `${activeCampHero.name} lance LOMILWA, illuminant durablement le donjon.`, 'Lumière permanente', maze.level, { x, y });
       return;
     }
 
@@ -511,7 +586,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           {lightLevel > 0 && (
             <div className="flex items-center gap-1 text-amber-400 font-bold" title="Lumière magique Milwa/Lomilwa active">
               <Flame className="w-3.5 h-3.5 animate-pulse" />
-              <span>Lumière (+{lightLevel})</span>
+              <span>Lumière ({lightLevel > 999 ? '∞' : lightLevel})</span>
             </div>
           )}
           {acModifier > 0 && (
