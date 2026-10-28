@@ -316,6 +316,14 @@ export default function App() {
   };
 
   // Per-square usage counters for scenario events (key: level:x:y)
+  const [scenarioMessage, setScenarioMessage] = useState<{ title: string; lines: string[]; details?: string } | null>(null);
+
+  // Shows a scenario message on screen and keeps a trace in the adventure journal
+  const announce = (title: string, lines: string[], details: string | undefined, x: number, y: number) => {
+    setScenarioMessage({ title, lines, details });
+    addAdventureEvent('DISCOVERY', title, lines.join(' ').replace(/\s+/g, ' ').trim(), details, dungeonLevel, { x, y });
+  };
+
   const eventUsesRef = useRef<Record<string, number>>(
     (() => {
       try {
@@ -363,22 +371,22 @@ export default function App() {
       case 'ITEM_TO_PASS':
         if (onceOnly && used > 0) return false;
         markEventUsed(key, used + 1);
-        if (text) addAdventureEvent('DISCOVERY', 'Inscription ou vision', text, undefined, dungeonLevel, { x, y });
+        if (ev.message?.length) announce('Inscription ou vision', ev.message, undefined, x, y);
         return false;
       case 'ITEM_PICKUP': {
         if (used > 0) return false;
         markEventUsed(key, used + 1);
         const got = ev.itemId !== undefined ? giveItemToParty(ev.itemId) : null;
-        addAdventureEvent('DISCOVERY', 'Un objet est trouvé', text || 'Un objet gît ici.', got || undefined, dungeonLevel, { x, y });
+        announce('Un objet est trouvé', ev.message?.length ? ev.message : ['Un objet gît ici.'], got || undefined, x, y);
         return false;
       }
       case 'BACK_TO_CASTLE':
-        if (text) addAdventureEvent('DISCOVERY', 'Une lueur étrange', text, undefined, dungeonLevel, { x, y });
+        if (ev.message?.length) announce('Une lueur étrange', ev.message, undefined, x, y);
         handleTakeStairs(0, 0, 0);
         return true;
       case 'SEARCH_FIGHT': {
         if (!searching) {
-          if (text) addAdventureEvent('DISCOVERY', 'Une salle singulière', text, 'Fouillez (Inspecter) pour en savoir plus.', dungeonLevel, { x, y });
+          if (ev.message?.length) announce('Une salle singulière', ev.message, 'Fouillez (Inspecter) pour en savoir plus.', x, y);
           return false;
         }
         if (ev.monsterId !== undefined && used === 0) {
@@ -389,12 +397,12 @@ export default function App() {
         if (ev.itemId !== undefined && used === 0) {
           markEventUsed(key, used + 1);
           const got = giveItemToParty(ev.itemId);
-          addAdventureEvent('DISCOVERY', 'Fouille fructueuse', text || '', got || undefined, dungeonLevel, { x, y });
+          announce('Fouille fructueuse', ev.message || [], got || undefined, x, y);
         }
         return false;
       }
       default:
-        if (text) addAdventureEvent('DISCOVERY', 'Message', text, undefined, dungeonLevel, { x, y });
+        if (ev.message?.length) announce('Message', ev.message, undefined, x, y);
         return false;
     }
   };
@@ -414,13 +422,12 @@ export default function App() {
       const hasItem = party.some(h => h.possessions.some(p => p.itemIndex === gate.itemId));
       if (!hasItem) {
         sounds.playBump();
-        addAdventureEvent(
-          'DISCOVERY',
+        announce(
           'Passage bloqué',
-          gate.message?.join(' ').replace(/\s+/g, ' ').trim() || 'Il manque un objet pour passer.',
+          gate.message?.length ? gate.message : ['Il manque un objet pour passer.'],
           `Objet requis : ${ITEMS_DATABASE.find(i => i.id === gate.itemId)?.name ?? gate.itemId}`,
-          dungeonLevel,
-          { x: newX, y: newY }
+          newX,
+          newY
         );
         return;
       }
@@ -784,21 +791,18 @@ export default function App() {
     setDirection(0);
   };
 
-  const handleReviveAllParty = () => {
-    // Quick recovery fallback
-    const revived = allCharacters.map(h => ({
+  // Cheat (castle menu): heal and revive the whole roster without moving anyone in the maze
+  const handleCheatRestoreParty = () => {
+    const restore = (h: TCharacter): TCharacter => ({
       ...h,
-      status: 'OK' as const,
+      status: 'OK',
       hpLeft: h.hpMax,
+      poisonAmount: 0,
       lostLocation: undefined,
       inMaze: false
-    }));
-    setAllCharacters(revived);
-    setParty(revived.slice(0, 6));
-    setLocation('CASTLE');
-    setPosX(0);
-    setPosY(0);
-    setDirection(0);
+    });
+    setAllCharacters(prev => prev.map(restore));
+    setParty(prev => prev.map(restore));
   };
 
   return (
@@ -852,10 +856,17 @@ export default function App() {
             onClearAdventureEvents={() => setAdventureEvents([])}
             onAddAdventureEvent={addAdventureEvent}
             onEnterMaze={() => {
+              // Original gameplay: the party always starts at the stairs of level 1
+              setMaze(getMazeForFloor(1));
+              setDungeonLevel(1);
+              setPosX(0);
+              setPosY(0);
+              setDirection(0);
               setLocation('MAZE');
               sounds.playDoor();
             }}
             onOpenPySide6Export={() => setShowPySide6Export(true)}
+            onCheatRestoreParty={handleCheatRestoreParty}
           />
         )}
 
@@ -965,13 +976,33 @@ export default function App() {
               </button>
             </div>
 
-            <button
-              onClick={handleReviveAllParty}
-              className="text-[11px] text-slate-500 hover:text-slate-300 underline pt-2"
-              title="Réanimation complète instantanée (facilité de test)"
+          </div>
+        )}
+
+        {scenarioMessage && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            onClick={() => setScenarioMessage(null)}
+          >
+            <div
+              className="max-w-xl w-full max-h-[80vh] overflow-y-auto bg-slate-900 border-2 border-amber-500/60 rounded-xl p-6 shadow-2xl space-y-3"
+              onClick={e => e.stopPropagation()}
             >
-              Mode entraînement : Réanimer miraculeusement toute l'équipe sur place
-            </button>
+              <h3 className="text-amber-400 font-serif font-bold tracking-wider text-sm uppercase">{scenarioMessage.title}</h3>
+              <div className="font-mono text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
+                {scenarioMessage.lines.join('\n')}
+              </div>
+              {scenarioMessage.details && (
+                <div className="text-xs text-amber-300 border-t border-slate-700 pt-2">{scenarioMessage.details}</div>
+              )}
+              <button
+                autoFocus
+                onClick={() => setScenarioMessage(null)}
+                className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition"
+              >
+                Continuer
+              </button>
+            </div>
           </div>
         )}
 

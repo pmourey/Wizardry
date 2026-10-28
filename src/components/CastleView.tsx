@@ -65,6 +65,7 @@ interface CastleViewProps {
   ) => void;
   onEnterMaze: () => void;
   onOpenPySide6Export: () => void;
+  onCheatRestoreParty?: () => void;
 }
 
 type CastleTab = 'COURTYARD' | 'TAVERN' | 'INN' | 'BOLTAC' | 'TEMPLE' | 'TRAINING' | 'JOURNAL';
@@ -78,7 +79,8 @@ export const CastleView: React.FC<CastleViewProps> = ({
   onClearAdventureEvents,
   onAddAdventureEvent,
   onEnterMaze,
-  onOpenPySide6Export
+  onOpenPySide6Export,
+  onCheatRestoreParty
 }) => {
   const [currentTab, setCurrentTab] = useState<CastleTab>('COURTYARD');
   const [message, setMessage] = useState<string>('Bienvenue au Château de Trebor. Choisissez votre destination.');
@@ -579,6 +581,21 @@ export const CastleView: React.FC<CastleViewProps> = ({
             <FileCode className="w-3.5 h-3.5" />
             Code PySide6 (.py)
           </button>
+          {onCheatRestoreParty && (
+            <button
+              onClick={() => {
+                if (window.confirm('Triche : soigner et ressusciter tous les personnages ?')) {
+                  onCheatRestoreParty();
+                  setMessage('Triche : tous les personnages sont soignés et ressuscités.');
+                  sounds.playFanfare();
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-semibold transition"
+              title="Menu de triche : restaurer le groupe"
+            >
+              Triche : restaurer le groupe
+            </button>
+          )}
           <button
             onClick={onEnterMaze}
             className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition shadow-md shadow-amber-950/30"
