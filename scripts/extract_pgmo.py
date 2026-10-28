@@ -7,11 +7,16 @@ src/data/provingGroundsData.ts.
 
 Record layouts come from the reverse-engineered Pascal source (Wizardry.Code).
 
+Also writes the 20 monster pictures (80x50, 1 bit/pixel, LSB first, SPCCHRS records)
+as transparent PNGs into src/assets/monsters/pic<N>.png.
+
 Usage: python3 scripts/extract_pgmo.py <scenario.dsk> [out.ts]
 """
 import json
+import os
 import struct
 import sys
+import zlib
 
 ALIGN = ['UNALIGN', 'GOOD', 'NEUTRAL', 'EVIL']
 OBJT = ['WEAPON', 'ARMOR', 'SHIELD', 'HELMET', 'GAUNTLET', 'SPECIAL', 'MISC']
@@ -278,6 +283,30 @@ class Scenario:
         return ev
 
 
+def png_rgba(rows, fg=(252, 211, 77)):
+    h, w = len(rows), len(rows[0])
+    raw = b''.join(b'\x00' + b''.join(bytes(fg) + b'\xff' if v else b'\x00\x00\x00\x00' for v in r) for r in rows)
+
+    def chunk(t, d):
+        return struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
+    return (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)) +
+            chunk(b'IDAT', zlib.compress(raw, 9)) + chunk(b'IEND', b''))
+
+
+def write_monster_pictures(sc, out_dir='src/assets/monsters'):
+    """SPCCHRS records (type 6): 512 bytes each, 2 per 1024-byte pair; 500 bytes = 80x50 bitmap."""
+    data = sc.d
+    bloff = sc.bloff[6]
+    os.makedirs(out_dir, exist_ok=True)
+    for i in range(20):
+        o = (bloff + 2 * (i // 2)) * 512 + 512 * (i % 2)
+        bits = [(byte >> m) & 1 for byte in data[o:o + 500] for m in range(8)]
+        rows = [bits[r * 80:(r + 1) * 80] for r in range(50)]
+        with open(os.path.join(out_dir, 'pic%d.png' % i), 'wb') as f:
+            f.write(png_rgba(rows))
+    print('wrote 20 monster pictures to', out_dir)
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
@@ -297,6 +326,7 @@ def main():
             for e in v:
                 f.write('  ' + json.dumps(e, separators=(',', ':')) + ',\n')
             f.write('];\n\n')
+    write_monster_pictures(sc)
     print('wrote', out, {k: len(v) for k, v in data.items()})
 
 

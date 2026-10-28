@@ -1,3 +1,4 @@
+import { MonsterPicture, getMonsterPictureUrl } from './MonsterPicture';
 import React, { useState, useEffect } from 'react';
 import { 
   TCharacter, 
@@ -223,8 +224,12 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   </span>
                 </div>
                 <div className="py-3 text-center">
-                  <div className="w-16 h-16 mx-auto rounded-full bg-slate-800/90 border border-slate-700 flex items-center justify-center text-amber-400 text-2xl font-serif font-bold shadow-inner mb-2">
-                    {grp.monster.name[0]}
+                  <div className="mx-auto mb-2 w-[160px] h-[100px] bg-black border border-slate-700 rounded shadow-inner flex items-center justify-center overflow-hidden">
+                    {getMonsterPictureUrl(grp.monster.picId) ? (
+                      <MonsterPicture picId={grp.monster.picId} alt={grp.identified ? grp.monster.name : grp.monster.nameUnknown} className="w-[160px] h-[100px]" />
+                    ) : (
+                      <span className="text-amber-400 text-2xl font-serif font-bold">{grp.monster.name[0]}</span>
+                    )}
                   </div>
                   <div className="font-bold text-sm text-white">
                     {grp.identified ? grp.monster.name : grp.monster.nameUnknown}
