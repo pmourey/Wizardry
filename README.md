@@ -4,6 +4,10 @@ Une recréation moderne, fidèle et enrichie du jeu de rôle culte de **Sir-Tech
 
 Ce projet combine l'authenticité des règles historiques de Wizardry 1 avec une interface web moderne, un moteur 3D temps réel Three.js, un système de cartographie tactique, un journal d'aventures narratif et un système de récupération des corps conforme au jeu de 1981.
 
+> 📜 **DIRECTIVE IMPÉRATIVE DE DÉVELOPPEMENT :**
+> Pour **toute modification, correction de bogue ou ajout de fonctionnalité** touchant aux règles, tables de monstres, probabilités, calculs de dégâts ou mécanismes du moteur de jeu, **TOUJOURS se référer impérativement au code source Pascal originel de Wizardry I** présent dans :
+> `public/assets/aistudio/Wiz1WizardryPascal_fb30a53c.txt` (voir également `INSTRUCTIONS_DEVELOPPEUR.md`).
+
 ---
 
 ## 🏛️ Nature du Projet
@@ -120,10 +124,15 @@ Le projet propose une expérience de *dungeon crawler* à la première personne 
 
 ---
 
-### 5. Coffres & Pièges (`chestEngine`)
-- **Inspection de piège** : Estimation probabiliste par le Voleur ou le Ninja.
-- **Désamorçage** : Test de désamorçage avec risque de déclenchement du piège en cas d'erreur.
+### 5. Coffres & Pièges (`chestEngine` & `ChestView`)
+- **Les 5 options authentiques du code Pascal (`PROCEDURE ACHEST`)** :
+  - `(O) Ouvrir` : Ouvre le coffre (fait sauter le piège s'il n'a pas été désamorcé).
+  - `(C) Sort CALFO` : Révélation magique infaillible du piège par le Prêtre.
+  - `(L) Laisser le coffre` : **Abandonne le coffre sans y toucher** (vital en l'absence de voleur valide ou de sort Calfo, ne déclenche aucun piège).
+  - `(I) Inspecter` : Analyse minutieuse du mécanisme par le voleur ou le ninja avec estimation probabiliste.
+  - `(D) Désarmer` : Tentative de désamorçage du piège identifié avec risque de déclenchement en cas d'échec critique.
 - **12 pièges fidèles à Wizardry** : Aiguille empoisonnée, bombe à gaz, carreau d'arbalète, boîte explosive, éclats, lames tranchantes, étourdisseur, téléporteur débile, décharge anti-mage, décharge anti-prêtre, alarme rameutant d'autres monstres.
+- **Raccourcis clavier authentiques** : Touches directes `O`, `C`, `L`, `I`, `D`.
 
 ---
 

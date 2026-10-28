@@ -226,6 +226,13 @@ export function executeCombatRound(
           executePlayerSpell(hero, spell, action, groups, party, log);
         }
       } else if (action.actionType === 'FIGHT') {
+        // According to Pascal Wizardry 1 (line 4446: IF MYCHARX < 3 THEN FIGHT):
+        // Only the first 3 characters (front rank) can execute a melee attack
+        if (action.charIndex >= 3) {
+          log.push(`${hero.name} est en arrière-garde (rang ${action.charIndex + 1}) et ne peut pas frapper en mêlée.`);
+          continue;
+        }
+
         // Melee attack: target designated group or automatically fall back to the first living group
         const isGroupAlive = (g?: CombatGroup) => 
           !!g && g.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
@@ -661,9 +668,12 @@ function executeMonsterTurn(
   }
 
   // 3. Physical Melee Attack against hero
-  // Front rank (first 3 heroes) are 3x more likely to be attacked
-  const weightedTargets = livingHeroes.flatMap(item => item.index < 3 ? [item, item, item] : [item]);
-  const chosenTarget = weightedTargets[Math.floor(Math.random() * weightedTargets.length)].hero;
+  // According to Pascal Wizardry 1 (line 4840: CHARX := CHARX MOD 3):
+  // Only the first 3 characters (front rank) can be attacked in physical melee.
+  // If all front rank characters are dead or fallen, the front line collapses and remaining living heroes are reached.
+  const frontRankCandidates = livingHeroes.filter(item => item.index < 3);
+  const eligibleMeleeTargets = frontRankCandidates.length > 0 ? frontRankCandidates : livingHeroes;
+  const chosenTarget = eligibleMeleeTargets[Math.floor(Math.random() * eligibleMeleeTargets.length)].hero;
 
   const targetAC = chosenTarget.armorClass;
   const toHitThreshold = Math.max(1, Math.min(19, 20 - targetAC - monster.level));

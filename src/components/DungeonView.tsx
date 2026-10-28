@@ -32,7 +32,12 @@ import {
   Heart,
   ArrowRightLeft,
   Skull,
-  Package
+  Package,
+  ArrowUpDown,
+  MoveUp,
+  MoveDown,
+  Users,
+  Swords
 } from 'lucide-react';
 
 interface DungeonViewProps {
@@ -98,6 +103,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   const [campCharIdx, setCampCharIdx] = useState<number>(0);
   const [campTargetIdx, setCampTargetIdx] = useState<number>(0);
   const [campMessage, setCampMessage] = useState<string>('');
+  const [campTab, setCampTab] = useState<'INVENTORY' | 'FORMATION'>('INVENTORY');
   const [transferringSlotIdx, setTransferringSlotIdx] = useState<number | null>(null);
   const [localVisitedTiles, setLocalVisitedTiles] = useState<boolean[][]>(() => 
     Array.from({ length: 20 }, () => Array(20).fill(false))
@@ -233,6 +239,48 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   };
 
   const activeCampHero = party[campCharIdx] || party[0];
+
+  // ==========================================
+  // CAMP FORMATION REORDERING (PASCAL REORDER)
+  // ==========================================
+  const handleMoveHero = (fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx || fromIdx < 0 || fromIdx >= party.length || toIdx < 0 || toIdx >= party.length) return;
+    sounds.playTurn();
+    const newParty = [...party];
+    const [moved] = newParty.splice(fromIdx, 1);
+    newParty.splice(toIdx, 0, moved);
+    setParty(newParty);
+    setCampCharIdx(toIdx);
+    setCampMessage(`🔄 ${moved.name} est maintenant en position #${toIdx + 1} (${toIdx < 3 ? 'Avant-garde (Mêlée)' : 'Arrière-garde (Distance/Magie)'}).`);
+    onAddAdventureEvent?.(
+      'DISCOVERY',
+      'Modification de l\'Ordre du Groupe',
+      `Formation réorganisée : ${moved.name} prend le rang #${toIdx + 1} (${toIdx < 3 ? 'Avant-garde' : 'Arrière-garde'}).`,
+      `Ordre actuel : ${newParty.map((h, i) => `#${i + 1} ${h.name} (${i < 3 ? 'Avant' : 'Arrière'})`).join(', ')}`,
+      maze.level,
+      { x, y }
+    );
+  };
+
+  const handleSwapHeroes = (idxA: number, idxB: number) => {
+    if (idxA === idxB || idxA < 0 || idxA >= party.length || idxB < 0 || idxB >= party.length) return;
+    sounds.playTurn();
+    const newParty = [...party];
+    const temp = newParty[idxA];
+    newParty[idxA] = newParty[idxB];
+    newParty[idxB] = temp;
+    setParty(newParty);
+    setCampCharIdx(idxB);
+    setCampMessage(`🔄 Échange de position : #${idxA + 1} ${newParty[idxA].name} ⇄ #${idxB + 1} ${newParty[idxB].name}.`);
+    onAddAdventureEvent?.(
+      'DISCOVERY',
+      'Modification de l\'Ordre du Groupe',
+      `Échange de positions au camp : #${idxA + 1} ${newParty[idxA].name} et #${idxB + 1} ${newParty[idxB].name}.`,
+      `Nouvel ordre : ${newParty.map((h, i) => `#${i + 1} ${h.name} (${i < 3 ? 'Avant' : 'Arrière'})`).join(', ')}`,
+      maze.level,
+      { x, y }
+    );
+  };
 
   // ==========================================
   // CAMP ACTIONS (EQUIP / HEAL / CAST / IDENTIFY)
@@ -799,11 +847,45 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       {showCamp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-slate-700 w-full max-w-4xl max-h-[90vh] rounded-xl flex flex-col shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950">
-              <div className="flex items-center gap-2">
-                <Tent className="w-5 h-5 text-emerald-400" />
-                <h2 className="text-base font-bold text-white">Campement dans le Labyrinthe</h2>
+            <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950 flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-emerald-950/80 border border-emerald-600/50 rounded-lg text-emerald-400">
+                  <Tent className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white">Campement dans le Labyrinthe</h2>
+                  <p className="text-[10px] text-slate-400">Gestion de l'escouade, formation et inventaire</p>
+                </div>
               </div>
+
+              {/* Camp Mode Tabs: Inventory vs Formation */}
+              <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => { setCampTab('INVENTORY'); sounds.playTurn(); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    campTab === 'INVENTORY' 
+                      ? 'bg-amber-600 text-white shadow-sm' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Package className="w-3.5 h-3.5" />
+                  <span>Équipement & Magie</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setCampTab('FORMATION'); sounds.playTurn(); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                    campTab === 'FORMATION' 
+                      ? 'bg-amber-600 text-white shadow-sm' 
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                  <span>Ordre du Groupe (Formation)</span>
+                </button>
+              </div>
+
               <button
                 onClick={() => setShowCamp(false)}
                 className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
@@ -812,18 +894,36 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               </button>
             </div>
 
-            {/* Hero selector tabs */}
-            <div className="flex items-center gap-1 px-6 py-2 bg-slate-950/60 border-b border-slate-800 overflow-x-auto">
-              {party.map((h, idx) => (
-                <button
-                  key={h.id}
-                  onClick={() => { setCampCharIdx(idx); sounds.playTurn(); }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${campCharIdx === idx ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                >
-                  {h.name}
-                </button>
-              ))}
-            </div>
+            {/* Hero selector tabs (for inventory mode) */}
+            {campTab === 'INVENTORY' && (
+              <div className="flex items-center gap-1.5 px-6 py-2.5 bg-slate-950/60 border-b border-slate-800 overflow-x-auto">
+                {party.map((h, idx) => {
+                  const isFront = idx < 3;
+                  const isSel = campCharIdx === idx;
+                  return (
+                    <button
+                      key={h.id}
+                      onClick={() => { setCampCharIdx(idx); sounds.playTurn(); }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition shrink-0 ${
+                        isSel 
+                          ? 'bg-amber-600 text-white shadow' 
+                          : 'bg-slate-800/60 text-slate-400 hover:text-white border border-slate-700/60'
+                      }`}
+                    >
+                      <span className="font-mono text-[10px] opacity-80">#{idx + 1}</span>
+                      <span>{h.name}</span>
+                      <span className={`text-[9px] px-1 rounded font-bold ${
+                        isFront 
+                          ? isSel ? 'bg-amber-800 text-amber-200' : 'bg-amber-950/80 text-amber-400 border border-amber-800/60'
+                          : isSel ? 'bg-blue-800 text-blue-200' : 'bg-blue-950/80 text-blue-400 border border-blue-800/60'
+                      }`}>
+                        {isFront ? 'Avant' : 'Arrière'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {campMessage && (
               <div className="px-6 py-2 bg-amber-950/30 border-b border-amber-900/30 text-xs text-amber-300">
@@ -831,18 +931,61 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               </div>
             )}
 
-            <div className="flex-1 p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
-              {/* Character Details & Spells */}
-              <div className="space-y-4">
-                <div className="p-4 bg-slate-800/50 border border-slate-700/60 rounded-xl space-y-2">
-                  <div className="font-bold text-sm text-white">{activeCampHero.name}</div>
-                  <div className="text-slate-400">
-                    {activeCampHero.race} {activeCampHero.class} (Niveau {activeCampHero.charLevel}) · CA {activeCampHero.armorClass}
+            {campTab === 'INVENTORY' ? (
+              <div className="flex-1 p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                {/* Character Details & Spells */}
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-800/50 border border-slate-700/60 rounded-xl space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-sm text-white flex items-center gap-2">
+                          <span>{activeCampHero.name}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                            campCharIdx < 3 
+                              ? 'bg-amber-950/80 border-amber-500/60 text-amber-300' 
+                              : 'bg-blue-950/80 border-blue-500/60 text-blue-300'
+                          }`}>
+                            {campCharIdx < 3 ? `Avant-garde · Rang #${campCharIdx + 1}` : `Arrière-garde · Rang #${campCharIdx + 1}`}
+                          </span>
+                        </div>
+                        <div className="text-slate-400 text-xs">
+                          {activeCampHero.race} {activeCampHero.class} (Niveau {activeCampHero.charLevel}) · CA {activeCampHero.armorClass}
+                        </div>
+                      </div>
+
+                      {/* Quick reorder buttons */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleMoveHero(campCharIdx, campCharIdx - 1)}
+                          disabled={campCharIdx === 0}
+                          className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 border border-slate-700 rounded text-slate-300 hover:text-white transition"
+                          title="Monter d'un rang dans le groupe"
+                        >
+                          <MoveUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleMoveHero(campCharIdx, campCharIdx + 1)}
+                          disabled={campCharIdx === party.length - 1}
+                          className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 border border-slate-700 rounded text-slate-300 hover:text-white transition"
+                          title="Descendre d'un rang dans le groupe"
+                        >
+                          <MoveDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setCampTab('FORMATION')}
+                          className="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-[11px] font-bold text-amber-300 flex items-center gap-1 transition"
+                          title="Ouvrir le gestionnaire de formation complet"
+                        >
+                          <ArrowUpDown className="w-3 h-3" />
+                          <span>Ordre</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-slate-400">
+                      Points de Vie : <strong className="text-emerald-400">{activeCampHero.hpLeft}/{activeCampHero.hpMax}</strong> · Or : <strong className="text-amber-400">{activeCampHero.gold} PO</strong>
+                    </div>
                   </div>
-                  <div className="text-slate-400">
-                    Points de Vie : <strong className="text-emerald-400">{activeCampHero.hpLeft}/{activeCampHero.hpMax}</strong> · Or : <strong className="text-amber-400">{activeCampHero.gold} PO</strong>
-                  </div>
-                </div>
 
                 {/* Spells available to cast in Camp */}
                 <div className="space-y-2">
@@ -1015,6 +1158,230 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 </div>
               </div>
             </div>
+          ) : (
+              <div className="flex-1 p-6 overflow-y-auto space-y-5 text-xs">
+                {/* Rules description header */}
+                <div className="p-4 bg-amber-950/30 border border-amber-600/40 rounded-xl space-y-1.5">
+                  <div className="font-bold text-amber-300 flex items-center gap-2 text-sm font-serif">
+                    <Swords className="w-4 h-4 text-amber-400" />
+                    <span>Règles Pascal de Wizardry I : Disposition Tactique du Groupe</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Seuls les <strong>3 premiers personnages (l'Avant-garde)</strong> peuvent porter des attaques physiques au corps-à-corps et subir les assauts physiques directs des monstres.
+                    Les personnages <strong>4, 5 et 6 (l'Arrière-garde)</strong> sont protégés des coups de mêlée et combattent par leurs sorts, objets ou compétences.
+                  </p>
+                </div>
+
+                {/* Two Column Battle Ranks */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* FRONT RANK (AVANT-GARDE : Rangs 1, 2, 3) */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-amber-600/40">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 bg-amber-950/80 border border-amber-600/60 rounded-lg text-amber-400">
+                          <Swords className="w-4 h-4" />
+                        </span>
+                        <div>
+                          <div className="font-bold text-sm text-amber-300">AVANT-GARDE (Ligne de Front)</div>
+                          <div className="text-[11px] text-slate-400">Rangs #1 à #3 · Attaquent et encaissent en mêlée</div>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        {Math.min(3, party.length)}/3
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {party.slice(0, 3).map((hero, idx) => {
+                        const actualIdx = idx;
+                        return (
+                          <div 
+                            key={hero.id}
+                            className="p-3 bg-slate-800/80 border border-amber-500/40 rounded-xl space-y-2 hover:border-amber-500 transition shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-amber-600/20 border border-amber-500 text-amber-300 flex items-center justify-center font-bold font-mono text-xs">
+                                  #{actualIdx + 1}
+                                </span>
+                                <div>
+                                  <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                                    <span>{hero.name}</span>
+                                    <span className="text-[10px] text-amber-400 font-normal">({hero.class})</span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-400">
+                                    Niv.{hero.charLevel} · CA {hero.armorClass} · {hero.hpLeft}/{hero.hpMax} PV
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Controls */}
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveHero(actualIdx, actualIdx - 1)}
+                                  disabled={actualIdx === 0}
+                                  className="p-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-white rounded text-xs transition"
+                                  title="Monter d'un rang"
+                                >
+                                  <MoveUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveHero(actualIdx, actualIdx + 1)}
+                                  disabled={actualIdx === party.length - 1}
+                                  className="p-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-white rounded text-xs transition"
+                                  title="Descendre d'un rang"
+                                >
+                                  <MoveDown className="w-3.5 h-3.5" />
+                                </button>
+                                {party.length > 3 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveHero(actualIdx, Math.min(party.length - 1, 3))}
+                                    className="px-2 py-1 bg-blue-950/80 hover:bg-blue-900 border border-blue-700/60 text-blue-300 rounded text-[11px] font-semibold transition"
+                                    title="Placer en arrière-garde"
+                                  >
+                                    Arrière ⏩
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Swap selector */}
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-700/40 text-[11px]">
+                              <span className="text-slate-400">Échanger avec :</span>
+                              <select
+                                onChange={e => {
+                                  const targetIdx = Number(e.target.value);
+                                  if (!isNaN(targetIdx)) handleSwapHeroes(actualIdx, targetIdx);
+                                }}
+                                value=""
+                                className="bg-slate-900 border border-slate-700 text-slate-300 rounded px-2 py-0.5 text-xs focus:outline-none"
+                              >
+                                <option value="" disabled>Choisir un compagnon...</option>
+                                {party.map((p, pIdx) => {
+                                  if (pIdx === actualIdx) return null;
+                                  return (
+                                    <option key={p.id} value={pIdx}>
+                                      #{pIdx + 1} {p.name} ({p.class} · {pIdx < 3 ? 'Avant' : 'Arrière'})
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* BACK RANK (ARRIÈRE-GARDE : Rangs 4, 5, 6) */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-blue-600/40">
+                      <div className="flex items-center gap-2">
+                        <span className="p-1.5 bg-blue-950/80 border border-blue-600/60 rounded-lg text-blue-400">
+                          <ShieldCheck className="w-4 h-4" />
+                        </span>
+                        <div>
+                          <div className="font-bold text-sm text-blue-300">ARRIÈRE-GARDE (Second Rang)</div>
+                          <div className="text-[11px] text-slate-400">Rangs #4 à #6 · Protégés de la mêlée physique</div>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-blue-400">
+                        {Math.max(0, party.length - 3)}/3
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {party.length <= 3 && (
+                        <div className="p-6 bg-slate-950/40 border border-dashed border-slate-800 rounded-xl text-center text-slate-500">
+                          Aucun héros en arrière-garde. Tous vos aventuriers sont au front !
+                        </div>
+                      )}
+                      {party.slice(3).map((hero, idx) => {
+                        const actualIdx = idx + 3;
+                        return (
+                          <div 
+                            key={hero.id}
+                            className="p-3 bg-slate-800/80 border border-blue-500/40 rounded-xl space-y-2 hover:border-blue-500 transition shadow-sm"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="w-6 h-6 rounded-full bg-blue-600/20 border border-blue-500 text-blue-300 flex items-center justify-center font-bold font-mono text-xs">
+                                  #{actualIdx + 1}
+                                </span>
+                                <div>
+                                  <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                                    <span>{hero.name}</span>
+                                    <span className="text-[10px] text-blue-400 font-normal">({hero.class})</span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-400">
+                                    Niv.{hero.charLevel} · CA {hero.armorClass} · {hero.hpLeft}/{hero.hpMax} PV
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Controls */}
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveHero(actualIdx, actualIdx - 1)}
+                                  className="p-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition"
+                                  title="Monter d'un rang"
+                                >
+                                  <MoveUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveHero(actualIdx, actualIdx + 1)}
+                                  disabled={actualIdx === party.length - 1}
+                                  className="p-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-white rounded text-xs transition"
+                                  title="Descendre d'un rang"
+                                >
+                                  <MoveDown className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleMoveHero(actualIdx, 0)}
+                                  className="px-2 py-1 bg-amber-950/80 hover:bg-amber-900 border border-amber-700/60 text-amber-300 rounded text-[11px] font-semibold transition"
+                                  title="Placer en tête de ligne (Avant-garde)"
+                                >
+                                  ⏪ Avant
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Swap selector */}
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-700/40 text-[11px]">
+                              <span className="text-slate-400">Échanger avec :</span>
+                              <select
+                                onChange={e => {
+                                  const targetIdx = Number(e.target.value);
+                                  if (!isNaN(targetIdx)) handleSwapHeroes(actualIdx, targetIdx);
+                                }}
+                                value=""
+                                className="bg-slate-900 border border-slate-700 text-slate-300 rounded px-2 py-0.5 text-xs focus:outline-none"
+                              >
+                                <option value="" disabled>Choisir un compagnon...</option>
+                                {party.map((p, pIdx) => {
+                                  if (pIdx === actualIdx) return null;
+                                  return (
+                                    <option key={p.id} value={pIdx}>
+                                      #{pIdx + 1} {p.name} ({p.class} · {pIdx < 3 ? 'Avant' : 'Arrière'})
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

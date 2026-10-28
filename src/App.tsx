@@ -44,6 +44,21 @@ import {
   Users
 } from 'lucide-react';
 
+// Persistent Dungeon & Exploration Session Type
+interface TDungeonSession {
+  location: GameLocation;
+  dungeonLevel: number;
+  posX: number;
+  posY: number;
+  direction: number;
+  lightLevel: number;
+  acModifier: number;
+  combatGroups?: CombatGroup[];
+  combatSurprise?: 'PARTY' | 'MONSTERS' | 'NONE';
+  chestReward?: ChestReward | null;
+  lastWipeoutInfo?: { x: number; y: number; level: number; heroes: string[] } | null;
+}
+
 export default function App() {
   // Persistence in localStorage
   const [party, setParty] = useState<TCharacter[]>(() => {
@@ -66,25 +81,38 @@ export default function App() {
     return DEFAULT_PARTY;
   });
 
-  // Location & Navigation State
-  const [location, setLocation] = useState<GameLocation>('CASTLE');
-  const [dungeonLevel, setDungeonLevel] = useState<number>(1);
-  const [maze, setMaze] = useState<TMazeFloor>(() => generateLevel1Maze());
-  const [posX, setPosX] = useState<number>(0);
-  const [posY, setPosY] = useState<number>(0);
-  const [direction, setDirection] = useState<number>(0); // 0: N, 1: E, 2: S, 3: W
-  const [lightLevel, setLightLevel] = useState<number>(0);
-  const [acModifier, setAcModifier] = useState<number>(0);
+  // Stored dungeon outing & exploration session state
+  const savedSession: Partial<TDungeonSession> | null = (() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('wiz1_dungeon_session');
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      }
+    }
+    return null;
+  })();
+
+  // Location & Navigation State (restores exact place in dungeon on page refresh)
+  const [location, setLocation] = useState<GameLocation>(() => savedSession?.location || 'CASTLE');
+  const [dungeonLevel, setDungeonLevel] = useState<number>(() => savedSession?.dungeonLevel || 1);
+  const [maze, setMaze] = useState<TMazeFloor>(() => getMazeForFloor(savedSession?.dungeonLevel || 1));
+  const [posX, setPosX] = useState<number>(() => savedSession?.posX ?? 0);
+  const [posY, setPosY] = useState<number>(() => savedSession?.posY ?? 0);
+  const [direction, setDirection] = useState<number>(() => savedSession?.direction ?? 0); // 0: N, 1: E, 2: S, 3: W
+  const [lightLevel, setLightLevel] = useState<number>(() => savedSession?.lightLevel ?? 0);
+  const [acModifier, setAcModifier] = useState<number>(() => savedSession?.acModifier ?? 0);
 
   // Combat & Chest State
-  const [combatGroups, setCombatGroups] = useState<CombatGroup[]>([]);
-  const [combatSurprise, setCombatSurprise] = useState<'PARTY' | 'MONSTERS' | 'NONE'>('NONE');
-  const [chestReward, setChestReward] = useState<ChestReward | null>(null);
+  const [combatGroups, setCombatGroups] = useState<CombatGroup[]>(() => savedSession?.combatGroups || []);
+  const [combatSurprise, setCombatSurprise] = useState<'PARTY' | 'MONSTERS' | 'NONE'>(() => savedSession?.combatSurprise || 'NONE');
+  const [chestReward, setChestReward] = useState<ChestReward | null>(() => savedSession?.chestReward || null);
 
   // Modals & Sound
   const [showPySide6Export, setShowPySide6Export] = useState<boolean>(false);
   const [soundOn, setSoundOn] = useState<boolean>(true);
-  const [lastWipeoutInfo, setLastWipeoutInfo] = useState<{ x: number; y: number; level: number; heroes: string[] } | null>(null);
+  const [lastWipeoutInfo, setLastWipeoutInfo] = useState<{ x: number; y: number; level: number; heroes: string[] } | null>(
+    () => savedSession?.lastWipeoutInfo || null
+  );
 
   // Adventure Journal Events (persisted in localStorage)
   const [adventureEvents, setAdventureEvents] = useState<AdventureLogEvent[]>(() => {
@@ -145,32 +173,79 @@ export default function App() {
   const [visitedTilesByLevel, setVisitedTilesByLevel] = useState<Record<number, boolean[][]>>(() => {
     const initialByLevel: Record<number, boolean[][]> = {};
     if (typeof window !== 'undefined') {
-      const savedL1 = localStorage.getItem('wiz1_visited_level1');
-      if (savedL1) {
-        try { initialByLevel[1] = JSON.parse(savedL1); } catch (e) { /* ignore */ }
+      const savedAll = localStorage.getItem('wiz1_visited_tiles_all');
+      if (savedAll) {
+        try { Object.assign(initialByLevel, JSON.parse(savedAll)); } catch (e) { /* ignore */ }
+      } else {
+        const savedL1 = localStorage.getItem('wiz1_visited_level1');
+        if (savedL1) {
+          try { initialByLevel[1] = JSON.parse(savedL1); } catch (e) { /* ignore */ }
+        }
       }
     }
-    if (!initialByLevel[1]) {
-      const l1 = Array.from({ length: 20 }, () => Array(20).fill(false));
-      l1[0][0] = true;
-      initialByLevel[1] = l1;
+    const curLvl = savedSession?.dungeonLevel || 1;
+    if (!initialByLevel[curLvl]) {
+      const l = Array.from({ length: 20 }, () => Array(20).fill(false));
+      const curX = savedSession?.posX ?? 0;
+      const curY = savedSession?.posY ?? 0;
+      if (l[curX]) l[curX][curY] = true;
+      initialByLevel[curLvl] = l;
     }
     return initialByLevel;
   });
 
   const [visitedTiles, setVisitedTiles] = useState<boolean[][]>(() => {
-    return visitedTilesByLevel[1] || Array.from({ length: 20 }, () => Array(20).fill(false));
+    const curLvl = savedSession?.dungeonLevel || 1;
+    if (visitedTilesByLevel[curLvl]) return visitedTilesByLevel[curLvl];
+    const fresh = Array.from({ length: 20 }, () => Array(20).fill(false));
+    const curX = savedSession?.posX ?? 0;
+    const curY = savedSession?.posY ?? 0;
+    if (fresh[curX]) fresh[curX][curY] = true;
+    return fresh;
   });
 
-  // Save to localStorage on changes
+  // Save all game and dungeon session state to localStorage on changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('wiz1_party', JSON.stringify(party));
       localStorage.setItem('wiz1_roster', JSON.stringify(allCharacters));
       localStorage.setItem('wiz1_visited_level1', JSON.stringify(visitedTilesByLevel[1] || visitedTiles));
+      localStorage.setItem('wiz1_visited_tiles_all', JSON.stringify(visitedTilesByLevel));
       localStorage.setItem('wiz1_adventure_journal', JSON.stringify(adventureEvents));
+
+      const sessionData: TDungeonSession = {
+        location,
+        dungeonLevel,
+        posX,
+        posY,
+        direction,
+        lightLevel,
+        acModifier,
+        combatGroups: location === 'COMBAT' ? combatGroups : [],
+        combatSurprise: location === 'COMBAT' ? combatSurprise : 'NONE',
+        chestReward: location === 'CHEST' ? chestReward : null,
+        lastWipeoutInfo
+      };
+      localStorage.setItem('wiz1_dungeon_session', JSON.stringify(sessionData));
     }
-  }, [party, allCharacters, visitedTiles, visitedTilesByLevel, adventureEvents]);
+  }, [
+    party, 
+    allCharacters, 
+    visitedTiles, 
+    visitedTilesByLevel, 
+    adventureEvents,
+    location,
+    dungeonLevel,
+    posX,
+    posY,
+    direction,
+    lightLevel,
+    acModifier,
+    combatGroups,
+    combatSurprise,
+    chestReward,
+    lastWipeoutInfo
+  ]);
 
   // Per Pascal Wizardry 1: Poison only exists while in the maze (POISNAMT in LOSTXYL).
   // Characters returning to the castle are automatically and immediately cured of all poison!
@@ -440,8 +515,8 @@ export default function App() {
     setLocation('CHEST');
   };
 
-  const handleFinishChest = (alarmTriggered: boolean) => {
-    if (chestReward) {
+  const handleFinishChest = (alarmTriggered: boolean, wasOpened: boolean = true) => {
+    if (wasOpened && chestReward) {
       const itemDesc = chestReward.itemFound 
         ? `Objet : ${chestReward.itemFound.name}` 
         : 'Aucun équipement';
@@ -453,8 +528,18 @@ export default function App() {
         dungeonLevel,
         { x: posX, y: posY }
       );
+    } else if (!wasOpened) {
+      addAdventureEvent(
+        'DISCOVERY',
+        `Coffre aux trésors laissé scellé`,
+        `Faute de voleur qualifié ou de sort Calfo, votre escouade a prudemment laissé le coffre intact (Règle Pascal L)EAVE).`,
+        `Piège non déclenché · Exploration poursuivie`,
+        dungeonLevel,
+        { x: posX, y: posY }
+      );
     }
 
+    setChestReward(null);
     if (alarmTriggered) {
       triggerBattleEncounter();
     } else {
@@ -466,6 +551,10 @@ export default function App() {
     if (targetLevel === 0) {
       sounds.playDoor();
       setLocation('CASTLE');
+      setDungeonLevel(1);
+      setPosX(0);
+      setPosY(0);
+      setDirection(0);
       addAdventureEvent(
         'CASTLE',
         "Retour au Château de Trebor",
@@ -673,6 +762,10 @@ export default function App() {
             onInspectArea={handleInspectArea}
             onReturnToCastle={() => {
               setLocation('CASTLE');
+              setDungeonLevel(1);
+              setPosX(0);
+              setPosY(0);
+              setDirection(0);
               sounds.playDoor();
             }}
             onTakeStairs={handleTakeStairs}

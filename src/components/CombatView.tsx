@@ -371,81 +371,100 @@ export const CombatView: React.FC<CombatViewProps> = ({
       {/* Command Panel for Active Hero */}
       {!isResolving && currentSurprise !== 'MONSTERS' && !allHelpless && activeHero && (
         <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-xl space-y-4 max-w-3xl mx-auto w-full shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                Ordre #{currentHeroIdx + 1}/{livingHeroes.length} :
-              </span>
-              <span className="text-sm font-bold text-white">
-                {activeHero.name} ({activeHero.class} · CA {activeHero.armorClass} · {activeHero.hpLeft}/{activeHero.hpMax} PV)
-              </span>
-            </div>
-            {currentHeroIdx > 0 && (
-              <button
-                onClick={() => {
-                  setCurrentHeroIdx(currentHeroIdx - 1);
-                  setActions(actions.slice(0, -1));
-                }}
-                className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
-              >
-                <RotateCcw className="w-3.5 h-3.5" /> Revenir
-              </button>
-            )}
-          </div>
+          {(() => {
+            const heroPartyIdx = party.findIndex(p => p.id === activeHero.id);
+            const isFrontRank = heroPartyIdx < 3;
 
-          {/* Target Group Selector for Current Order */}
-          <div className="flex items-center gap-2 text-xs pt-1 border-t border-slate-800/80">
-            <span className="font-bold text-slate-400 flex items-center gap-1">
-              <Target className="w-3.5 h-3.5 text-amber-400" />
-              Groupe ciblé :
-            </span>
-            <div className="flex gap-1.5 flex-wrap">
-              {groups.map((grp, gIdx) => {
-                const isAlive = grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
-                if (!isAlive) return null;
-                const isSel = selectedTargetGroupIdx === gIdx;
-                const mName = grp.identified ? grp.monster.name : grp.monster.nameUnknown;
+            return (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                      Ordre #{currentHeroIdx + 1}/{livingHeroes.length} :
+                    </span>
+                    <span className="text-sm font-bold text-white">
+                      {activeHero.name} ({activeHero.class} · CA {activeHero.armorClass} · {activeHero.hpLeft}/{activeHero.hpMax} PV)
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                      isFrontRank 
+                        ? 'bg-amber-950/80 border-amber-500/60 text-amber-300' 
+                        : 'bg-blue-950/80 border-blue-500/60 text-blue-300'
+                    }`}>
+                      {isFrontRank ? `Avant-garde · Rang #${heroPartyIdx + 1}` : `Arrière-garde · Rang #${heroPartyIdx + 1}`}
+                    </span>
+                  </div>
+                  {currentHeroIdx > 0 && (
+                    <button
+                      onClick={() => {
+                        setCurrentHeroIdx(currentHeroIdx - 1);
+                        setActions(actions.slice(0, -1));
+                      }}
+                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Revenir
+                    </button>
+                  )}
+                </div>
 
-                return (
-                  <button
-                    key={gIdx}
-                    type="button"
-                    onClick={() => {
-                      setSelectedTargetGroupIdx(gIdx);
-                      sounds.playTurn();
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
-                      isSel 
-                        ? 'bg-amber-600/30 border-amber-500 text-amber-300 shadow-sm' 
-                        : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    #{gIdx + 1} {mName} ({grp.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length})
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                {/* Target Group Selector for Current Order */}
+                <div className="flex items-center gap-2 text-xs pt-1 border-t border-slate-800/80">
+                  <span className="font-bold text-slate-400 flex items-center gap-1">
+                    <Target className="w-3.5 h-3.5 text-amber-400" />
+                    Groupe ciblé :
+                  </span>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {groups.map((grp, gIdx) => {
+                      const isAlive = grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
+                      if (!isAlive) return null;
+                      const isSel = selectedTargetGroupIdx === gIdx;
+                      const mName = grp.identified ? grp.monster.name : grp.monster.nameUnknown;
 
-          {/* Active Hero Silence Alert */}
-          {activeHero.silencedRounds && activeHero.silencedRounds > 0 && (
-            <div className="px-3 py-1.5 bg-cyan-950/50 border border-cyan-500/40 rounded-lg text-xs text-cyan-300 flex items-center gap-2">
-              <MicOff className="w-4 h-4 text-cyan-400 shrink-0 animate-pulse" />
-              <span>{activeHero.name} est sous l'effet du silence magique MONTINO (sorts bloqués pour encore {activeHero.silencedRounds} tour(s)).</span>
-            </div>
-          )}
+                      return (
+                        <button
+                          key={gIdx}
+                          type="button"
+                          onClick={() => {
+                            setSelectedTargetGroupIdx(gIdx);
+                            sounds.playTurn();
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                            isSel 
+                              ? 'bg-amber-600/30 border-amber-500 text-amber-300 shadow-sm' 
+                              : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          #{gIdx + 1} {mName} ({grp.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length})
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-          {!selectingSpell ? (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-              {/* Fight attack button */}
-              <button
-                onClick={() => handleSelectAction('FIGHT', undefined, selectedTargetGroupIdx)}
-                className="p-3 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/60 rounded-lg flex flex-col items-center gap-1 text-xs font-bold text-amber-300 transition"
-                title={`Attaquer le Groupe #${selectedTargetGroupIdx + 1}`}
-              >
-                <Swords className="w-4 h-4 text-amber-400" />
-                <span>Attaquer</span>
-              </button>
+                {/* Active Hero Silence Alert */}
+                {activeHero.silencedRounds && activeHero.silencedRounds > 0 && (
+                  <div className="px-3 py-1.5 bg-cyan-950/50 border border-cyan-500/40 rounded-lg text-xs text-cyan-300 flex items-center gap-2">
+                    <MicOff className="w-4 h-4 text-cyan-400 shrink-0 animate-pulse" />
+                    <span>{activeHero.name} est sous l'effet du silence magique MONTINO (sorts bloqués pour encore {activeHero.silencedRounds} tour(s)).</span>
+                  </div>
+                )}
+
+                {!selectingSpell ? (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+                    {/* Fight attack button: ONLY front 3 characters can attack in melee as per Pascal */}
+                    <button
+                      onClick={() => handleSelectAction('FIGHT', undefined, selectedTargetGroupIdx)}
+                      disabled={!isFrontRank}
+                      className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs font-bold transition ${
+                        isFrontRank 
+                          ? 'bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/60 text-amber-300' 
+                          : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                      }`}
+                      title={isFrontRank ? `Attaquer le Groupe #${selectedTargetGroupIdx + 1}` : "Arrière-garde : Seuls les 3 premiers héros peuvent attaquer au corps-à-corps selon le code Pascal"}
+                    >
+                      <Swords className="w-4 h-4 text-amber-400" />
+                      <span>Attaquer</span>
+                      {!isFrontRank && <span className="text-[9px] text-slate-400 font-normal">Arrière-garde</span>}
+                    </button>
 
               <button
                 onClick={() => setSelectingSpell(true)}
@@ -515,8 +534,11 @@ export const CombatView: React.FC<CombatViewProps> = ({
               </div>
             </div>
           )}
-        </div>
-      )}
+        </>
+      );
+    })()}
+  </div>
+)}
 
       {/* Combat Resolution Logs */}
       {roundLog.length > 0 && (

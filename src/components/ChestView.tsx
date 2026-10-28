@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TCharacter } from '../types/wizardry';
 import { 
   ChestReward, 
@@ -9,14 +9,14 @@ import {
   TTrapType 
 } from '../engine/chestEngine';
 import { sounds } from '../utils/soundEffects';
-import { Package, Search, KeyRound, Unlock, ArrowRight, ShieldCheck, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Package, Search, KeyRound, Unlock, ArrowRight, ShieldCheck, AlertTriangle, CheckCircle2, ShieldAlert, Footprints } from 'lucide-react';
 
 interface ChestViewProps {
   party: TCharacter[];
   setParty: React.Dispatch<React.SetStateAction<TCharacter[]>>;
   chest: ChestReward;
   dungeonLevel: number;
-  onFinishChest: (alarmTriggered: boolean) => void;
+  onFinishChest: (alarmTriggered: boolean, wasOpened?: boolean) => void;
   onPartyWipedOut?: () => void;
 }
 
@@ -220,6 +220,62 @@ export const ChestView: React.FC<ChestViewProps> = ({
     setParty([...party]);
   };
 
+  const handleLeave = () => {
+    sounds.playFootstep();
+    setLog(prev => [
+      ...prev,
+      `🚪 Vous choisissez de laisser le coffre sur place sans l'ouvrir (Option Pascal L)EAVE). L'escouade s'éloigne prudemment.`
+    ]);
+    setTimeout(() => {
+      onFinishChest(false, false);
+    }, 650);
+  };
+
+  // Authentic Wizardry 1 keyboard shortcuts: O)pen, C)alfo, L)eave, I)nspect, D)isarm
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+        return;
+      }
+
+      if (opened) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key.toUpperCase() === 'C') {
+          e.preventDefault();
+          onFinishChest(chest.trapType === 'ALARM', true);
+        }
+        return;
+      }
+
+      const key = e.key.toUpperCase();
+      if (key === 'L') {
+        e.preventDefault();
+        handleLeave();
+      } else if (key === 'O') {
+        e.preventDefault();
+        handleOpen();
+      } else if (key === 'I') {
+        if (!chest.exploded && !chest.disarmed) {
+          e.preventDefault();
+          handleInspect();
+        }
+      } else if (key === 'C') {
+        if (!chest.exploded && !chest.disarmed) {
+          e.preventDefault();
+          handleCalfo();
+        }
+      } else if (key === 'D') {
+        if (!chest.exploded && !chest.disarmed) {
+          e.preventDefault();
+          handleDisarm();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [opened, hero, selectedDisarmTrap, chest, party, dungeonLevel, selectedHeroIdx]);
+
   return (
     <div className="flex flex-col h-full bg-slate-950 text-slate-100 p-6 select-none overflow-y-auto max-w-3xl mx-auto">
       <div className="flex items-center justify-between pb-4 border-b border-slate-800">
@@ -295,33 +351,33 @@ export const ChestView: React.FC<ChestViewProps> = ({
         {/* Actions panel */}
         {!opened ? (
           <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <button
                 onClick={handleInspect}
                 disabled={chest.exploded || chest.disarmed}
                 className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition disabled:opacity-40 disabled:hover:bg-slate-800"
-                title={chest.exploded ? "Le piège a déjà explosé" : "Examiner la serrure"}
+                title={chest.exploded ? "Le piège a déjà explosé" : "Examiner la serrure pour identifier le piège (Touche I)"}
               >
                 <Search className="w-4 h-4 text-amber-400" />
-                <span>Inspecter le piège</span>
+                <span>(I) Inspecter</span>
               </button>
 
               <button
                 onClick={handleCalfo}
                 disabled={chest.exploded || chest.disarmed}
                 className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition disabled:opacity-40 disabled:hover:bg-slate-800"
-                title={chest.exploded ? "Le piège a déjà explosé" : "Sort Calfo"}
+                title={chest.exploded ? "Le piège a déjà explosé" : "Incanter CALFO pour révéler le piège à 100% (Touche C)"}
               >
                 <KeyRound className="w-4 h-4 text-purple-400" />
-                <span>Sort CALFO (Prêtre)</span>
+                <span>(C) Sort CALFO</span>
               </button>
 
-              <div className="col-span-1 md:col-span-2 flex items-center gap-2">
+              <div className="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700 rounded-xl px-2 py-1">
                 <select
                   value={selectedDisarmTrap}
                   onChange={e => setSelectedDisarmTrap(e.target.value as TTrapType)}
                   disabled={chest.exploded || chest.disarmed}
-                  className="bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white flex-1 focus:outline-none disabled:opacity-40"
+                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-white flex-1 focus:outline-none disabled:opacity-40"
                 >
                   {Object.entries(TRAP_NAMES).map(([key, name]) => (
                     <option key={key} value={key}>{name}</option>
@@ -330,11 +386,22 @@ export const ChestView: React.FC<ChestViewProps> = ({
                 <button
                   onClick={handleDisarm}
                   disabled={chest.exploded || chest.disarmed}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold text-amber-400 transition shrink-0 disabled:opacity-40 disabled:hover:bg-slate-800"
+                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 text-white rounded-lg text-xs font-bold transition shrink-0 disabled:opacity-40"
+                  title="Tenter de désamorcer le piège (Touche D)"
                 >
-                  Désarmer
+                  (D) Désarmer
                 </button>
               </div>
+
+              {/* Pascal L)EAVE Option: Leave chest undisturbed */}
+              <button
+                onClick={handleLeave}
+                className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition shadow-sm"
+                title="Ne pas ouvrir le coffre et reprendre la route sans déclencher de piège (Option L originelle de Wizardry)"
+              >
+                <Footprints className="w-4 h-4 text-slate-400" />
+                <span>(L) Laisser le coffre</span>
+              </button>
             </div>
 
             {/* Open chest button - prominently styled and shows safe state when exploded/disarmed */}
@@ -347,23 +414,24 @@ export const ChestView: React.FC<ChestViewProps> = ({
                   ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-950/40 ring-1 ring-amber-400/50 animate-pulse'
                   : 'bg-amber-700 hover:bg-amber-600 text-amber-100 shadow-amber-950/30'
               }`}
+              title="Ouvrir le coffre et piller le trésor (Touche O)"
             >
               <Unlock className="w-4 h-4" />
               <span>
                 {chest.disarmed
-                  ? 'Ouvrir le coffre sécurisé et collecter le butin'
+                  ? '(O) Ouvrir le coffre sécurisé et collecter le butin'
                   : chest.exploded
-                  ? 'Ouvrir le coffre neutralisé (aucun danger restant)'
-                  : 'Ouvrir le coffre et piller le trésor'}
+                  ? '(O) Ouvrir le coffre neutralisé (aucun danger restant)'
+                  : '(O) Ouvrir le coffre et piller le trésor'}
               </span>
             </button>
           </div>
         ) : (
           <button
-            onClick={() => onFinishChest(chest.trapType === 'ALARM')}
+            onClick={() => onFinishChest(chest.trapType === 'ALARM', true)}
             className="w-full p-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg"
           >
-            <span>Reprendre l'exploration du Labyrinthe</span>
+            <span>Reprendre l'exploration du Labyrinthe (Entrée / Espace)</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         )}
