@@ -245,15 +245,28 @@ export const CastleView: React.FC<CastleViewProps> = ({
   // ==========================================
   // TEMPLE OF CANT (RESURRECT / CURE)
   // ==========================================
+  // ==========================================
+  // TEMPLE OF CANT (RESURRECT / CURE)
+  // ==========================================
   const handleResurrect = (targetHero: TCharacter) => {
     sounds.playSpellCast();
     const cost = targetHero.status === 'DEAD' ? targetHero.charLevel * 250 : targetHero.charLevel * 500;
-    if (selectedHero.gold < cost) {
-      setMessage(`Dons insuffisants ! Le Temple exige ${cost} PO.`);
+    
+    // Determine payment source (selected hero, target hero, or any character with gold)
+    let payer = (selectedHero && selectedHero.gold >= cost) ? selectedHero : null;
+    if (!payer && targetHero.gold >= cost) {
+      payer = targetHero;
+    }
+    if (!payer) {
+      payer = party.find(p => p.gold >= cost) || allCharacters.find(c => c.gold >= cost) || null;
+    }
+
+    if (!payer) {
+      setMessage(`Dons insuffisants ! Le Temple exige ${cost} PO (Fonds indisponibles).`);
       return;
     }
 
-    selectedHero.gold -= cost;
+    payer.gold -= cost;
     // Resurrection chance based on vitality
     const successChance = Math.min(95, targetHero.attrib.VITALITY * 5 + 30);
     if (Math.random() * 100 < successChance) {
@@ -265,7 +278,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
         'RESCUE',
         `Miracle au Temple de Cant : ${targetHero.name} ressuscité !`,
         `Le rituel sacré et les prières des clercs ont arraché ${targetHero.name} aux mânes de la mort. Il se relève, prêt à combattre de nouveau.`,
-        `Coût de l'offrande : ${cost} PO · PV actuels : 1/${targetHero.hpMax}`
+        `Offrande payée par ${payer.name} : ${cost} PO · PV actuels : 1/${targetHero.hpMax}`
       );
     } else {
       if (targetHero.status === 'DEAD') {
@@ -288,19 +301,24 @@ export const CastleView: React.FC<CastleViewProps> = ({
         );
       }
     }
-    setParty([...party]);
+
+    // Sync changes to both party and allCharacters roster
+    setParty(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
+    setAllCharacters(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
   };
 
   const handleCurePoison = (targetHero: TCharacter) => {
     sounds.playSpellCast();
     const cost = 50;
-    if (selectedHero.gold < cost) {
+    let payer = (selectedHero && selectedHero.gold >= cost) ? selectedHero : (party.find(p => p.gold >= cost) || null);
+    if (!payer) {
       setMessage(`Fonds insuffisants ! Le Temple exige ${cost} PO pour purifier le poison.`);
       return;
     }
-    selectedHero.gold -= cost;
+    payer.gold -= cost;
     targetHero.poisonAmount = 0;
-    setParty([...party]);
+    setParty(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
+    setAllCharacters(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
     sounds.playFanfare();
     setMessage(`Le poison a été totalement extrait du corps de ${targetHero.name}.`);
   };
@@ -308,13 +326,15 @@ export const CastleView: React.FC<CastleViewProps> = ({
   const handleCureParalysis = (targetHero: TCharacter) => {
     sounds.playSpellCast();
     const cost = 100;
-    if (selectedHero.gold < cost) {
+    let payer = (selectedHero && selectedHero.gold >= cost) ? selectedHero : (targetHero.gold >= cost ? targetHero : (party.find(p => p.gold >= cost) || allCharacters.find(c => c.gold >= cost) || null));
+    if (!payer) {
       setMessage(`Fonds insuffisants ! Le Temple exige ${cost} PO pour lever la paralysie.`);
       return;
     }
-    selectedHero.gold -= cost;
+    payer.gold -= cost;
     targetHero.status = 'OK';
-    setParty([...party]);
+    setParty(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
+    setAllCharacters(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
     sounds.playFanfare();
     setMessage(`L'onction sacrée a délié les membres de ${targetHero.name}. La paralysie est guérie !`);
   };
@@ -322,13 +342,15 @@ export const CastleView: React.FC<CastleViewProps> = ({
   const handleCureStoned = (targetHero: TCharacter) => {
     sounds.playSpellCast();
     const cost = 200;
-    if (selectedHero.gold < cost) {
+    let payer = (selectedHero && selectedHero.gold >= cost) ? selectedHero : (targetHero.gold >= cost ? targetHero : (party.find(p => p.gold >= cost) || allCharacters.find(c => c.gold >= cost) || null));
+    if (!payer) {
       setMessage(`Fonds insuffisants ! Le Temple exige ${cost} PO pour inverser la pétrification.`);
       return;
     }
-    selectedHero.gold -= cost;
+    payer.gold -= cost;
     targetHero.status = 'OK';
-    setParty([...party]);
+    setParty(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
+    setAllCharacters(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
     sounds.playFanfare();
     setMessage(`La pierre redevient chair vivante ! ${targetHero.name} est libéré de la pétrification !`);
   };
@@ -923,70 +945,95 @@ export const CastleView: React.FC<CastleViewProps> = ({
             </div>
 
             <div className="space-y-3">
-              {party.map(h => {
-                const effs = getActiveStatusEffects(h);
-                const hasAilment = effs.length > 0;
+              {(() => {
+                // Authentic Wizardry: All heroes needing resurrection or healing are treated at the Temple of Cant,
+                // including deceased heroes removed from the exploration party upon return to the castle!
+                const deceasedOrAfflictedRoster = allCharacters.filter(c => 
+                  !party.some(p => p.id === c.id) && 
+                  (c.status === 'DEAD' || c.status === 'ASHES' || c.status === 'PLYZE' || c.status === 'STONED')
+                );
+                const patients = [...party, ...deceasedOrAfflictedRoster];
 
-                return (
-                  <div key={h.id} className="p-3.5 bg-slate-800/60 border border-slate-700/50 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                    <div>
-                      <div className="font-bold text-sm text-white flex items-center gap-2">
-                        <span>{h.name} ({h.class})</span>
-                        <div className="flex flex-wrap gap-1">
-                          {effs.map(e => (
-                            <span key={e.id} className={`text-[10px] px-1.5 py-0.2 rounded border font-bold ${e.bgColor} ${e.borderColor} ${e.color}`}>
-                              {e.badge}
+                if (patients.length === 0) {
+                  return (
+                    <div className="p-8 bg-slate-800/40 border border-slate-700/40 rounded-xl text-center space-y-2">
+                      <p className="text-emerald-400 font-bold text-sm">Le Temple est paisible.</p>
+                      <p className="text-xs text-slate-400">Aucun aventurier de votre garnison n'est mort ou affligé de pétrification.</p>
+                    </div>
+                  );
+                }
+
+                return patients.map(h => {
+                  const effs = getActiveStatusEffects(h);
+                  const hasAilment = effs.length > 0;
+                  const isDeceasedRoster = !party.some(p => p.id === h.id);
+
+                  return (
+                    <div key={h.id} className="p-3.5 bg-slate-800/60 border border-slate-700/50 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div>
+                        <div className="font-bold text-sm text-white flex items-center gap-2">
+                          <span>{h.name} ({h.class})</span>
+                          {isDeceasedRoster && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-400">
+                              Déposé au Temple
                             </span>
-                          ))}
+                          )}
+                          <div className="flex flex-wrap gap-1">
+                            {effs.map(e => (
+                              <span key={e.id} className={`text-[10px] px-1.5 py-0.2 rounded border font-bold ${e.bgColor} ${e.borderColor} ${e.color}`}>
+                                {e.badge}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="text-slate-400 pt-0.5">
+                          Santé : <strong className={h.hpLeft < h.hpMax / 2 ? 'text-red-400' : 'text-emerald-400'}>{h.hpLeft}/{h.hpMax} PV</strong> · Or : {h.gold} PO
                         </div>
                       </div>
-                      <div className="text-slate-400 pt-0.5">
-                        Santé : <strong className={h.hpLeft < h.hpMax / 2 ? 'text-red-400' : 'text-emerald-400'}>{h.hpLeft}/{h.hpMax} PV</strong> · Or : {h.gold} PO
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Dead or Ashes: Resurrection */}
+                        {(h.status === 'DEAD' || h.status === 'ASHES') && (
+                          <button
+                            onClick={() => handleResurrect(h)}
+                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition"
+                          >
+                            Ressusciter ({h.charLevel * (h.status === 'DEAD' ? 250 : 500)} PO)
+                          </button>
+                        )}
+
+                        {/* Paralyzed: Cure Paralysis */}
+                        {h.status === 'PLYZE' && (
+                          <button
+                            onClick={() => handleCureParalysis(h)}
+                            className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-lg transition flex items-center gap-1"
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                            Guérir Paralysie (100 PO)
+                          </button>
+                        )}
+
+                        {/* Stoned: Cure Petrified */}
+                        {h.status === 'STONED' && (
+                          <button
+                            onClick={() => handleCureStoned(h)}
+                            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition flex items-center gap-1"
+                          >
+                            <Shield className="w-3.5 h-3.5" />
+                            Lever Pétrification (200 PO)
+                          </button>
+                        )}
+
+                        {!hasAilment && (
+                          <span className="text-emerald-400 flex items-center gap-1 italic text-xs">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> En pleine santé
+                          </span>
+                        )}
                       </div>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Dead or Ashes: Resurrection */}
-                      {(h.status === 'DEAD' || h.status === 'ASHES') && (
-                        <button
-                          onClick={() => handleResurrect(h)}
-                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition"
-                        >
-                          Ressusciter ({h.charLevel * (h.status === 'DEAD' ? 250 : 500)} PO)
-                        </button>
-                      )}
-
-                      {/* Paralyzed: Cure Paralysis */}
-                      {h.status === 'PLYZE' && (
-                        <button
-                          onClick={() => handleCureParalysis(h)}
-                          className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-lg transition flex items-center gap-1"
-                        >
-                          <Zap className="w-3.5 h-3.5" />
-                          Guérir Paralysie (100 PO)
-                        </button>
-                      )}
-
-                      {/* Stoned: Cure Petrified */}
-                      {h.status === 'STONED' && (
-                        <button
-                          onClick={() => handleCureStoned(h)}
-                          className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition flex items-center gap-1"
-                        >
-                          <Shield className="w-3.5 h-3.5" />
-                          Lever Pétrification (200 PO)
-                        </button>
-                      )}
-
-                      {!hasAilment && (
-                        <span className="text-emerald-400 flex items-center gap-1 italic text-xs">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> En pleine santé
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
           </div>
         )}
@@ -1441,6 +1488,18 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           className="px-3 py-1 bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-700/50 rounded text-xs transition font-semibold"
                         >
                           Retirer
+                        </button>
+                      ) : (h.status === 'DEAD' || h.status === 'ASHES') ? (
+                        <button
+                          onClick={() => {
+                            setCurrentTab('TEMPLE');
+                            sounds.playTurn();
+                          }}
+                          className="px-3 py-1 bg-amber-950/70 hover:bg-amber-900 text-amber-300 border border-amber-600/50 rounded text-xs font-semibold flex items-center gap-1 transition"
+                          title="Ce héros a péri. Rendez-vous au Temple de Cant pour invoquer une résurrection avant de pouvoir le recruter dans l'escouade !"
+                        >
+                          <Cross className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Temple ({h.status === 'DEAD' ? 'Mort' : 'Cendres'})</span>
                         </button>
                       ) : (
                         <button

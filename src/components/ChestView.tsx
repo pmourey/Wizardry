@@ -8,6 +8,7 @@ import {
   TRAP_NAMES, 
   TTrapType 
 } from '../engine/chestEngine';
+import { shiftDeadHeroesToEnd } from '../engine/combatEngine';
 import { sounds } from '../utils/soundEffects';
 import { Package, Search, KeyRound, Unlock, ArrowRight, ShieldCheck, AlertTriangle, CheckCircle2, ShieldAlert, Footprints } from 'lucide-react';
 
@@ -139,6 +140,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
     } else if (result.exploded) {
       sounds.playBump();
       const trapLogs = applyTrapEffects(chest.trapType, party, selectedHeroIdx, dungeonLevel);
+      shiftDeadHeroesToEnd(party);
       setLog(prev => [
         ...prev,
         `💥 ÉCHEC CRITIQUE ! Le mécanisme de désamorçage se coince et le piège (${TRAP_NAMES[chest.trapType]}) se déclenche !`,
@@ -161,6 +163,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
       chest.exploded = true;
       sounds.playBump();
       const trapLogs = applyTrapEffects(chest.trapType, party, selectedHeroIdx, dungeonLevel);
+      shiftDeadHeroesToEnd(party);
       setLog(prev => [
         ...prev,
         `💥 Vous forcez le couvercle sans désarmer... Le piège (${TRAP_NAMES[chest.trapType]}) explose !`,
