@@ -74,6 +74,8 @@ export interface TItem {
   extraSwings: number;
   critHit: boolean;
   wepVsType: number[]; // monster types it deals x2 against
+  protVs2?: number[]; // WEPVSTY2 flags (resistance categories granted when equipped)
+  protVs3?: number[]; // WEPVSTY3 flags (protection against breath/poison/etc. when equipped)
 }
 
 export interface TInventorySlot {
@@ -146,6 +148,8 @@ export interface TMonster {
   picId: number;
   level: number;
   hp: THPRec;
+  appear?: THPRec; // dice for the number of monsters in a group
+  resistances?: number[]; // WEPVSTY3 flags the monster is protected against
   monsterClass: number; // 0: fighter, 1: mage, 2: priest, 3: thief, 6: animal, 10: undead, etc.
   ac: number;
   attackCount: number;
@@ -214,6 +218,68 @@ export interface TMazeFloor {
     range0n: number;
     percWorse: number;
   }>;
+  events?: TMazeEvent[]; // decoded special squares (stairs, teleporters, messages, fixed fights...)
+}
+
+export type TSpecialKind =
+  | 'NONE' | 'MESSAGE' | 'ITEM_PICKUP' | 'WADE' | 'SEARCH_FIGHT' | 'ITEM_TO_PASS'
+  | 'ALIGNMENT_CHECK' | 'ARMOR_CLASS_MOD' | 'BACK_TO_CASTLE' | 'LOOKOUT' | 'RIDDLE' | 'FEE' | 'UNKNOWN';
+
+export interface TMazeEvent {
+  x: number; // East
+  y: number; // North
+  type: TSquareType;
+  aux0: number;
+  aux1: number;
+  aux2: number;
+  description: string;
+  kind?: TSpecialKind; // for SCNMSG squares
+  message?: string[]; // text lines from SCENARIO.MESGS
+  uses?: 'DISABLED' | 'ONCE' | 'ALWAYS' | number;
+  itemId?: number;
+  monsterId?: number;
+  answer?: string;
+  fee?: string;
+}
+
+export interface TRewardEntry {
+  percent: number;
+  type: 'GOLD' | 'ITEM';
+  // GOLD
+  tries?: number; average?: number; minAdd?: number; multiplier?: number;
+  tries2?: number; average2?: number; minAdd2?: number;
+  // ITEM
+  minIndex?: number; factor?: number; maxTimes?: number; range?: number; percentBigger?: number;
+}
+
+export interface TReward {
+  id: number;
+  chest: boolean;
+  trapTypes: number[];
+  entries: TRewardEntry[];
+}
+
+export interface PGSpellRecord {
+  id: number;
+  hash: number;
+  tier: number;
+  target: TSpellTarget;
+}
+
+export interface PGMessage {
+  text: string;
+  end: boolean;
+}
+
+// Compact maze form written by scripts/extract_pgmo.py: one string of digits per East column (index = North)
+export interface PGRawMaze {
+  level: number;
+  w: string[]; s: string[]; e: string[]; n: string[];
+  fights: string[];
+  sqrExtra: string[];
+  extraDefs: TSquareExtra[];
+  enemyCalc: TMazeFloor['enemyCalc'];
+  events: TMazeEvent[];
 }
 
 export type GameLocation = 
