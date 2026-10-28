@@ -13,6 +13,7 @@ import {
 import { 
   DEFAULT_PARTY, 
   generateLevel1Maze, 
+  getMazeForFloor,
   MONSTERS_DATABASE 
 } from './data/wizardryData';
 import { CastleView } from './components/CastleView';
@@ -140,17 +141,25 @@ export default function App() {
     setAdventureEvents(prev => [newEvent, ...prev].slice(0, 50));
   };
 
-  // Persistent explored map tiles (Level 1)
-  const [visitedTiles, setVisitedTiles] = useState<boolean[][]>(() => {
+  // Persistent explored map tiles per floor
+  const [visitedTilesByLevel, setVisitedTilesByLevel] = useState<Record<number, boolean[][]>>(() => {
+    const initialByLevel: Record<number, boolean[][]> = {};
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('wiz1_visited_level1');
-      if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      const savedL1 = localStorage.getItem('wiz1_visited_level1');
+      if (savedL1) {
+        try { initialByLevel[1] = JSON.parse(savedL1); } catch (e) { /* ignore */ }
       }
     }
-    const initial = Array.from({ length: 20 }, () => Array(20).fill(false));
-    initial[0][0] = true;
-    return initial;
+    if (!initialByLevel[1]) {
+      const l1 = Array.from({ length: 20 }, () => Array(20).fill(false));
+      l1[0][0] = true;
+      initialByLevel[1] = l1;
+    }
+    return initialByLevel;
+  });
+
+  const [visitedTiles, setVisitedTiles] = useState<boolean[][]>(() => {
+    return visitedTilesByLevel[1] || Array.from({ length: 20 }, () => Array(20).fill(false));
   });
 
   // Save to localStorage on changes
@@ -158,10 +167,54 @@ export default function App() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('wiz1_party', JSON.stringify(party));
       localStorage.setItem('wiz1_roster', JSON.stringify(allCharacters));
-      localStorage.setItem('wiz1_visited_level1', JSON.stringify(visitedTiles));
+      localStorage.setItem('wiz1_visited_level1', JSON.stringify(visitedTilesByLevel[1] || visitedTiles));
       localStorage.setItem('wiz1_adventure_journal', JSON.stringify(adventureEvents));
     }
-  }, [party, allCharacters, visitedTiles, adventureEvents]);
+  }, [party, allCharacters, visitedTiles, visitedTilesByLevel, adventureEvents]);
+
+  // Per Pascal Wizardry 1: Poison only exists while in the maze (POISNAMT in LOSTXYL).
+  // Characters returning to the castle are automatically and immediately cured of all poison!
+  useEffect(() => {
+    if (location === 'CASTLE') {
+      const curedNames: string[] = [];
+
+      setParty(prevParty => {
+        let changed = false;
+        const updated = prevParty.map(hero => {
+          if (hero.poisonAmount > 0) {
+            changed = true;
+            curedNames.push(hero.name);
+            return { ...hero, poisonAmount: 0, silencedRounds: 0 };
+          }
+          return hero;
+        });
+        return changed ? updated : prevParty;
+      });
+
+      setAllCharacters(prevRoster => {
+        let changed = false;
+        const updated = prevRoster.map(hero => {
+          if (hero.poisonAmount > 0) {
+            changed = true;
+            return { ...hero, poisonAmount: 0, silencedRounds: 0 };
+          }
+          return hero;
+        });
+        return changed ? updated : prevRoster;
+      });
+
+      if (curedNames.length > 0) {
+        sounds.playSpellCast();
+        addAdventureEvent(
+          'CASTLE',
+          'Guérison automatique du Poison au Château',
+          `Conformément aux règles authentiques de Wizardry, le poison qui affligeait vos aventuriers a été automatiquement et totalement dissipé dès leur retour dans l'enceinte du Château.`,
+          `Aventuriers purifiés : ${curedNames.join(', ')}`,
+          1
+        );
+      }
+    }
+  }, [location]);
 
   // Check victory condition: Amulet of Werdna (id 94) in inventory at Castle
   useEffect(() => {
@@ -409,27 +462,70 @@ export default function App() {
     }
   };
 
+  const handleTakeStairs = (targetLevel: number, targetX: number, targetY: number) => {
+    if (targetLevel === 0) {
+      sounds.playDoor();
+      setLocation('CASTLE');
+      addAdventureEvent(
+        'CASTLE',
+        "Retour au Château de Trebor",
+        "L'escouade a gravi les marches pour regagner la sécurité du château.",
+        undefined,
+        dungeonLevel,
+        { x: posX, y: posY }
+      );
+      return;
+    }
+
+    sounds.playFootstep();
+
+    // Preserve visited tiles for current floor
+    setVisitedTilesByLevel(prev => ({
+      ...prev,
+      [dungeonLevel]: visitedTiles
+    }));
+
+    const isDescending = targetLevel > dungeonLevel;
+    const targetMaze = getMazeForFloor(targetLevel);
+
+    setMaze(targetMaze);
+    setDungeonLevel(targetLevel);
+    setPosX(targetX);
+    setPosY(targetY);
+
+    // Load or initialize visited tiles for target floor
+    setVisitedTiles(() => {
+      const existing = visitedTilesByLevel[targetLevel];
+      if (existing) {
+        const next = existing.map(r => [...r]);
+        if (next[targetX]) next[targetX][targetY] = true;
+        return next;
+      }
+      const fresh = Array.from({ length: 20 }, () => Array(20).fill(false));
+      if (fresh[targetX]) fresh[targetX][targetY] = true;
+      return fresh;
+    });
+
+    addAdventureEvent(
+      'DISCOVERY',
+      isDescending ? `Descente dans les profondeurs : Niveau ${targetLevel}` : `Ascension vers le Niveau ${targetLevel}`,
+      isDescending 
+        ? `L'escouade a franchi l'escalier menant au ${targetLevel}e sous-sol du Labyrinthe. Les dangers s'intensifient.`
+        : `L'escouade a gravi les marches pour remonter au ${targetLevel}e sous-sol.`,
+      `Coordonnées d'arrivée : (${targetX}, ${targetY})`,
+      targetLevel,
+      { x: targetX, y: targetY }
+    );
+  };
+
   const handleInspectArea = () => {
     sounds.playTurn();
     const sqrCode = maze.sqrExtra[posX][posY];
     const sqrDef = maze.extraDefs[sqrCode];
 
     if (sqrDef?.type === 'STAIRS') {
-      if (posX === 0 && posY === 0) {
-        addAdventureEvent(
-          'DISCOVERY',
-          "Escalier vers le Château emprunté",
-          "Vos héros regagnent la sécurité de la Grande Cour et de la garnison de Trebor.",
-          undefined,
-          dungeonLevel,
-          { x: posX, y: posY }
-        );
-        setLocation('CASTLE');
-      } else {
-        alert('Escalier vers les niveaux inférieurs du Labyrinthe.');
-      }
+      handleTakeStairs(sqrDef.aux0, sqrDef.aux2, sqrDef.aux1);
     } else if (sqrDef?.type === 'SCNMSG') {
-      alert('Une statue gravée d’une inscription de Trebor : « Seul le porteur de l’amulette verra la lumière céleste. »');
       addAdventureEvent(
         'DISCOVERY',
         'Statue gravée de Trebor inspectée',
@@ -565,7 +661,9 @@ export default function App() {
             y={posY}
             direction={direction}
             lightLevel={lightLevel}
+            setLightLevel={setLightLevel}
             acModifier={acModifier}
+            setAcModifier={setAcModifier}
             visitedTiles={visitedTiles}
             setVisitedTiles={setVisitedTiles}
             onAddAdventureEvent={addAdventureEvent}
@@ -577,6 +675,7 @@ export default function App() {
               setLocation('CASTLE');
               sounds.playDoor();
             }}
+            onTakeStairs={handleTakeStairs}
             onTriggerEncounter={() => triggerBattleEncounter()}
           />
         )}
@@ -598,6 +697,7 @@ export default function App() {
             chest={chestReward}
             dungeonLevel={dungeonLevel}
             onFinishChest={handleFinishChest}
+            onPartyWipedOut={() => handlePartyWipedOut(party, posX, posY, dungeonLevel)}
           />
         )}
 

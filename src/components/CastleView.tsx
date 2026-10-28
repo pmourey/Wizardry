@@ -118,6 +118,25 @@ export const CastleView: React.FC<CastleViewProps> = ({
 
   const selectedHero = party[selectedCharIndex] || party[0];
 
+  // Per authentic Pascal Wizardry 1: Poison only exists in the maze (POISNAMT).
+  // Characters entering the castle are automatically and immediately cured of poison!
+  React.useEffect(() => {
+    let changed = false;
+    party.forEach(h => {
+      if (h.poisonAmount > 0) {
+        h.poisonAmount = 0;
+        changed = true;
+      }
+      if (h.silencedRounds && h.silencedRounds > 0) {
+        h.silencedRounds = 0;
+        changed = true;
+      }
+    });
+    if (changed) {
+      setParty([...party]);
+    }
+  }, [party, setParty]);
+
   // ==========================================
   // INN LOGIC (HEALING & LEVEL UP)
   // ==========================================
@@ -686,7 +705,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                     <HeartHandshake className="w-4 h-4" />
                     Temple
                   </div>
-                  <p className="text-xs text-slate-400">Ressuscitez les défunts et guérissez le poison.</p>
+                  <p className="text-xs text-slate-400">Ressuscitez les défunts et soignez pétrifications et paralysies.</p>
                 </button>
 
                 <button
@@ -883,7 +902,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
           <div className="max-w-3xl mx-auto bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-6">
             <div>
               <h2 className="text-lg font-serif font-bold text-white">Le Temple Radiant de Cant</h2>
-              <p className="text-xs text-slate-400">Les prêtres invoquent les miracles divins pour relever les héros morts, purifier poisons et guérir paralysies.</p>
+              <p className="text-xs text-slate-400">Les prêtres invoquent les miracles divins pour relever les héros morts, lever la pétrification et guérir la paralysie (le poison est automatiquement neutralisé dès le retour au château).</p>
             </div>
 
             <div className="space-y-3">
@@ -939,17 +958,6 @@ export const CastleView: React.FC<CastleViewProps> = ({
                         >
                           <Shield className="w-3.5 h-3.5" />
                           Lever Pétrification (200 PO)
-                        </button>
-                      )}
-
-                      {/* Poisoned: Cure Poison */}
-                      {h.poisonAmount > 0 && (
-                        <button
-                          onClick={() => handleCurePoison(h)}
-                          className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-lg transition flex items-center gap-1"
-                        >
-                          <Biohazard className="w-3.5 h-3.5" />
-                          Purifier Poison (50 PO)
                         </button>
                       )}
 

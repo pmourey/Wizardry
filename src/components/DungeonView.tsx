@@ -45,7 +45,9 @@ interface DungeonViewProps {
   y: number;
   direction: number; // 0: N, 1: E, 2: S, 3: W
   lightLevel: number;
+  setLightLevel?: React.Dispatch<React.SetStateAction<number>>;
   acModifier: number;
+  setAcModifier?: React.Dispatch<React.SetStateAction<number>>;
   visitedTiles?: boolean[][];
   setVisitedTiles?: React.Dispatch<React.SetStateAction<boolean[][]>>;
   onAddAdventureEvent?: (
@@ -61,6 +63,7 @@ interface DungeonViewProps {
   onKickDoor: () => void;
   onInspectArea: () => void;
   onReturnToCastle: () => void;
+  onTakeStairs?: (targetLevel: number, targetX: number, targetY: number) => void;
   onTriggerEncounter: () => void;
 }
 
@@ -74,7 +77,9 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   y,
   direction,
   lightLevel,
+  setLightLevel,
   acModifier,
+  setAcModifier,
   visitedTiles: propVisitedTiles,
   setVisitedTiles: propSetVisitedTiles,
   onAddAdventureEvent,
@@ -83,6 +88,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   onKickDoor,
   onInspectArea,
   onReturnToCastle,
+  onTakeStairs,
   onTriggerEncounter
 }) => {
   const [wireframeMode, setWireframeMode] = useState<boolean>(false);
@@ -123,13 +129,54 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     });
   }, [x, y, setVisitedTiles]);
 
-  // Check if current tile is dark
-  const sqrType = maze.extraDefs[maze.sqrExtra[x][y]]?.type || 'NORMAL';
+  // Check if current tile is special
+  const currentSqrDef = maze.extraDefs[maze.sqrExtra[x]?.[y]];
+  const sqrType = currentSqrDef?.type || 'NORMAL';
   const isDarkZone = sqrType === 'DARK';
+  const isStairs = sqrType === 'STAIRS';
+
+  const [showStairsPrompt, setShowStairsPrompt] = useState<boolean>(false);
+  const lastPromptedPos = React.useRef<string>('');
+
+  // Automatically prompt player when stepping onto a staircase (like Pascal STAIRSYN)
+  useEffect(() => {
+    const posKey = `${x},${y},${maze.level}`;
+    if (isStairs && lastPromptedPos.current !== posKey) {
+      lastPromptedPos.current = posKey;
+      setShowStairsPrompt(true);
+    }
+  }, [x, y, maze.level, isStairs]);
+
+  const handleExecuteTakeStairs = () => {
+    setShowStairsPrompt(false);
+    if (!currentSqrDef || currentSqrDef.type !== 'STAIRS') return;
+    if (currentSqrDef.aux0 === 0) {
+      onReturnToCastle();
+    } else {
+      if (onTakeStairs) {
+        onTakeStairs(currentSqrDef.aux0, currentSqrDef.aux2, currentSqrDef.aux1);
+      } else {
+        onReturnToCastle();
+      }
+    }
+  };
 
   // Keyboard navigation shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (showCamp || showMinimap) return;
+
+    if (showStairsPrompt && isStairs) {
+      if (e.key === 'y' || e.key === 'Y' || e.key === 'o' || e.key === 'O' || e.key === 'Enter') {
+        e.preventDefault();
+        handleExecuteTakeStairs();
+        return;
+      }
+      if (e.key === 'n' || e.key === 'N' || e.key === 'Escape') {
+        e.preventDefault();
+        setShowStairsPrompt(false);
+        return;
+      }
+    }
 
     if (e.key === 'w' || e.key === 'ArrowUp') {
       e.preventDefault();
@@ -153,9 +200,13 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       sounds.playTurn();
     } else if (e.key === 'i') {
       e.preventDefault();
-      onInspectArea();
+      if (isStairs) {
+        setShowStairsPrompt(true);
+      } else {
+        onInspectArea();
+      }
     }
-  }, [showCamp, showMinimap, x, y, direction, maze]);
+  }, [showCamp, showMinimap, showStairsPrompt, isStairs, currentSqrDef, x, y, direction, maze]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -334,6 +385,30 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       return;
     }
 
+    if (spell.name === 'MILWA') {
+      setLightLevel?.(prev => Math.min(60, prev + 25));
+      setParty([...party]);
+      setCampMessage(`✨ MILWA : Une douce lueur magique emplit les couloirs (+25 lumière) !`);
+      onAddAdventureEvent?.('DISCOVERY', 'Sortilège de Lumière', `${activeCampHero.name} lance MILWA, repoussant l'obscurité.`, '+25 Lumière', maze.level, { x, y });
+      return;
+    }
+
+    if (spell.name === 'LOMILWA') {
+      setLightLevel?.(prev => Math.min(100, prev + 75));
+      setParty([...party]);
+      setCampMessage(`✨ LOMILWA : Une vive clarté magique inonde le donjon (+75 lumière) !`);
+      onAddAdventureEvent?.('DISCOVERY', 'Sortilège de Clarté Éternelle', `${activeCampHero.name} lance LOMILWA, illuminant durablement le donjon.`, '+75 Lumière', maze.level, { x, y });
+      return;
+    }
+
+    if (spell.name === 'MAPORFIC') {
+      setAcModifier?.(prev => prev + 2);
+      setParty([...party]);
+      setCampMessage(`🛡️ MAPORFIC : Un champ de protection mystique enveloppe les aventuriers (+2 CA) !`);
+      onAddAdventureEvent?.('DISCOVERY', 'Bouclier Mystique', `${activeCampHero.name} lance MAPORFIC, améliorant l'armure du groupe.`, '+2 CA', maze.level, { x, y });
+      return;
+    }
+
     setParty([...party]);
     setCampMessage(`${spell.name} lancé sur ${targetHero.name} (${targetHero.hpLeft}/${targetHero.hpMax} PV) !`);
   };
@@ -502,6 +577,71 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               <span>Ouvrir Minicarte</span>
             </button>
           )}
+          {/* Stairs Detected Floating Banner */}
+          {isStairs && currentSqrDef && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-slate-900/90 border border-amber-500/80 px-4 py-2 rounded-full shadow-2xl backdrop-blur-md">
+              <Layers className="w-4 h-4 text-amber-400 animate-bounce" />
+              <span className="text-xs font-bold text-amber-300">
+                {currentSqrDef.aux0 === 0 
+                  ? 'Escalier montant vers le Château' 
+                  : currentSqrDef.aux0 > maze.level 
+                    ? `Escalier descendant vers le Niveau ${currentSqrDef.aux0}` 
+                    : `Escalier montant vers le Niveau ${currentSqrDef.aux0}`}
+              </span>
+              <button
+                onClick={handleExecuteTakeStairs}
+                className="ml-2 px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-full text-xs shadow transition active:scale-95 cursor-pointer"
+              >
+                Emprunter (Y)
+              </button>
+            </div>
+          )}
+
+          {/* Interactive Stairs Confirmation Modal */}
+          {showStairsPrompt && isStairs && currentSqrDef && (
+            <div className="absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+              <div className="bg-slate-900 border-2 border-amber-500/80 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center">
+                <div className="w-14 h-14 mx-auto rounded-full bg-amber-950/80 border-2 border-amber-400 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-950/60">
+                  <Layers className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-black text-amber-300 tracking-wide">
+                  {currentSqrDef.aux0 === 0 
+                    ? "Escalier vers le Château" 
+                    : currentSqrDef.aux0 > maze.level 
+                      ? `Escalier Descendant (Niveau ${currentSqrDef.aux0})` 
+                      : `Escalier Montant (Niveau ${currentSqrDef.aux0})`}
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {currentSqrDef.aux0 === 0
+                    ? "Un large perron de pierre remonte vers la cour et la sécurité du Château de Trebor."
+                    : currentSqrDef.aux0 > maze.level
+                      ? `Un escalier en colimaçon taillé dans la roche brute s'enfonce dans les profondeurs vers le Niveau ${currentSqrDef.aux0}. L'air y est plus froid, et les rugissements des créatures résonnent plus près.`
+                      : `Un escalier de pierre taillée remonte vers les couloirs du Niveau ${currentSqrDef.aux0}.`}
+                </p>
+                <div className="text-amber-200/90 font-bold text-xs pt-1">
+                  Voulez-vous emprunter cet escalier ?
+                </div>
+                <div className="flex items-center justify-center gap-3 pt-2">
+                  <button
+                    onClick={handleExecuteTakeStairs}
+                    className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl text-xs font-black shadow-lg transition active:scale-95 cursor-pointer"
+                  >
+                    {currentSqrDef.aux0 === 0 
+                      ? 'Remonter au Château (Y)' 
+                      : currentSqrDef.aux0 > maze.level 
+                        ? `Descendre au Niveau ${currentSqrDef.aux0} (Y)` 
+                        : `Monter au Niveau ${currentSqrDef.aux0} (Y)`}
+                  </button>
+                  <button
+                    onClick={() => setShowStairsPrompt(false)}
+                    className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
+                  >
+                    Rester ici (N)
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tactical Control Pad */}
@@ -575,13 +715,20 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             </div>
           </div>
 
-          {/* Stairs Up to Castle Button */}
-          {x === 0 && y === 0 && (
+          {/* Dynamic Stairs Action Button */}
+          {isStairs && currentSqrDef && (
             <button
-              onClick={onReturnToCastle}
-              className="w-full p-3 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-amber-950/40"
+              onClick={handleExecuteTakeStairs}
+              className="w-full p-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl text-xs font-black transition shadow-lg shadow-amber-950/40 flex items-center justify-center gap-2 border border-amber-300/40 active:scale-95 cursor-pointer"
             >
-              Remonter au Château
+              <Layers className="w-4 h-4" />
+              <span>
+                {currentSqrDef.aux0 === 0 
+                  ? 'Remonter au Château (Y)' 
+                  : currentSqrDef.aux0 > maze.level 
+                    ? `Descendre au Niveau ${currentSqrDef.aux0} (Y)` 
+                    : `Monter au Niveau ${currentSqrDef.aux0} (Y)`}
+              </span>
             </button>
           )}
         </div>

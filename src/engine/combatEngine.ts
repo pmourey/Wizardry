@@ -226,17 +226,20 @@ export function executeCombatRound(
           executePlayerSpell(hero, spell, action, groups, party, log);
         }
       } else if (action.actionType === 'FIGHT') {
-        // Melee attack
+        // Melee attack: target designated group or automatically fall back to the first living group
+        const isGroupAlive = (g?: CombatGroup) => 
+          !!g && g.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
+
         let targetGrpIdx = action.targetGroupIndex ?? 0;
-        let targetGroup = groups[targetGrpIdx];
-        if (!targetGroup || targetGroup.aliveCount <= 0) {
+        let targetGroup: CombatGroup | undefined = groups[targetGrpIdx];
+        if (!isGroupAlive(targetGroup)) {
           // Retarget next available living group
-          targetGrpIdx = groups.findIndex(g => g.aliveCount > 0);
-          targetGroup = groups[targetGrpIdx];
+          targetGroup = groups.find(g => isGroupAlive(g));
         }
 
-        if (targetGroup && targetGroup.aliveCount > 0) {
-          const livingTarget = targetGroup.instances.find(i => i.status === 'OK' && i.hpLeft > 0);
+        if (targetGroup) {
+          // Target any living monster in the group (OK, ASLEEP, or PLYZE)
+          const livingTarget = targetGroup.instances.find(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
           if (livingTarget) {
             executeHeroAttack(hero, livingTarget, targetGroup, log);
           }
@@ -318,9 +321,11 @@ function executeHeroAttack(
   log: string[]
 ) {
   const monster = group.monster;
+  const isHelpless = target.status === 'ASLEEP' || target.status === 'PLYZE';
   // Hit roll calculation based on Pascal: 21 - Monster AC - Hero Hit Mod + Armor Mod
-  const targetAC = monster.ac + target.acMod;
-  const toHitThreshold = Math.max(1, Math.min(19, 21 - targetAC - hero.hitMod));
+  // Helpless (asleep/paralyzed) monsters have defenseless AC (AC 10) and are vastly easier to hit
+  const targetAC = isHelpless ? 10 : monster.ac + target.acMod;
+  const toHitThreshold = isHelpless ? 1 : Math.max(1, Math.min(19, 21 - targetAC - hero.hitMod));
 
   let totalDamage = 0;
   let hitsLanded = 0;
@@ -331,7 +336,8 @@ function executeHeroAttack(
     if (roll >= toHitThreshold) {
       hitsLanded++;
       const dam = hero.wepDamage.hpMinAdd + Math.floor(Math.random() * hero.wepDamage.hpFac * hero.wepDamage.level) + 1;
-      totalDamage += dam;
+      // 1.5x bonus damage against helpless target
+      totalDamage += isHelpless ? Math.floor(dam * 1.5) : dam;
 
       // Ninja critical hit decapitation check
       if (hero.critHit && (Math.random() * 100 < hero.charLevel * 3)) {
@@ -345,18 +351,24 @@ function executeHeroAttack(
   if (hitsLanded === 0) {
     log.push(`${hero.name} attaque ${targetName} mais manque son coup.`);
   } else {
+    // Wake up if sleeping and took damage
+    if (target.status === 'ASLEEP') {
+      target.status = 'OK';
+      log.push(`⚡ Le coup réveille ${targetName} de son sommeil !`);
+    }
+
     if (criticalHit) {
       target.hpLeft = 0;
       target.status = 'DEAD';
-      group.aliveCount = Math.max(0, group.aliveCount - 1);
+      group.aliveCount = group.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length;
       log.push(`⚡ COUP CRITIQUE ! ${hero.name} décapite net ${targetName} d’un coup magistral !`);
     } else {
-      target.hpLeft -= totalDamage;
+      target.hpLeft = Math.max(0, target.hpLeft - totalDamage);
       log.push(`${hero.name} frappe ${targetName} ${hitsLanded} fois pour ${totalDamage} points de dégâts !`);
       if (target.hpLeft <= 0) {
         target.status = 'DEAD';
         target.hpLeft = 0;
-        group.aliveCount = Math.max(0, group.aliveCount - 1);
+        group.aliveCount = group.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length;
         log.push(`${targetName} s’effondre sans vie !`);
       }
     }

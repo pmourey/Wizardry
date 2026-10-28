@@ -91,6 +91,11 @@ export function inspectChest(
   chest: ChestReward,
   inspector: TCharacter
 ): { guess: TTrapType; sprung: boolean } {
+  // If already disarmed or exploded, trap cannot spring again
+  if (chest.disarmed || chest.exploded || chest.trapType === 'TRAPLESS') {
+    return { guess: chest.trapType, sprung: false };
+  }
+
   // Thief has 6x agility, Ninja 4x, others 1x
   let chance = inspector.attrib.AGILITY;
   if (inspector.class === 'THIEF') chance *= 6;
@@ -118,7 +123,12 @@ export function disarmChest(
   disarmer: TCharacter,
   trapGuess: TTrapType
 ): { success: boolean; exploded: boolean } {
-  if (trapGuess !== chest.trapType && chest.trapType !== 'TRAPLESS') {
+  // If already disarmed or exploded, trap cannot trigger again
+  if (chest.disarmed || chest.exploded || chest.trapType === 'TRAPLESS') {
+    return { success: true, exploded: false };
+  }
+
+  if (trapGuess !== chest.trapType) {
     chest.exploded = true;
     return { success: false, exploded: true };
   }

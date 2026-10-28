@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TCharacter, 
   TSpell 
@@ -22,7 +22,8 @@ import {
   CheckCircle2,
   Biohazard,
   Moon,
-  MicOff
+  MicOff,
+  Target
 } from 'lucide-react';
 import { getActiveStatusEffects } from '../engine/statusSystem';
 
@@ -46,19 +47,47 @@ export const CombatView: React.FC<CombatViewProps> = ({
   const [roundLog, setRoundLog] = useState<string[]>([]);
   const [selectingSpell, setSelectingSpell] = useState<boolean>(false);
   const [isResolving, setIsResolving] = useState<boolean>(false);
+  // Mutable round surprise state: surprise only lasts for Round 1!
+  const [currentSurprise, setCurrentSurprise] = useState<'PARTY' | 'MONSTERS' | 'NONE'>(surprise);
 
-  // Living heroes who can choose actions
+  // Target group selection: default to first group that has living monsters
+  const [selectedTargetGroupIdx, setSelectedTargetGroupIdx] = useState<number>(() => {
+    const firstAlive = groups.findIndex(g => g.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0));
+    return firstAlive >= 0 ? firstAlive : 0;
+  });
+
+  // Keep target group pointing to a living group
+  useEffect(() => {
+    const isCurrentTargetAlive = groups[selectedTargetGroupIdx]?.instances.some(
+      i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0
+    );
+    if (!isCurrentTargetAlive) {
+      const firstAlive = groups.findIndex(g => g.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0));
+      if (firstAlive >= 0) {
+        setSelectedTargetGroupIdx(firstAlive);
+      }
+    }
+  }, [groups, selectedTargetGroupIdx]);
+
+  // Living heroes who are conscious (OK) and can choose actions
   const livingHeroes = party.filter(h => h.status === 'OK' && h.hpLeft > 0);
-  const activeHero = livingHeroes[currentHeroIdx];
+  const anyHeroAlive = party.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0);
+  const allHelpless = anyHeroAlive && livingHeroes.length === 0;
+
+  const safeHeroIdx = Math.min(currentHeroIdx, Math.max(0, livingHeroes.length - 1));
+  const activeHero = livingHeroes[safeHeroIdx];
 
   const handleSelectAction = (type: PlayerCombatAction['actionType'], spellId?: number, targetGrpIdx?: number) => {
     sounds.playTurn();
+    if (!activeHero) return;
     const heroIndexInParty = party.findIndex(p => p.id === activeHero.id);
+
+    const targetGroup = targetGrpIdx !== undefined ? targetGrpIdx : selectedTargetGroupIdx;
 
     const newAction: PlayerCombatAction = {
       charIndex: heroIndexInParty,
       actionType: type,
-      targetGroupIndex: targetGrpIdx ?? 0,
+      targetGroupIndex: targetGroup,
       spellId
     };
 
@@ -69,7 +98,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
     if (currentHeroIdx + 1 < livingHeroes.length) {
       setCurrentHeroIdx(currentHeroIdx + 1);
     } else {
-      // All heroes chose actions -> resolve combat round
+      // All conscious heroes chose actions -> resolve combat round
       resolveRound(nextActions);
     }
   };
@@ -78,9 +107,15 @@ export const CombatView: React.FC<CombatViewProps> = ({
     setIsResolving(true);
     sounds.playHit();
 
-    const result = executeCombatRound(party, groups, finalActions, surprise);
+    // Execute combat round with current surprise state
+    const result = executeCombatRound(party, groups, finalActions, currentSurprise);
     setParty([...party]);
     setRoundLog(result.combatLog);
+
+    // CRITICAL: Surprise only applies to round 1! From round 2 onward, surprise is always NONE
+    if (currentSurprise !== 'NONE') {
+      setCurrentSurprise('NONE');
+    }
 
     if (result.fled) {
       setTimeout(() => onCombatEnd(false, true, false), 1500);
@@ -129,53 +164,106 @@ export const CombatView: React.FC<CombatViewProps> = ({
               Engagement en Combat !
             </h2>
             <p className="text-xs text-slate-400">
-              {surprise === 'PARTY' ? '⚡ Vous surprenez les monstres !' : surprise === 'MONSTERS' ? '⚠️ Les monstres vous ont pris par surprise !' : 'Combat au corps-à-corps dans les ténèbres'}
+              {currentSurprise === 'PARTY' 
+                ? '⚡ Vous surprenez les monstres (Tour gratuit pour vos aventuriers) !' 
+                : currentSurprise === 'MONSTERS' 
+                ? '⚠️ Les monstres vous ont pris par surprise (Embuscade au Round 1) !' 
+                : 'Combat au corps-à-corps dans les ténèbres'}
             </p>
           </div>
         </div>
+
+        {/* Surprise round indicator */}
+        {currentSurprise !== 'NONE' && (
+          <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+            currentSurprise === 'PARTY'
+              ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-400'
+              : 'bg-red-950/80 border-red-500/60 text-red-400 animate-pulse'
+          }`}>
+            {currentSurprise === 'PARTY' ? 'Surprise : Escouade' : 'Surprise : Monstres (Round 1)'}
+          </span>
+        )}
       </div>
 
       {/* Battlefield & Monster Groups */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 py-6">
-        {groups.map((grp, gIdx) => (
-          <div 
-            key={gIdx}
-            className={`p-4 rounded-xl border flex flex-col justify-between transition ${grp.aliveCount > 0 ? 'bg-slate-900/80 border-slate-700/80 shadow-md' : 'bg-slate-950 border-slate-800/40 opacity-40'}`}
-          >
-            <div>
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <span className="text-xs font-bold text-amber-400">GROUPE #{gIdx + 1}</span>
-                <span className="text-xs font-semibold text-slate-300">
-                  {grp.aliveCount}/{grp.count} Vivant(s)
-                </span>
-              </div>
-              <div className="py-3 text-center">
-                <div className="w-16 h-16 mx-auto rounded-full bg-slate-800/90 border border-slate-700 flex items-center justify-center text-amber-400 text-2xl font-serif font-bold shadow-inner mb-2">
-                  {grp.monster.name[0]}
-                </div>
-                <div className="font-bold text-sm text-white">
-                  {grp.identified ? grp.monster.name : grp.monster.nameUnknown}
-                </div>
-                <div className="text-xs text-slate-400">
-                  Niveau {grp.monster.level} · CA {grp.monster.ac}
-                </div>
-              </div>
-            </div>
+        {groups.map((grp, gIdx) => {
+          const isAlive = grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
+          const isTargeted = selectedTargetGroupIdx === gIdx && isAlive;
 
-            {/* Living status pill badges */}
-            <div className="flex flex-wrap gap-1 justify-center pt-2">
-              {grp.instances.map((inst, iIdx) => (
-                <div 
-                  key={iIdx}
-                  className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold ${inst.status === 'OK' ? 'bg-emerald-600 text-white' : 'bg-red-950 text-red-400'}`}
-                  title={`PV: ${inst.hpLeft}/${inst.maxHp} [${inst.status}]`}
-                >
-                  {inst.status === 'OK' ? (iIdx + 1) : '†'}
+          return (
+            <div 
+              key={gIdx}
+              onClick={() => {
+                if (isAlive) {
+                  setSelectedTargetGroupIdx(gIdx);
+                  sounds.playTurn();
+                }
+              }}
+              className={`p-4 rounded-xl border flex flex-col justify-between transition cursor-pointer ${
+                isTargeted
+                  ? 'bg-amber-950/30 border-amber-500 ring-2 ring-amber-500/50 shadow-lg'
+                  : isAlive 
+                  ? 'bg-slate-900/80 border-slate-700/80 hover:border-slate-600 shadow-md' 
+                  : 'bg-slate-950 border-slate-800/40 opacity-40 cursor-not-allowed'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-amber-400">GROUPE #{gIdx + 1}</span>
+                    {isTargeted && (
+                      <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-300 font-bold bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-600/50">
+                        <Target className="w-2.5 h-2.5" /> Cible
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-300">
+                    {grp.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length}/{grp.count} Vivant(s)
+                  </span>
                 </div>
-              ))}
+                <div className="py-3 text-center">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-slate-800/90 border border-slate-700 flex items-center justify-center text-amber-400 text-2xl font-serif font-bold shadow-inner mb-2">
+                    {grp.monster.name[0]}
+                  </div>
+                  <div className="font-bold text-sm text-white">
+                    {grp.identified ? grp.monster.name : grp.monster.nameUnknown}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    Niveau {grp.monster.level} · CA {grp.monster.ac}
+                  </div>
+                </div>
+              </div>
+
+              {/* Living status pill badges */}
+              <div className="flex flex-wrap gap-1 justify-center pt-2">
+                {grp.instances.map((inst, iIdx) => {
+                  const isInstAlive = inst.status !== 'DEAD' && inst.status !== 'ASHES' && inst.hpLeft > 0;
+                  const isAsleep = inst.status === 'ASLEEP';
+                  const isPlyze = inst.status === 'PLYZE';
+
+                  return (
+                    <div 
+                      key={iIdx}
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] flex items-center justify-center font-bold ${
+                        !isInstAlive
+                          ? 'bg-red-950 text-red-500'
+                          : isAsleep
+                          ? 'bg-purple-900 text-purple-200 border border-purple-500'
+                          : isPlyze
+                          ? 'bg-yellow-900 text-yellow-200 border border-yellow-500'
+                          : 'bg-emerald-600 text-white'
+                      }`}
+                      title={`PV: ${inst.hpLeft}/${inst.maxHp} [${inst.status}]`}
+                    >
+                      {isInstAlive ? `${iIdx + 1}${isAsleep ? ' 💤' : isPlyze ? ' ⚡' : ''}` : '†'}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Party Status Overview Strip in Combat */}
@@ -240,8 +328,48 @@ export const CombatView: React.FC<CombatViewProps> = ({
         </div>
       </div>
 
+      {/* Special State: Surprise Ambush by Monsters in Round 1 */}
+      {currentSurprise === 'MONSTERS' && !isResolving && (
+        <div className="bg-red-950/60 border border-red-600/60 p-4 rounded-xl max-w-3xl mx-auto w-full text-center space-y-3 shadow-lg">
+          <div className="text-sm font-bold text-red-200 flex items-center justify-center gap-2">
+            <Zap className="w-4 h-4 text-red-400 animate-bounce" />
+            <span>Embuscade ennemie ! Les monstres attaquent par surprise lors de ce 1er round.</span>
+          </div>
+          <p className="text-xs text-red-300/90 max-w-lg mx-auto">
+            Vos héros sont pris au dépourvu et ne peuvent pas riposter ce tour-ci. Le combat reprendra normalement dès le round suivant.
+          </p>
+          <button
+            onClick={() => resolveRound([])}
+            className="px-6 py-2.5 bg-red-700 hover:bg-red-600 text-white font-bold text-xs rounded-xl transition shadow-lg inline-flex items-center gap-2"
+          >
+            <Swords className="w-4 h-4" />
+            <span>Subir l'assaut de surprise des monstres</span>
+          </button>
+        </div>
+      )}
+
+      {/* Special State: All Living Heroes Helpless (Asleep or Paralyzed) */}
+      {allHelpless && !isResolving && currentSurprise !== 'MONSTERS' && (
+        <div className="bg-purple-950/60 border border-purple-600/60 p-4 rounded-xl max-w-3xl mx-auto w-full text-center space-y-3 shadow-lg">
+          <div className="text-sm font-bold text-purple-200 flex items-center justify-center gap-2">
+            <Moon className="w-4 h-4 text-purple-400" />
+            <span>Tous vos aventuriers sont endormis ou paralysés !</span>
+          </div>
+          <p className="text-xs text-purple-300/90 max-w-lg mx-auto">
+            Aucun héros conscient n'est en état de donner d'ordre ce tour-ci. Les monstres mènent leur assaut. Les héros endormis ont une chance de se réveiller à chaque tour ou à chaque coup reçu.
+          </p>
+          <button
+            onClick={() => resolveRound([])}
+            className="px-6 py-2.5 bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs rounded-xl transition shadow-lg inline-flex items-center gap-2"
+          >
+            <Moon className="w-4 h-4" />
+            <span>Résoudre le tour des monstres</span>
+          </button>
+        </div>
+      )}
+
       {/* Command Panel for Active Hero */}
-      {!isResolving && activeHero && (
+      {!isResolving && currentSurprise !== 'MONSTERS' && !allHelpless && activeHero && (
         <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-xl space-y-4 max-w-3xl mx-auto w-full shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -265,6 +393,40 @@ export const CombatView: React.FC<CombatViewProps> = ({
             )}
           </div>
 
+          {/* Target Group Selector for Current Order */}
+          <div className="flex items-center gap-2 text-xs pt-1 border-t border-slate-800/80">
+            <span className="font-bold text-slate-400 flex items-center gap-1">
+              <Target className="w-3.5 h-3.5 text-amber-400" />
+              Groupe ciblé :
+            </span>
+            <div className="flex gap-1.5 flex-wrap">
+              {groups.map((grp, gIdx) => {
+                const isAlive = grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
+                if (!isAlive) return null;
+                const isSel = selectedTargetGroupIdx === gIdx;
+                const mName = grp.identified ? grp.monster.name : grp.monster.nameUnknown;
+
+                return (
+                  <button
+                    key={gIdx}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTargetGroupIdx(gIdx);
+                      sounds.playTurn();
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                      isSel 
+                        ? 'bg-amber-600/30 border-amber-500 text-amber-300 shadow-sm' 
+                        : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    #{gIdx + 1} {mName} ({grp.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Active Hero Silence Alert */}
           {activeHero.silencedRounds && activeHero.silencedRounds > 0 && (
             <div className="px-3 py-1.5 bg-cyan-950/50 border border-cyan-500/40 rounded-lg text-xs text-cyan-300 flex items-center gap-2">
@@ -275,10 +437,11 @@ export const CombatView: React.FC<CombatViewProps> = ({
 
           {!selectingSpell ? (
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
-              {/* Fight: only front rank or with ranged */}
+              {/* Fight attack button */}
               <button
-                onClick={() => handleSelectAction('FIGHT', undefined, 0)}
-                className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center gap-1 text-xs font-bold transition"
+                onClick={() => handleSelectAction('FIGHT', undefined, selectedTargetGroupIdx)}
+                className="p-3 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/60 rounded-lg flex flex-col items-center gap-1 text-xs font-bold text-amber-300 transition"
+                title={`Attaquer le Groupe #${selectedTargetGroupIdx + 1}`}
               >
                 <Swords className="w-4 h-4 text-amber-400" />
                 <span>Attaquer</span>
@@ -308,7 +471,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
 
               {(activeHero.class === 'PRIEST' || activeHero.class === 'BISHOP' || activeHero.class === 'LORD') && (
                 <button
-                  onClick={() => handleSelectAction('DISPELL', undefined, 0)}
+                  onClick={() => handleSelectAction('DISPELL', undefined, selectedTargetGroupIdx)}
                   className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center gap-1 text-xs font-bold transition"
                 >
                   <Zap className="w-4 h-4 text-yellow-400" />
@@ -339,7 +502,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                 {availableSpells.map(sp => (
                   <button
                     key={sp.id}
-                    onClick={() => handleSelectAction('SPELL', sp.id, 0)}
+                    onClick={() => handleSelectAction('SPELL', sp.id, selectedTargetGroupIdx)}
                     className="p-2.5 bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition"
                   >
                     <div className="font-bold text-white flex justify-between">

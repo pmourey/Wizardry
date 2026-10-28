@@ -1119,3 +1119,210 @@ export function generateLevel1Maze(): TMazeFloor {
     ]
   };
 }
+
+/**
+ * Generate Level 2 Maze: The Testing Grounds & Murphy's Domain (20x20)
+ * Stairs UP at (5,5) returning to Level 1 (18,18)
+ * Stairs DOWN at (14,14) leading to Level 3 (4,4)
+ */
+export function generateLevel2Maze(): TMazeFloor {
+  const size = 20;
+  const w: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
+  const s: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
+  const e: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
+  const n: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
+  const fights: number[][] = Array.from({ length: size }, () => Array(size).fill(0));
+  const sqrExtra: number[][] = Array.from({ length: size }, () => Array(size).fill(0));
+
+  // Outer boundary walls
+  for (let i = 0; i < size; i++) {
+    s[i][0] = 'WALL';
+    n[i][size - 1] = 'WALL';
+    w[0][i] = 'WALL';
+    e[size - 1][i] = 'WALL';
+  }
+
+  // Corridors and Rooms on Level 2
+  for (let x = 2; x < 18; x += 3) {
+    for (let y = 0; y < size; y++) {
+      e[x][y] = (y % 3 === 1) ? 'DOOR' : (y % 3 === 2) ? 'OPEN' : 'WALL';
+    }
+  }
+  for (let y = 2; y < 18; y += 3) {
+    for (let x = 0; x < size; x++) {
+      n[x][y] = (x % 3 === 0) ? 'DOOR' : (x % 3 === 2) ? 'OPEN' : 'WALL';
+    }
+  }
+
+  // Room around (5,5) landing stairs
+  n[5][5] = 'OPEN';
+  s[5][5] = 'OPEN';
+  e[5][5] = 'OPEN';
+  w[5][5] = 'OPEN';
+
+  // Room around (14,14) descending stairs
+  n[14][14] = 'OPEN';
+  s[14][14] = 'OPEN';
+  e[14][14] = 'DOOR';
+  w[14][14] = 'OPEN';
+
+  // Secret doors on Level 2
+  w[6][5] = 'HIDEDOOR';
+  n[13][4] = 'HIDEDOOR'; // Entrance to Murphy's chamber
+  s[14][14] = 'HIDEDOOR';
+
+  // Synchronize wall pairs
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
+      if (y < size - 1) s[x][y + 1] = n[x][y];
+      if (x < size - 1) w[x + 1][y] = e[x][y];
+      if (y > 0) n[x][y - 1] = s[x][y];
+      if (x > 0) e[x - 1][y] = w[x][y];
+    }
+  }
+
+  // Encounters
+  fights[13][4] = 1; // Murphy's Ghost chamber
+  fights[8][8] = 1;
+  fights[11][15] = 1;
+  fights[4][16] = 1;
+  fights[16][10] = 1;
+
+  // Square special definitions for Level 2
+  const extraDefs = [
+    { type: 'NORMAL' as const, aux0: 0, aux1: 0, aux2: 0 },
+    { type: 'STAIRS' as const, aux0: 1, aux1: 18, aux2: 18 },  // Stairs UP to Level 1 at (18,18)
+    { type: 'STAIRS' as const, aux0: 3, aux1: 4, aux2: 4 },    // Stairs DOWN to Level 3 at (4,4)
+    { type: 'PIT' as const, aux0: 2, aux1: 8, aux2: 3 },       // Pit trap
+    { type: 'DARK' as const, aux0: 0, aux1: 0, aux2: 0 },      // Dark corridor
+    { type: 'SPINNER' as const, aux0: 0, aux1: 0, aux2: 0 },   // Spinner
+    { type: 'ENCOUNTE' as const, aux0: 2, aux1: 1, aux2: 4 },  // Fixed battle
+    { type: 'SCNMSG' as const, aux0: 2, aux1: 1, aux2: 0 }     // Level 2 inscription
+  ];
+
+  sqrExtra[5][5] = 1;    // Stairs UP to Level 1 (18,18)
+  sqrExtra[14][14] = 2;  // Stairs DOWN to Level 3 (4,4)
+  sqrExtra[6][8] = 3;    // Pit
+  sqrExtra[15][7] = 3;   // Pit
+  sqrExtra[10][10] = 4;  // Dark room
+  sqrExtra[11][10] = 4;
+  sqrExtra[10][11] = 4;
+  sqrExtra[11][11] = 4;
+  sqrExtra[8][14] = 5;   // Spinner
+  sqrExtra[16][12] = 5;  // Spinner
+  sqrExtra[13][4] = 6;   // Murphy's ghost encounter
+  sqrExtra[7][12] = 7;   // Inscription
+
+  return {
+    level: 2,
+    w,
+    s,
+    e,
+    n,
+    fights,
+    sqrExtra,
+    extraDefs,
+    enemyCalc: [
+      { minEnemy: 1, multWorse: 1, worse01: 2, range0n: 4, percWorse: 50 },
+      { minEnemy: 2, multWorse: 1, worse01: 3, range0n: 4, percWorse: 60 },
+      { minEnemy: 3, multWorse: 1, worse01: 3, range0n: 5, percWorse: 70 }
+    ]
+  };
+}
+
+/**
+ * Generate Level 3 Maze (20x20)
+ * Stairs UP at (4,4) returning to Level 2 (14,14)
+ * Stairs DOWN at (17,17) leading to Level 4 (2,2)
+ */
+export function generateLevel3Maze(): TMazeFloor {
+  const size = 20;
+  const w: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
+  const s: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
+  const e: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
+  const n: ('OPEN' | 'WALL' | 'DOOR' | 'HIDEDOOR')[][] = Array.from({ length: size }, () => Array(size).fill('OPEN'));
+  const fights: number[][] = Array.from({ length: size }, () => Array(size).fill(0));
+  const sqrExtra: number[][] = Array.from({ length: size }, () => Array(size).fill(0));
+
+  for (let i = 0; i < size; i++) {
+    s[i][0] = 'WALL';
+    n[i][size - 1] = 'WALL';
+    w[0][i] = 'WALL';
+    e[size - 1][i] = 'WALL';
+  }
+
+  for (let x = 1; x < 19; x += 4) {
+    for (let y = 0; y < size; y++) {
+      e[x][y] = (y % 4 === 2) ? 'DOOR' : (y % 4 === 0) ? 'OPEN' : 'WALL';
+    }
+  }
+  for (let y = 1; y < 19; y += 4) {
+    for (let x = 0; x < size; x++) {
+      n[x][y] = (x % 4 === 1) ? 'DOOR' : (x % 4 === 3) ? 'OPEN' : 'WALL';
+    }
+  }
+
+  // Stairs rooms
+  n[4][4] = 'OPEN';
+  s[4][4] = 'OPEN';
+  e[4][4] = 'OPEN';
+  w[4][4] = 'OPEN';
+
+  n[17][17] = 'OPEN';
+  s[17][17] = 'OPEN';
+  e[17][17] = 'OPEN';
+  w[17][17] = 'OPEN';
+
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
+      if (y < size - 1) s[x][y + 1] = n[x][y];
+      if (x < size - 1) w[x + 1][y] = e[x][y];
+      if (y > 0) n[x][y - 1] = s[x][y];
+      if (x > 0) e[x - 1][y] = w[x][y];
+    }
+  }
+
+  fights[6][6] = 1;
+  fights[12][12] = 1;
+  fights[15][8] = 1;
+
+  const extraDefs = [
+    { type: 'NORMAL' as const, aux0: 0, aux1: 0, aux2: 0 },
+    { type: 'STAIRS' as const, aux0: 2, aux1: 14, aux2: 14 },  // Stairs UP to Level 2 at (14,14)
+    { type: 'STAIRS' as const, aux0: 4, aux1: 2, aux2: 2 },    // Stairs DOWN to Level 4 at (2,2)
+    { type: 'PIT' as const, aux0: 3, aux1: 10, aux2: 4 },      // Pit trap
+    { type: 'DARK' as const, aux0: 0, aux1: 0, aux2: 0 },      // Dark room
+    { type: 'SPINNER' as const, aux0: 0, aux1: 0, aux2: 0 }    // Spinner
+  ];
+
+  sqrExtra[4][4] = 1;    // Stairs UP to Level 2 (14,14)
+  sqrExtra[17][17] = 2;  // Stairs DOWN to Level 4 (2,2)
+  sqrExtra[8][8] = 3;
+  sqrExtra[9][9] = 4;
+  sqrExtra[10][10] = 5;
+
+  return {
+    level: 3,
+    w,
+    s,
+    e,
+    n,
+    fights,
+    sqrExtra,
+    extraDefs,
+    enemyCalc: [
+      { minEnemy: 2, multWorse: 1, worse01: 3, range0n: 4, percWorse: 60 },
+      { minEnemy: 3, multWorse: 1, worse01: 4, range0n: 5, percWorse: 70 },
+      { minEnemy: 4, multWorse: 1, worse01: 4, range0n: 6, percWorse: 80 }
+    ]
+  };
+}
+
+/**
+ * Retrieve the maze layout for any dungeon level
+ */
+export function getMazeForFloor(level: number): TMazeFloor {
+  if (level === 2) return generateLevel2Maze();
+  if (level === 3) return generateLevel3Maze();
+  return generateLevel1Maze();
+}
