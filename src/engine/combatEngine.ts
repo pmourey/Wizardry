@@ -38,66 +38,65 @@ export interface CombatRoundResult {
   alarmTriggered: boolean;
 }
 
-export function initCombatEncounter(level: number, specialEnemyId?: number): {
+export interface EncounterOptions {
+  enemyCalc?: { minEnemy: number; multWorse: number; worse01: number; range0n: number; percWorse: number }[];
+  fixedMonsterIds?: number[];
+}
+
+const rollDice = (d: { level: number; hpFac: number; hpMinAdd: number }): number => {
+  let total = d.hpMinAdd;
+  for (let i = 0; i < d.level; i++) total += Math.floor(Math.random() * d.hpFac) + 1;
+  return total;
+};
+
+const makeGroup = (monster: TMonster, forcedCount?: number): CombatGroup => {
+  const count = Math.max(1, Math.min(9, forcedCount ?? rollDice(monster.appear || { level: 1, hpFac: 1, hpMinAdd: 0 })));
+  const instances: CombatMonsterInstance[] = [];
+  for (let i = 0; i < count; i++) {
+    const hp = Math.max(1, rollDice(monster.hp));
+    instances.push({ monsterId: monster.id, hpLeft: hp, maxHp: hp, status: 'OK', acMod: 0, silencedRounds: 0 });
+  }
+  return { monster, identified: false, count, aliveCount: count, instances };
+};
+
+// Authentic random monster pick (maze ENEMYCALC): encounter type 1..3, then "worse" upgrades
+function pickRandomMonsterId(level: number, calc?: EncounterOptions['enemyCalc']): number {
+  if (!calc || calc.length === 0) {
+    return Math.min(MONSTERS_DATABASE.length - 1, Math.floor(Math.random() * (level + 2)));
+  }
+  let type = 0;
+  while (type < 2 && Math.random() < 0.25) type++;
+  const c = calc[type];
+  let worse = 0;
+  if (c.percWorse > 0) {
+    while (worse < c.worse01 && Math.random() * 100 < c.percWorse) worse++;
+  }
+  const id = c.minEnemy + Math.floor(Math.random() * (c.range0n + 1)) + c.multWorse * worse;
+  return Math.min(MONSTERS_DATABASE.length - 1, Math.max(0, id));
+}
+
+export function initCombatEncounter(level: number, specialEnemyId?: number, options: EncounterOptions = {}): {
   groups: CombatGroup[];
   surprise: 'PARTY' | 'MONSTERS' | 'NONE';
   friendly: boolean;
 } {
   const groups: CombatGroup[] = [];
 
-  // Determine primary monster
-  let baseMonsterId = specialEnemyId !== undefined 
-    ? specialEnemyId 
-    : Math.min(MONSTERS_DATABASE.length - 1, Math.max(0, Math.floor(Math.random() * (level + 2))));
-  
+  const baseMonsterId = specialEnemyId !== undefined
+    ? specialEnemyId
+    : pickRandomMonsterId(level, options.enemyCalc);
   const primaryMonster = MONSTERS_DATABASE[baseMonsterId] || MONSTERS_DATABASE[0];
-  
-  // Count roll: 1-9 based on level and monster
-  const count1 = Math.min(9, Math.max(1, Math.floor(Math.random() * (2 + level)) + 1));
-  const instances1: CombatMonsterInstance[] = [];
-  for (let i = 0; i < count1; i++) {
-    const hpRoll = primaryMonster.hp.hpMinAdd + Math.floor(Math.random() * primaryMonster.hp.hpFac * primaryMonster.hp.level) + 1;
-    instances1.push({
-      monsterId: primaryMonster.id,
-      hpLeft: Math.max(1, hpRoll),
-      maxHp: Math.max(1, hpRoll),
-      status: 'OK',
-      acMod: 0,
-      silencedRounds: 0
-    });
-  }
+  groups.push(makeGroup(primaryMonster, primaryMonster.unique >= 0 && specialEnemyId !== undefined ? 1 : undefined));
 
-  groups.push({
-    monster: primaryMonster,
-    identified: false,
-    count: count1,
-    aliveCount: count1,
-    instances: instances1
-  });
-
-  // Secondary groups if teamPercent succeeds
-  if (primaryMonster.teamId > 0 && Math.random() * 100 < primaryMonster.teamPercent) {
-    const secondaryMonster = MONSTERS_DATABASE[primaryMonster.teamId] || MONSTERS_DATABASE[0];
-    const count2 = Math.min(6, Math.max(1, Math.floor(Math.random() * 4) + 1));
-    const instances2: CombatMonsterInstance[] = [];
-    for (let i = 0; i < count2; i++) {
-      const hpRoll = secondaryMonster.hp.hpMinAdd + Math.floor(Math.random() * secondaryMonster.hp.hpFac * secondaryMonster.hp.level) + 1;
-      instances2.push({
-        monsterId: secondaryMonster.id,
-        hpLeft: Math.max(1, hpRoll),
-        maxHp: Math.max(1, hpRoll),
-        status: 'OK',
-        acMod: 0,
-        silencedRounds: 0
-      });
-    }
-    groups.push({
-      monster: secondaryMonster,
-      identified: false,
-      count: count2,
-      aliveCount: count2,
-      instances: instances2
-    });
+  // Companion groups chain through teamId (up to 4 groups, no repeats)
+  let current = primaryMonster;
+  const seen = new Set<number>([primaryMonster.id]);
+  while (groups.length < 4 && current.teamId > 0 && Math.random() * 100 < current.teamPercent) {
+    const next = MONSTERS_DATABASE[current.teamId];
+    if (!next || seen.has(next.id)) break;
+    seen.add(next.id);
+    groups.push(makeGroup(next));
+    current = next;
   }
 
   // Surprise roll (Pascal 80% thresholds)
