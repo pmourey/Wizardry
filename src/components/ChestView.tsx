@@ -351,7 +351,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
         {/* Actions panel */}
         {!opened ? (
           <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
                 onClick={handleInspect}
                 disabled={chest.exploded || chest.disarmed}
@@ -372,27 +372,6 @@ export const ChestView: React.FC<ChestViewProps> = ({
                 <span>(C) Sort CALFO</span>
               </button>
 
-              <div className="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700 rounded-xl px-2 py-1">
-                <select
-                  value={selectedDisarmTrap}
-                  onChange={e => setSelectedDisarmTrap(e.target.value as TTrapType)}
-                  disabled={chest.exploded || chest.disarmed}
-                  className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-white flex-1 focus:outline-none disabled:opacity-40"
-                >
-                  {Object.entries(TRAP_NAMES).map(([key, name]) => (
-                    <option key={key} value={key}>{name}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleDisarm}
-                  disabled={chest.exploded || chest.disarmed}
-                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 text-white rounded-lg text-xs font-bold transition shrink-0 disabled:opacity-40"
-                  title="Tenter de désamorcer le piège (Touche D)"
-                >
-                  (D) Désarmer
-                </button>
-              </div>
-
               {/* Pascal L)EAVE Option: Leave chest undisturbed */}
               <button
                 onClick={handleLeave}
@@ -401,6 +380,29 @@ export const ChestView: React.FC<ChestViewProps> = ({
               >
                 <Footprints className="w-4 h-4 text-slate-400" />
                 <span>(L) Laisser le coffre</span>
+              </button>
+            </div>
+
+            {/* D)isarm: the player names the suspected trap */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-800/80 border border-slate-700 rounded-xl p-2.5">
+              <span className="text-xs text-slate-300 font-bold shrink-0">Piège supposé :</span>
+              <select
+                value={selectedDisarmTrap}
+                onChange={e => setSelectedDisarmTrap(e.target.value as TTrapType)}
+                disabled={chest.exploded || chest.disarmed}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white flex-1 min-w-0 focus:outline-none disabled:opacity-40"
+              >
+                {Object.entries(TRAP_NAMES).map(([key, name]) => (
+                  <option key={key} value={key}>{name}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleDisarm}
+                disabled={chest.exploded || chest.disarmed}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 text-white rounded-lg text-xs font-bold transition shrink-0 disabled:opacity-40"
+                title="Tenter de désamorcer le piège (Touche D)"
+              >
+                (D) Désarmer
               </button>
             </div>
 
