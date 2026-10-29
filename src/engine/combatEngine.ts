@@ -45,6 +45,33 @@ export interface EncounterOptions {
   fixedMonsterIds?: number[];
 }
 
+/**
+ * According to Pascal Wizardry 1 rules:
+ * Dead and ashed characters are automatically moved to the rear (last positions) of the formation,
+ * allowing living characters to step forward to fill their place and maintain the front rank (slots 1 to 3).
+ */
+export function shiftDeadHeroesToEnd(party: TCharacter[]): { changed: boolean; movedNames: string[] } {
+  const living = party.filter(h => h.status !== 'DEAD' && h.status !== 'ASHES');
+  const dead = party.filter(h => h.status === 'DEAD' || h.status === 'ASHES');
+
+  if (dead.length === 0 || living.length === 0) {
+    return { changed: false, movedNames: [] };
+  }
+
+  // Check if any dead character is located before any living character
+  const firstDeadIdx = party.findIndex(h => h.status === 'DEAD' || h.status === 'ASHES');
+  const lastLivingIdx = party.map(h => h.status !== 'DEAD' && h.status !== 'ASHES').lastIndexOf(true);
+
+  if (firstDeadIdx === -1 || lastLivingIdx === -1 || firstDeadIdx >= lastLivingIdx) {
+    return { changed: false, movedNames: [] };
+  }
+
+  const movedNames = dead.map(d => d.name);
+  const reordered = [...living, ...dead];
+  party.splice(0, party.length, ...reordered);
+  return { changed: true, movedNames };
+}
+
 const rollDice = (d: { level: number; hpFac: number; hpMinAdd: number }): number => {
   let total = d.hpMinAdd;
   for (let i = 0; i < d.level; i++) total += Math.floor(Math.random() * d.hpFac) + 1;
