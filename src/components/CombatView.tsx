@@ -10,7 +10,7 @@ import {
   executeCombatRound,
   attemptPartyRun
 } from '../engine/combatEngine';
-import { SPELLS } from '../data/wizardryData';
+import { SPELLS } from '../data/provingGroundsData';
 import { CombatEffects, isFriendlySingleSpell } from '../engine/spellEngine';
 import { sounds } from '../utils/soundEffects';
 import { 

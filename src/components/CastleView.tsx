@@ -16,7 +16,7 @@ import {
   setCharacterSpells,
   initLevel1CharacterSpells,
   levelUpCharacter
-} from '../data/wizardryData';
+} from '../data/provingGroundsData';
 import { CharacterSheetModal } from './CharacterSheetModal';
 import { sounds } from '../utils/soundEffects';
 import { 

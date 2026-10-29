@@ -2,7 +2,7 @@
  * Wizardry I Chest & Trap Engine matching Pascal reverse engineering
  */
 import { TCharacter, TItem } from '../types/wizardry';
-import { ITEMS_DATABASE } from '../data/wizardryData';
+import { ITEMS_DATABASE } from '../data/provingGroundsData';
 
 export type TTrapType =
   | 'TRAPLESS'

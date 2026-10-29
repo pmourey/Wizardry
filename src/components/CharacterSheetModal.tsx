@@ -10,7 +10,7 @@ import {
   SPELLS,
   getExpForNextLevel,
   getMaxCharacterSpells
-} from '../data/wizardryData';
+} from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { 
   Shield, 

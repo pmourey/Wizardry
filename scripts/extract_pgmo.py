@@ -193,6 +193,84 @@ class Scenario:
             out.append({'id': i, 'chest': bool(i16(b, 0)), 'trapTypes': flags(b, 2, 8), 'entries': entries})
         return out
 
+    def characters(self, scenario_id='proving-grounds'):
+        """Extract active ZCHAR records (TCHAR = 208 bytes) stored on the scenario disk."""
+        status_names = ['OK', 'AFRAID', 'ASLEEP', 'PLYZE', 'STONED', 'DEAD', 'ASHES', 'LOST']
+        race_names = ['NORACE', 'HUMAN', 'ELF', 'DWARF', 'GNOME', 'HOBBIT']
+        attr_names = ['STRENGTH', 'IQ', 'PIETY', 'VITALITY', 'AGILITY', 'LUCK']
+        out = []
+        for i in range(self.rdk[5]):
+            b = self.rec(5, i, 208)
+            st_idx = i16(b, 40)
+            status = status_names[st_idx] if 0 <= st_idx < 8 else 'LOST'
+            name = pstr(b, 0).strip()
+            if status in ('LOST', 'DEAD', 'ASHES') or not name:
+                continue
+            r_idx = i16(b, 34)
+            c_idx = i16(b, 36)
+            a_idx = i16(b, 42)
+            race = race_names[r_idx] if 1 <= r_idx <= 5 else 'HUMAN'
+            cls = CLS[c_idx] if 0 <= c_idx < 8 else 'FIGHTER'
+            align = ALIGN[a_idx] if 1 <= a_idx <= 3 else 'NEUTRAL'
+            attrs = packed(b, 44, 6, 5)
+            luckskil = packed(b, 48, 5, 5)
+            gold = wlong(b, 52)
+            posscnt = i16(b, 58)
+            poss = []
+            for k in range(min(8, max(0, posscnt))):
+                po = 60 + 8 * k
+                poss.append({
+                    'equipped': bool(i16(b, po)),
+                    'cursed': bool(i16(b, po + 2)),
+                    'identified': bool(i16(b, po + 4)),
+                    'itemIndex': i16(b, po + 6)
+                })
+            exp = wlong(b, 124)
+            maxlev = max(1, i16(b, 130))
+            charlev = max(1, i16(b, 132))
+            hpleft = max(1, i16(b, 134))
+            hpmax = max(hpleft, i16(b, 136))
+            spellskn = [bool(v) for v in packed(b, 138, 50, 1)] + [False]
+            magesp = [0] + [max(0, i16(b, 146 + 2 * k)) for k in range(7)]
+            priestsp = [0] + [max(0, i16(b, 160 + 2 * k)) for k in range(7)]
+            hpcalcmd = i16(b, 174)
+            armorcl = i16(b, 176)
+            healpts = i16(b, 178)
+            crithitm = bool(i16(b, 180))
+            swingcnt = max(1, i16(b, 182))
+            hpdamrc = hp(b, 184)
+            out.append({
+                'id': f'{scenario_id}-char-{len(out) + 1}',
+                'name': name,
+                'race': race,
+                'class': cls,
+                'align': align,
+                'status': 'OK',
+                'age': max(18 * 52, i16(b, 38)),
+                'attrib': {attr_names[k]: max(3, min(18, attrs[k])) for k in range(6)},
+                'luckSkill': luckskil,
+                'gold': max(0, gold),
+                'exp': max(0, exp),
+                'maxLevel': maxlev,
+                'charLevel': charlev,
+                'hpLeft': hpleft,
+                'hpMax': hpmax,
+                'spellsKnown': spellskn,
+                'mageSpells': magesp,
+                'priestSpells': priestsp,
+                'armorClass': armorcl,
+                'healPts': healpts,
+                'critHit': crithitm,
+                'swingCount': swingcnt,
+                'wepDamage': hpdamrc,
+                'hitMod': hpcalcmd,
+                'poisonAmount': 0,
+                'awards': [0, 0, 0, 0, 0],
+                'inMaze': False,
+                'possessions': poss
+            })
+        return out
+
     def messages(self):
         out = []
         for i in range(len(self.m) // 512 * 12):
@@ -276,9 +354,10 @@ class Scenario:
                 ev['description'] += ': %s (#%d)' % (items[payload]['name'], payload)
                 ev['itemId'] = payload
             elif kind == 'SEARCH_FIGHT' and a0 > 0:
-                ev['description'] += ': fight with %s (#%d)' % (monsters[a0]['name'], a0)
+                mname = monsters[a0]['name'] if 0 <= a0 < len(monsters) else '?'
+                ev['description'] += ': fight with %s (#%d)' % (mname, a0)
                 ev['monsterId'] = a0
-            elif kind == 'SEARCH_FIGHT' and a0 < 0 and payload < len(items):
+            elif kind == 'SEARCH_FIGHT' and a0 < 0 and 0 <= payload < len(items):
                 ev['description'] += ': item %s (#%d)' % (items[payload]['name'], payload)
                 ev['itemId'] = payload
             elif kind == 'RIDDLE':
@@ -434,10 +513,75 @@ def extract_pascal_source(disks_dir: str, out_dir: str = 'pascal_source'):
     print(f'extracted {total_units} UCSD-Pascal .TEXT units into {out_dir}/ and {combined_path}')
 
 
+SCENARIO_DISKS = [
+    ('proving-grounds', 'Wizardry-Proving-Grounds-v3.2-Scenario-18-Mar-2026.dsk', 'PROVING_GROUNDS'),
+    ('black-stone', 'Wizardry-Black-Stone-v3.2-Scenario.dsk', 'BLACK_STONE'),
+    ('catacombs-of-vlad', 'Wizardry-Catacombs-of-Vlad-v3.2-Scenario.dsk', 'CATACOMBS_OF_VLAD'),
+    ('dragonquest', 'Wizardry-DragonQuest-v1.4-v3.2engine-Scenario.dsk', 'DRAGONQUEST'),
+    ('knight-of-the-grave', 'Wizardry-Knight-of-the-Grave-v3.2-Scenario.dsk', 'KNIGHT_OF_THE_GRAVE'),
+    ('scarlet-brotherhood', 'Wizardry-Scarlet-Brotherhood-of-Hsi-So-v3.2-Scenario.dsk', 'SCARLET_BROTHERHOOD'),
+    ('nihonbashi', 'Wizardry-Nihonbashi-v3.2-Scenario.dsk', 'NIHONBASHI'),
+    ('oconnors-mine', 'Wizardry-OConnors-Mine-v3.2-Scenario.dsk', 'OCONNORS_MINE'),
+    ('emperors-seal', 'Wizardry-The-Emperors-Seal-v3.2-Scenario.dsk', 'EMPERORS_SEAL'),
+    ('atomic-wasteland-2098', 'Wizardry-Atomic-Wasteland-2098-v1.2-with-Engine-v3.2-Scenario.dsk', 'ATOMIC_WASTELAND_2098'),
+]
+
+
+def extract_all_scenarios(dsk_dir: str, out_dir: str = 'src/data/scenarios'):
+    """Extract all 9 alternate scenarios into src/data/scenarios/<id>Data.ts
+    and monster pictures for all 10 scenarios into src/assets/monsters/<id>/pic0..19.png.
+    """
+    os.makedirs(out_dir, exist_ok=True)
+    for scen_id, dsk_file, const_prefix in SCENARIO_DISKS:
+        dsk_path = os.path.join(dsk_dir, dsk_file)
+        if not os.path.exists(dsk_path):
+            print('missing scenario disk:', dsk_path)
+            continue
+        sc = Scenario(dsk_path)
+        # Write 20 monster pictures into src/assets/monsters/<scen_id>/pic0..19.png
+        write_monster_pictures(sc, os.path.join('src/assets/monsters', scen_id))
+        if scen_id == 'proving-grounds':
+            write_monster_pictures(sc, 'src/assets/monsters')
+            continue
+
+        items, monsters, msgs = sc.items(), sc.monsters(), sc.messages()
+        exp_tables = sc.exp_tables()
+        spells = sc.spells()
+        rewards = sc.rewards()
+        mazes = sc.mazes(items, monsters, msgs)
+        chars = sc.characters(scen_id)
+
+        out_ts = os.path.join(out_dir, f'{scen_id}Data.ts')
+        with open(out_ts, 'w', encoding='utf-8') as f:
+            f.write('/* eslint-disable */\n')
+            f.write(f'// GENERATED by scripts/extract_pgmo.py from "{sc.name}" ({dsk_file}). Do not edit by hand.\n')
+            f.write("import type { TClass, TItem, TMonster, TReward, PGSpellRecord, PGMessage, PGRawMaze, TCharacter } from '../../types/wizardry';\n\n")
+            f.write(f'export const {const_prefix}_EXP_TABLES: Record<TClass, number[]> = ' + json.dumps(exp_tables, separators=(',', ':')) + ';\n\n')
+            for k, typ, val in [
+                (f'{const_prefix}_SPELL_TABLE', 'PGSpellRecord[]', spells),
+                (f'{const_prefix}_ITEMS', 'TItem[]', items),
+                (f'{const_prefix}_MONSTERS', 'TMonster[]', monsters),
+                (f'{const_prefix}_REWARDS', 'TReward[]', rewards),
+                (f'{const_prefix}_MESSAGES', 'PGMessage[]', msgs),
+                (f'{const_prefix}_MAZES', 'PGRawMaze[]', mazes),
+                (f'{const_prefix}_STARTER_PARTY', 'TCharacter[]', chars),
+            ]:
+                f.write(f'export const {k}: {typ} = [\n')
+                for e in val:
+                    f.write('  ' + json.dumps(e, separators=(',', ':')) + ',\n')
+                f.write('];\n\n')
+        print(f'wrote {out_ts} (items={len(items)}, monsters={len(monsters)}, mazes={len(mazes)}, chars={len(chars)})')
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     args = sys.argv[1:]
+    if '--all-scenarios' in args:
+        idx = args.index('--all-scenarios')
+        dsk_dir = args[idx + 1]
+        extract_all_scenarios(dsk_dir)
+        return
     pascal_dir = None
     if '--pascal-disks' in args:
         idx = args.index('--pascal-disks')
@@ -461,7 +605,7 @@ def main():
             for e in v:
                 f.write('  ' + json.dumps(e, separators=(',', ':')) + ',\n')
             f.write('];\n\n')
-    write_monster_pictures(sc)
+    write_monster_pictures(sc, 'src/assets/monsters/proving-grounds')
     print('wrote', out, {k: len(v) for k, v in data.items()})
     if pascal_dir:
         extract_pascal_source(pascal_dir)

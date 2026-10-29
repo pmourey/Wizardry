@@ -1,10 +1,12 @@
 import React from 'react';
+import { ACTIVE_SCENARIO_ID } from '../data/provingGroundsData';
 
-// Official monster pictures extracted from the scenario disk (scripts/extract_pgmo.py)
-const PICTURES = import.meta.glob('../assets/monsters/pic*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+// Official monster pictures extracted from the 10 scenario disks (scripts/extract_pgmo.py)
+const PICTURES = import.meta.glob('../assets/monsters/**/pic*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
-export const getMonsterPictureUrl = (picId: number): string | undefined =>
-  PICTURES[`../assets/monsters/pic${picId}.png`];
+export const getMonsterPictureUrl = (picId: number, scenarioId: string = ACTIVE_SCENARIO_ID): string | undefined =>
+  PICTURES[`../assets/monsters/${scenarioId}/pic${picId}.png`] ||
+  PICTURES[`../assets/monsters/proving-grounds/pic${picId}.png`];
 
 interface MonsterPictureProps {
   picId: number;

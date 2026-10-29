@@ -17,8 +17,10 @@ import {
   getMazeForFloor,
   MONSTERS_DATABASE,
   ITEMS_DATABASE,
-  getMaxCharacterSpells
-} from './data/wizardryData';
+  getMaxCharacterSpells,
+  setActiveScenarioData,
+  getStarterPartyForScenario
+} from './data/provingGroundsData';
 import { CastleView } from './components/CastleView';
 import { DungeonView } from './components/DungeonView';
 import { CombatView } from './components/CombatView';
@@ -141,13 +143,14 @@ export default function App() {
 
   // Persistence in localStorage (isolated per scenario)
   const [party, setParty] = useState<TCharacter[]>(() => {
+    setActiveScenarioData(activeScenarioId);
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(storageKeys.party);
       if (saved) {
         try { return sanitizeCharacterSpells(JSON.parse(saved)); } catch (e) { /* ignore */ }
       }
     }
-    return DEFAULT_PARTY;
+    return getStarterPartyForScenario(activeScenarioId).slice(0, 6);
   });
 
   const [allCharacters, setAllCharacters] = useState<TCharacter[]>(() => {
@@ -157,7 +160,7 @@ export default function App() {
         try { return sanitizeCharacterSpells(JSON.parse(saved)); } catch (e) { /* ignore */ }
       }
     }
-    return DEFAULT_PARTY;
+    return getStarterPartyForScenario(activeScenarioId);
   });
 
   // Location & Navigation State (restores exact place in dungeon on page refresh)
@@ -274,6 +277,7 @@ export default function App() {
 
   // Switch Scenario & Load its isolated localStorage state
   const handleSelectScenario = (scenarioId: string) => {
+    setActiveScenarioData(scenarioId);
     const keys = getStorageKeysForScenario(scenarioId);
     if (typeof window !== 'undefined') {
       localStorage.setItem('wiz_active_scenario_id', scenarioId);
@@ -281,8 +285,9 @@ export default function App() {
     }
     setActiveScenarioId(scenarioId);
 
-    let nextParty = DEFAULT_PARTY;
-    let nextRoster = DEFAULT_PARTY;
+    const starter = getStarterPartyForScenario(scenarioId);
+    let nextParty = starter.slice(0, 6);
+    let nextRoster = starter;
     let nextSession: Partial<TDungeonSession> | null = null;
     let nextVisited: Record<number, boolean[][]> = {};
     let nextJournal: AdventureLogEvent[] = [];

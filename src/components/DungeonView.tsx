@@ -6,7 +6,7 @@ import {
   AdventureLogCategory
 } from '../types/wizardry';
 import { DungeonRenderer3D } from '../engine/dungeonRenderer3D';
-import { ITEMS_DATABASE, SPELLS } from '../data/wizardryData';
+import { ITEMS_DATABASE, SPELLS } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
 import { MiniMap } from './MiniMap';

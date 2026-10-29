@@ -61,7 +61,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
       'Commencez avec des guerriers ayant 18 en Force et une haute Agilité.',
       'Importation de personnages possible (sans équipement).'
     ],
-    dataExtracted: false
+    dataExtracted: true
   },
   {
     id: 'catacombs-of-vlad',
@@ -83,7 +83,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
       'Achetez beaucoup d’Ail (Garlic) chez Boltac avant de descendre !',
       'Prévoyez au moins un Prêtre ou un Bishop pour dissiper les morts-vivants.'
     ],
-    dataExtracted: false
+    dataExtracted: true
   },
   {
     id: 'dragonquest',
@@ -105,7 +105,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
       'Conçu pour des héros de niveau 1 et plus.',
       'Équilibrez votre groupe entre puissance physique et protection magique.'
     ],
-    dataExtracted: false
+    dataExtracted: true
   },
   {
     id: 'knight-of-the-grave',
@@ -127,7 +127,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
       'Cartographie plus accessible que la moyenne des scénarios alternatifs.',
       'Recommandé pour des personnages de niveau 1 et plus.'
     ],
-    dataExtracted: false
+    dataExtracted: true
   },
   {
     id: 'scarlet-brotherhood',
@@ -149,7 +149,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
       'Au niveau 10 du donjon, avoir 18 en Agilité sur vos lanceurs de sorts est décisif.',
       'Importation de personnages sans équipement supportée.'
     ],
-    dataExtracted: false
+    dataExtracted: true
   },
   {
     id: 'nihonbashi',
@@ -171,7 +171,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
       'Préquelle directe de The Emperor’s Seal.',
       'Entraînez vos personnages jusqu’au niveau 13+ pour préparer la suite.'
     ],
-    dataExtracted: false
+    dataExtracted: true
   },
   {
     id: 'oconnors-mine',
@@ -193,7 +193,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
       'Niveau 7+ requis au 1er étage, Niveau 9+ au 2e, Niveau 11+ au 3e.',
       'Emmenez deux Mages pour cumuler MASOPIC et sécuriser le retour via MALOR.'
     ],
-    dataExtracted: false
+    dataExtracted: true
   },
   {
     id: 'emperors-seal',
@@ -216,7 +216,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
       'Transférez vos vétérans de Nihonbashi ou Proving Grounds avec de l’or.'
     ],
     sequelTo: 'nihonbashi',
-    dataExtracted: false
+    dataExtracted: true
   },
   {
     id: 'atomic-wasteland-2098',
@@ -238,6 +238,6 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
       'Univers post-apocalyptique/futuriste pour personnages de niveau 1+.',
       'Les tables d’armes, d’armures et de classes y sont totalement repensées.'
     ],
-    dataExtracted: false
+    dataExtracted: true
   }
 ];
