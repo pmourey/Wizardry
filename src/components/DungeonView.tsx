@@ -6,10 +6,10 @@ import {
   AdventureLogCategory
 } from '../types/wizardry';
 import { DungeonRenderer3D } from '../engine/dungeonRenderer3D';
-import { ITEMS_DATABASE, SPELLS } from '../data/provingGroundsData';
+import { ITEMS_DATABASE, SPELLS, formatDamageDice, recalculateCharacterCombatStats } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
-import { MiniMap } from './MiniMap';
+import { MiniMap, loadMiniMapPrefs, saveMiniMapPrefs } from './MiniMap';
 import { 
   Compass, 
   Eye, 
@@ -37,7 +37,8 @@ import {
   MoveUp,
   MoveDown,
   Users,
-  Swords
+  Swords,
+  Keyboard
 } from 'lucide-react';
 
 interface DungeonViewProps {
@@ -55,6 +56,8 @@ interface DungeonViewProps {
   setAcModifier?: React.Dispatch<React.SetStateAction<number>>;
   visitedTiles?: boolean[][];
   setVisitedTiles?: React.Dispatch<React.SetStateAction<boolean[][]>>;
+  keyboardLayout?: 'AZERTY' | 'QWERTY';
+  onToggleKeyboardLayout?: () => void;
   onAddAdventureEvent?: (
     category: AdventureLogCategory,
     title: string,
@@ -87,6 +90,8 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   setAcModifier,
   visitedTiles: propVisitedTiles,
   setVisitedTiles: propSetVisitedTiles,
+  keyboardLayout = 'AZERTY',
+  onToggleKeyboardLayout,
   onAddAdventureEvent,
   onMove,
   onRotate,
@@ -96,9 +101,13 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   onTakeStairs,
   onTriggerEncounter
 }) => {
-  const [wireframeMode, setWireframeMode] = useState<boolean>(false);
+  const [wireframeMode, setWireframeMode] = useState<boolean>(() => loadMiniMapPrefs().wireframeMode);
   const [showMinimap, setShowMinimap] = useState<boolean>(false);
-  const [hudMinimapVisible, setHudMinimapVisible] = useState<boolean>(true);
+  const [hudMinimapVisible, setHudMinimapVisible] = useState<boolean>(() => loadMiniMapPrefs().hudVisible);
+
+  useEffect(() => {
+    saveMiniMapPrefs({ hudVisible: hudMinimapVisible, wireframeMode });
+  }, [hudMinimapVisible, wireframeMode]);
   const [showCamp, setShowCamp] = useState<boolean>(false);
   const [campCharIdx, setCampCharIdx] = useState<number>(0);
   const [campTargetIdx, setCampTargetIdx] = useState<number>(0);
@@ -167,7 +176,11 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     }
   };
 
-  // Keyboard navigation shortcuts
+  const forwardKeyLabel = keyboardLayout === 'AZERTY' ? 'Z' : 'W';
+  const leftKeyLabel = keyboardLayout === 'AZERTY' ? 'Q' : 'A';
+  const rightKeyLabel = 'D';
+
+  // Keyboard navigation shortcuts (adapts to AZERTY [Z/Q/D] or QWERTY [W/A/D] + Arrow keys)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (showCamp || showMinimap) return;
 
@@ -184,27 +197,31 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       }
     }
 
-    if (e.key === 'w' || e.key === 'ArrowUp') {
+    const key = e.key.toLowerCase();
+    const forwardKey = keyboardLayout === 'AZERTY' ? 'z' : 'w';
+    const leftKey = keyboardLayout === 'AZERTY' ? 'q' : 'a';
+
+    if (key === forwardKey || key === 'f' || e.key === 'ArrowUp') {
       e.preventDefault();
       tryMoveForward(false);
-    } else if (e.key === 'a' || e.key === 'ArrowLeft') {
+    } else if (key === leftKey || key === 'l' || e.key === 'ArrowLeft') {
       e.preventDefault();
       onRotate(3); // Turn Left
-    } else if (e.key === 'd' || e.key === 'ArrowRight') {
+    } else if (key === 'd' || key === 'r' || e.key === 'ArrowRight') {
       e.preventDefault();
       onRotate(1); // Turn Right
-    } else if (e.key === 'k') {
+    } else if (key === 'k') {
       e.preventDefault();
       onKickDoor();
-    } else if (e.key === 'c') {
+    } else if (key === 'c') {
       e.preventDefault();
       setShowCamp(true);
       sounds.playTurn();
-    } else if (e.key === 'm') {
+    } else if (key === 'm') {
       e.preventDefault();
       setShowMinimap(prev => !prev);
       sounds.playTurn();
-    } else if (e.key === 'i') {
+    } else if (key === 'i') {
       e.preventDefault();
       if (isStairs) {
         setShowStairsPrompt(true);
@@ -212,7 +229,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         onInspectArea();
       }
     }
-  }, [showCamp, showMinimap, showStairsPrompt, isStairs, currentSqrDef, x, y, direction, maze]);
+  }, [showCamp, showMinimap, showStairsPrompt, isStairs, currentSqrDef, x, y, direction, maze, keyboardLayout]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -298,13 +315,25 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         return;
       }
       slot.equipped = false;
-      activeCampHero.armorClass += itm.armorMod;
-      setCampMessage(`${itm.name} retiré.`);
+      recalculateCharacterCombatStats(activeCampHero);
+      setCampMessage(`${itm.name} retiré (CA : ${activeCampHero.armorClass} · Dégâts : ${formatDamageDice(activeCampHero.wepDamage)}).`);
     } else {
+      if (itm.objType !== 'SPECIAL' && itm.objType !== 'MISC') {
+        activeCampHero.possessions.forEach((other, idx) => {
+          if (idx !== slotIdx && other.equipped && !other.cursed) {
+            const otherItm = ITEMS_DATABASE.find(i => i.id === other.itemIndex);
+            if (otherItm && otherItm.objType === itm.objType) {
+              other.equipped = false;
+            }
+          }
+        });
+      }
       slot.equipped = true;
-      activeCampHero.armorClass -= itm.armorMod;
-      if (itm.cursed) slot.cursed = true;
-      setCampMessage(`${itm.name} équipé (CA : ${activeCampHero.armorClass}).`);
+      if (itm.cursed || (itm.align !== 'UNALIGN' && itm.align !== activeCampHero.align)) {
+        slot.cursed = true;
+      }
+      recalculateCharacterCombatStats(activeCampHero);
+      setCampMessage(`${itm.name} équipé (CA : ${activeCampHero.armorClass} · Dégâts : ${formatDamageDice(activeCampHero.wepDamage)}).`);
     }
     setParty([...party]);
   };
@@ -333,7 +362,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     // If equipped, unequip first
     if (slot.equipped) {
       slot.equipped = false;
-      activeCampHero.armorClass += itm.armorMod;
+      recalculateCharacterCombatStats(activeCampHero);
     }
 
     // Remove from activeCampHero
@@ -683,6 +712,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 visitedTiles={visitedTiles}
                 variant="hud"
                 fallenMarkers={fallenMarkers}
+                keyboardLayout={keyboardLayout}
                 onClose={() => setHudMinimapVisible(false)}
                 onExpand={() => setShowMinimap(true)}
               />
@@ -770,8 +800,20 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         {/* Tactical Control Pad */}
         <div className="w-64 bg-slate-900/90 border-l border-slate-800 p-4 flex flex-col justify-between shrink-0 space-y-4">
           <div>
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-              Commandes d'Exploration
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Commandes d'Exploration
+              </div>
+              {onToggleKeyboardLayout && (
+                <button
+                  onClick={() => { onToggleKeyboardLayout(); sounds.playTurn(); }}
+                  className="flex items-center gap-1 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 border border-amber-500/40 rounded text-[10px] font-mono font-bold text-amber-300 transition"
+                  title="Changer la disposition du clavier pour les déplacements (AZERTY: Z/Q/D · QWERTY: W/A/D)"
+                >
+                  <Keyboard className="w-3 h-3" />
+                  <span>{keyboardLayout}</span>
+                </button>
+              )}
             </div>
             
             {/* Directional D-Pad */}
@@ -779,19 +821,21 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               <div />
               <button
                 onClick={() => tryMoveForward(false)}
-                className="p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex items-center justify-center transition shadow-sm active:scale-95"
-                title="Avancer (W / Flèche Haut)"
+                className="p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex flex-col items-center justify-center transition shadow-sm active:scale-95"
+                title={`Avancer (${forwardKeyLabel} / F / Flèche Haut)`}
               >
-                <ArrowUp className="w-5 h-5 text-amber-400" />
+                <ArrowUp className="w-4 h-4 text-amber-400" />
+                <span className="text-[9px] font-mono text-amber-300 font-bold mt-0.5">{forwardKeyLabel}</span>
               </button>
               <div />
 
               <button
                 onClick={() => onRotate(3)}
-                className="p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex items-center justify-center transition shadow-sm active:scale-95"
-                title="Pivoter à Gauche (A / Flèche Gauche)"
+                className="p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex flex-col items-center justify-center transition shadow-sm active:scale-95"
+                title={`Pivoter à Gauche (${leftKeyLabel} / L / Flèche Gauche)`}
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-[9px] font-mono text-slate-300 font-bold mt-0.5">{leftKeyLabel}</span>
               </button>
               <button
                 onClick={() => onKickDoor()}
@@ -799,14 +843,15 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 title="Enfoncer / Ouvrir Porte (K)"
               >
                 <DoorClosed className="w-3.5 h-3.5 mb-0.5" />
-                Porte
+                Porte (K)
               </button>
               <button
                 onClick={() => onRotate(1)}
-                className="p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex items-center justify-center transition shadow-sm active:scale-95"
-                title="Pivoter à Droite (D / Flèche Droite)"
+                className="p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex flex-col items-center justify-center transition shadow-sm active:scale-95"
+                title={`Pivoter à Droite (${rightKeyLabel} / R / Flèche Droite)`}
               >
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-4 h-4" />
+                <span className="text-[9px] font-mono text-slate-300 font-bold mt-0.5">{rightKeyLabel}</span>
               </button>
             </div>
 
@@ -1155,7 +1200,9 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                               {slot.equipped && <span className="text-[10px] text-emerald-400 font-bold">[Équipé]</span>}
                               {slot.cursed && <span className="text-[10px] text-red-400 font-bold">[Maudit]</span>}
                             </div>
-                            <div className="text-[11px] text-slate-400">{itm.objType} {itm.armorMod ? `· CA -${itm.armorMod}` : ''}</div>
+                            <div className="text-[11px] text-slate-400">
+                              {itm.objType} {itm.objType === 'WEAPON' && itm.wepHpDam?.level ? `· Dégâts ${formatDamageDice(itm.wepHpDam)}` : ''} {itm.armorMod ? `· CA -${itm.armorMod}` : ''}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-1.5">
@@ -1472,6 +1519,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             visitedTiles={visitedTiles}
             variant="modal"
             fallenMarkers={fallenMarkers}
+            keyboardLayout={keyboardLayout}
             onClose={() => setShowMinimap(false)}
           />
         </div>

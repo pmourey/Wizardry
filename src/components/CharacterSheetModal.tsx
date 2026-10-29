@@ -9,7 +9,9 @@ import {
   ITEMS_DATABASE, 
   SPELLS,
   getExpForNextLevel,
-  getMaxCharacterSpells
+  getMaxCharacterSpells,
+  formatDamageDice,
+  recalculateCharacterCombatStats
 } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { 
@@ -146,7 +148,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
   const expProgress = Math.min(100, Math.max(0, Math.round(((hero.exp - expCurrentTier) / expDiff) * 100)));
   const maxSpellSlots = getMaxCharacterSpells(hero);
 
-  // Equip / Unequip handler
+  // Equip / Unequip handler (authentic Pascal EQUIPCHR + ARM4CHAR)
   const handleToggleEquip = (slotIdx: number) => {
     const slot = hero.possessions[slotIdx];
     if (!slot) return;
@@ -160,14 +162,27 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
         return;
       }
       slot.equipped = false;
-      hero.armorClass += itm.armorMod;
-      setFeedbackMessage(`${itm.name} retiré (CA actuelle : ${hero.armorClass}).`);
+      recalculateCharacterCombatStats(hero);
+      setFeedbackMessage(`${itm.name} retiré (CA : ${hero.armorClass} · Dégâts : ${formatDamageDice(hero.wepDamage)}).`);
       sounds.playTurn();
     } else {
+      // Unequip any non-cursed item of the same equipment slot type (WEAPON, ARMOR, SHIELD, HELMET, GAUNTLET)
+      if (itm.objType !== 'SPECIAL' && itm.objType !== 'MISC') {
+        hero.possessions.forEach((other, idx) => {
+          if (idx !== slotIdx && other.equipped && !other.cursed) {
+            const otherItm = ITEMS_DATABASE.find(i => i.id === other.itemIndex);
+            if (otherItm && otherItm.objType === itm.objType) {
+              other.equipped = false;
+            }
+          }
+        });
+      }
       slot.equipped = true;
-      hero.armorClass -= itm.armorMod;
-      if (itm.cursed) slot.cursed = true;
-      setFeedbackMessage(`${itm.name} équipé avec succès (CA : ${hero.armorClass}).`);
+      if (itm.cursed || (itm.align !== 'UNALIGN' && itm.align !== hero.align)) {
+        slot.cursed = true;
+      }
+      recalculateCharacterCombatStats(hero);
+      setFeedbackMessage(`${itm.name} équipé avec succès (CA : ${hero.armorClass} · Dégâts : ${formatDamageDice(hero.wepDamage)}).`);
       sounds.playDoor();
     }
 
@@ -538,7 +553,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                     <div className="flex justify-between py-1 border-b border-slate-800/60">
                       <span className="text-slate-400">Dégâts de Base Arme :</span>
                       <strong className="text-amber-300 font-mono">
-                        {hero.wepDamage?.hpFac || 1}d{hero.wepDamage?.hpMinAdd || 4}
+                        {formatDamageDice(hero.wepDamage)}
                       </strong>
                     </div>
                     <div className="flex justify-between py-1">
@@ -654,7 +669,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                               <div className="flex justify-between">
                                 <span className="text-slate-400">Dégâts de l'arme :</span>
                                 <strong className="text-amber-300 font-mono">
-                                  {itm.wepHpDam.hpFac}d{itm.wepHpDam.hpMinAdd}
+                                  {formatDamageDice(itm.wepHpDam)}
                                   {itm.wepHitMod > 0 ? ` (+${itm.wepHitMod} touch)` : ''}
                                 </strong>
                               </div>

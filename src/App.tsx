@@ -19,7 +19,8 @@ import {
   ITEMS_DATABASE,
   getMaxCharacterSpells,
   setActiveScenarioData,
-  getStarterPartyForScenario
+  getStarterPartyForScenario,
+  recalculateCharacterCombatStats
 } from './data/provingGroundsData';
 import { CastleView } from './components/CastleView';
 import { DungeonView } from './components/DungeonView';
@@ -50,7 +51,8 @@ import {
   VolumeX,
   Skull,
   Users,
-  Library
+  Library,
+  Keyboard
 } from 'lucide-react';
 
 export function getStorageKeysForScenario(scenarioId: string) {
@@ -92,15 +94,37 @@ interface TDungeonSession {
 
 export default function App() {
   // Clamp any legacy saved character spell slots to their authentic Pascal maximum (SETSPELS)
+  // and recompute combat stats (wepDamage, armorClass, hitMod) per Pascal EQUIPCHR + ARM4CHAR
   const sanitizeCharacterSpells = (chars: TCharacter[]): TCharacter[] =>
     chars.map(h => {
       const maxSp = getMaxCharacterSpells(h);
-      return {
+      const copy: TCharacter = {
         ...h,
         mageSpells: (h.mageSpells || [0, 0, 0, 0, 0, 0, 0, 0]).map((v, i) => Math.min(v, maxSp.mageSpells[i] || 0)),
         priestSpells: (h.priestSpells || [0, 0, 0, 0, 0, 0, 0, 0]).map((v, i) => Math.min(v, maxSp.priestSpells[i] || 0)),
       };
+      recalculateCharacterCombatStats(copy);
+      return copy;
     });
+
+  // Keyboard Layout (AZERTY [Z/Q/D] vs QWERTY [W/A/D], persisted in localStorage)
+  const [keyboardLayout, setKeyboardLayout] = useState<'AZERTY' | 'QWERTY'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('wiz_keyboard_layout');
+      if (saved === 'AZERTY' || saved === 'QWERTY') return saved;
+    }
+    return 'AZERTY';
+  });
+
+  const toggleKeyboardLayout = () => {
+    setKeyboardLayout(prev => {
+      const next = prev === 'AZERTY' ? 'QWERTY' : 'AZERTY';
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('wiz_keyboard_layout', next);
+      }
+      return next;
+    });
+  };
 
   // Active Scenario ID (persisted in localStorage)
   const [activeScenarioId, setActiveScenarioId] = useState<string>(() => {
@@ -1068,6 +1092,15 @@ export default function App() {
           </button>
 
           <button
+            onClick={() => { toggleKeyboardLayout(); sounds.playTurn(); }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-mono font-bold whitespace-nowrap shrink-0 transition"
+            title={`Disposition clavier actuelle : ${keyboardLayout} (${keyboardLayout === 'AZERTY' ? 'Z=Avancer, Q=Gauche, D=Droite' : 'W=Avancer, A=Gauche, D=Droite'}). Cliquer pour basculer AZERTY / QWERTY.`}
+          >
+            <Keyboard className="w-3.5 h-3.5" />
+            <span>{keyboardLayout}</span>
+          </button>
+
+          <button
             onClick={toggleSound}
             className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
             title={soundOn ? 'Couper le son' : 'Activer le son'}
@@ -1135,6 +1168,8 @@ export default function App() {
             setAcModifier={setAcModifier}
             visitedTiles={visitedTiles}
             setVisitedTiles={setVisitedTiles}
+            keyboardLayout={keyboardLayout}
+            onToggleKeyboardLayout={toggleKeyboardLayout}
             onAddAdventureEvent={addAdventureEvent}
             onMove={handleMove}
             onRotate={handleRotate}

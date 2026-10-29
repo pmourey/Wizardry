@@ -15,7 +15,9 @@ import {
   getExpForNextLevel,
   setCharacterSpells,
   initLevel1CharacterSpells,
-  levelUpCharacter
+  levelUpCharacter,
+  formatDamageDice,
+  recalculateCharacterCombatStats
 } from '../data/provingGroundsData';
 import { CharacterSheetModal } from './CharacterSheetModal';
 import { sounds } from '../utils/soundEffects';
@@ -630,6 +632,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
 
     // Authentic KEEPCHYN Level 1 spells & spell points (MAGE/BISHOP: Halito & Katino [2 pts]; PRIEST: Dios & Badios [2 pts])
     initLevel1CharacterSpells(newHero);
+    recalculateCharacterCombatStats(newHero);
 
     setAllCharacters(prev => [...prev, newHero]);
     if (party.length < 6) {
@@ -960,7 +963,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                       <div>
                         <div className="font-semibold text-white">{item.name}</div>
                         <div className="text-[11px] text-slate-400">
-                          {item.objType} {item.armorMod ? `· CA -${item.armorMod}` : ''} {item.price} PO
+                          {item.objType} {item.objType === 'WEAPON' && item.wepHpDam?.level ? `· Dégâts ${formatDamageDice(item.wepHpDam)}` : ''} {item.armorMod ? `· CA -${item.armorMod}` : ''} · {item.price} PO
                         </div>
                       </div>
                       <button

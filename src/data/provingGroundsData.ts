@@ -548,8 +548,8 @@ export const DEFAULT_PARTY: TCharacter[] = [
     healPts: 0,
     critHit: false,
     swingCount: 1,
-    wepDamage: { level: 1, hpFac: 8, hpMinAdd: 1 },
-    hitMod: 1,
+    wepDamage: { level: 1, hpFac: 8, hpMinAdd: 0 },
+    hitMod: 6,
     poisonAmount: 0,
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
@@ -578,12 +578,12 @@ export const DEFAULT_PARTY: TCharacter[] = [
     spellsKnown: new Array(51).fill(false),
     mageSpells: [0, 0, 0, 0, 0, 0, 0, 0],
     priestSpells: [0, 0, 0, 0, 0, 0, 0, 0],
-    armorClass: 6,
+    armorClass: 7,
     healPts: 0,
-    critHit: true,
+    critHit: false,
     swingCount: 1,
-    wepDamage: { level: 1, hpFac: 8, hpMinAdd: 1 },
-    hitMod: 1,
+    wepDamage: { level: 1, hpFac: 8, hpMinAdd: 0 },
+    hitMod: 6,
     poisonAmount: 0,
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
@@ -616,12 +616,12 @@ export const DEFAULT_PARTY: TCharacter[] = [
     })(),
     mageSpells: [0, 0, 0, 0, 0, 0, 0, 0],
     priestSpells: [0, 2, 0, 0, 0, 0, 0, 0],
-    armorClass: 6,
+    armorClass: 5,
     healPts: 0,
     critHit: false,
     swingCount: 1,
-    wepDamage: { level: 2, hpFac: 3, hpMinAdd: 1 },
-    hitMod: 0,
+    wepDamage: { level: 2, hpFac: 3, hpMinAdd: 0 },
+    hitMod: 4,
     poisonAmount: 0,
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
@@ -650,12 +650,12 @@ export const DEFAULT_PARTY: TCharacter[] = [
     spellsKnown: new Array(51).fill(false),
     mageSpells: [0, 0, 0, 0, 0, 0, 0, 0],
     priestSpells: [0, 0, 0, 0, 0, 0, 0, 0],
-    armorClass: 7,
+    armorClass: 6,
     healPts: 0,
     critHit: false,
     swingCount: 1,
-    wepDamage: { level: 1, hpFac: 6, hpMinAdd: 1 },
-    hitMod: 0,
+    wepDamage: { level: 1, hpFac: 6, hpMinAdd: 0 },
+    hitMod: 3,
     poisonAmount: 0,
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
@@ -693,8 +693,8 @@ export const DEFAULT_PARTY: TCharacter[] = [
     healPts: 0,
     critHit: false,
     swingCount: 1,
-    wepDamage: { level: 1, hpFac: 4, hpMinAdd: 1 },
-    hitMod: 0,
+    wepDamage: { level: 1, hpFac: 4, hpMinAdd: 0 },
+    hitMod: 1,
     poisonAmount: 0,
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
@@ -1191,21 +1191,100 @@ export function levelUpCharacter(hero: TCharacter): {
   const hpGain = newHpMax - hero.hpMax;
   hero.hpMax = newHpMax;
 
-  if (hero.class === 'FIGHTER' || hero.class === 'PRIEST' || hero.class === 'SAMURAI' || hero.class === 'LORD' || hero.class === 'NINJA') {
-    hero.hitMod = 2 + Math.floor(hero.charLevel / 3);
-  } else {
-    hero.hitMod = Math.floor(hero.charLevel / 5);
-  }
-  if (hero.attrib.STRENGTH > 15) {
-    hero.hitMod += hero.attrib.STRENGTH - 15;
-  } else if (hero.attrib.STRENGTH < 6) {
-    hero.hitMod += hero.attrib.STRENGTH - 6;
-  }
-  if (hero.class === 'FIGHTER' || hero.class === 'SAMURAI' || hero.class === 'LORD' || hero.class === 'NINJA') {
-    hero.swingCount = Math.min(10, Math.max(hero.swingCount || 1, 1 + Math.floor(hero.charLevel / 5) + (hero.class === 'NINJA' ? 1 : 0)));
-  }
+  recalculateCharacterCombatStats(hero);
 
   return { hpGain, learnedSpells, statChanges };
+}
+
+/**
+ * Formats a Pascal THPREC ({ level, hpFac, hpMinAdd }) into standard dice notation (e.g. "1d8", "2d4+1").
+ * In Pascal THPREC: level = number of dice, hpFac = sides per die, hpMinAdd = flat bonus.
+ */
+export function formatDamageDice(d?: { level: number; hpFac: number; hpMinAdd: number }): string {
+  if (!d || d.level <= 0 || d.hpFac <= 0) return '2d2';
+  const bonus = d.hpMinAdd > 0 ? `+${d.hpMinAdd}` : d.hpMinAdd < 0 ? `${d.hpMinAdd}` : '';
+  return `${d.level}d${d.hpFac}${bonus}`;
+}
+
+/**
+ * Authentic Pascal EQUIPCHR + ARM4CHAR (pascal_source/Wiz1B/UTILITIE2.TEXT.pas, l. 154-208, 411-469):
+ * Recomputes armorClass, hitMod, wepDamage, swingCount, critHit, and healPts from base stats and equipped items.
+ */
+export function recalculateCharacterCombatStats(hero: TCharacter): void {
+  let hitMod =
+    hero.class === 'PRIEST' ||
+    hero.class === 'FIGHTER' ||
+    hero.class === 'SAMURAI' ||
+    hero.class === 'LORD' ||
+    hero.class === 'NINJA'
+      ? 2 + Math.floor((hero.charLevel || 1) / 3)
+      : Math.floor((hero.charLevel || 1) / 5);
+
+  let wepDamage = {
+    level: 2,
+    hpFac: hero.class === 'NINJA' ? 4 : 2,
+    hpMinAdd: 0
+  };
+
+  const str = hero.attrib?.STRENGTH || 10;
+  if (str > 15) {
+    hitMod += str - 15;
+    wepDamage.hpMinAdd = str - 15;
+  } else if (str < 6) {
+    hitMod += str - 6;
+  }
+
+  let healPts = 0;
+  let critHit = hero.class === 'NINJA';
+  let swingCount = 1;
+  if (hero.class === 'FIGHTER' || hero.class === 'SAMURAI' || hero.class === 'LORD' || hero.class === 'NINJA') {
+    swingCount += Math.floor((hero.charLevel || 1) / 5) + (hero.class === 'NINJA' ? 1 : 0);
+  }
+  if (swingCount > 10) swingCount = 10;
+
+  let armorClass = 10;
+  let unarmed = true;
+
+  for (const slot of hero.possessions || []) {
+    const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+    if (!itm) continue;
+    if (itm.healPts > healPts) {
+      healPts = itm.healPts;
+    }
+    if (!slot.equipped) continue;
+    unarmed = false;
+    if (itm.align === 'UNALIGN' || itm.align === hero.align) {
+      if (itm.extraSwings > swingCount) {
+        swingCount = itm.extraSwings;
+      }
+      armorClass -= itm.armorMod;
+      hitMod += itm.wepHitMod;
+      if (itm.objType === 'WEAPON' && itm.wepHpDam && itm.wepHpDam.level > 0 && itm.wepHpDam.hpFac > 0) {
+        const strBonus = wepDamage.hpMinAdd;
+        wepDamage = {
+          level: itm.wepHpDam.level,
+          hpFac: itm.wepHpDam.hpFac,
+          hpMinAdd: itm.wepHpDam.hpMinAdd + strBonus
+        };
+        critHit = critHit || Boolean(itm.critHit);
+      }
+    } else {
+      hitMod -= 1;
+      armorClass += 1;
+      critHit = false;
+    }
+  }
+
+  if (hero.class === 'NINJA' && unarmed) {
+    armorClass = armorClass - Math.floor((hero.charLevel || 1) / 3) - 2;
+  }
+
+  hero.armorClass = armorClass;
+  hero.hitMod = hitMod;
+  hero.wepDamage = wepDamage;
+  hero.swingCount = swingCount;
+  hero.critHit = critHit;
+  hero.healPts = healPts;
 }
 
 export function getScenarioMessage(index: number): string[] {

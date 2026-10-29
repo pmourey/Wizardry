@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { TMazeFloor } from '../types/wizardry';
 import { 
   Compass, 
@@ -14,6 +14,45 @@ import {
   X
 } from 'lucide-react';
 
+export interface MiniMapPrefs {
+  hudViewMode: 'radar' | 'full';
+  modalViewMode: 'radar' | 'full';
+  revealAll: boolean;
+  hudShowLegend: boolean;
+  modalShowLegend: boolean;
+  hudVisible: boolean;
+  wireframeMode: boolean;
+}
+
+const DEFAULT_MINIMAP_PREFS: MiniMapPrefs = {
+  hudViewMode: 'radar',
+  modalViewMode: 'full',
+  revealAll: false,
+  hudShowLegend: false,
+  modalShowLegend: true,
+  hudVisible: true,
+  wireframeMode: false
+};
+
+export function loadMiniMapPrefs(): MiniMapPrefs {
+  if (typeof window === 'undefined') return DEFAULT_MINIMAP_PREFS;
+  try {
+    const raw = localStorage.getItem('wiz_minimap_prefs');
+    if (raw) {
+      return { ...DEFAULT_MINIMAP_PREFS, ...JSON.parse(raw) };
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_MINIMAP_PREFS;
+}
+
+export function saveMiniMapPrefs(patch: Partial<MiniMapPrefs>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const next = { ...loadMiniMapPrefs(), ...patch };
+    localStorage.setItem('wiz_minimap_prefs', JSON.stringify(next));
+  } catch { /* ignore */ }
+}
+
 export interface MiniMapProps {
   maze: TMazeFloor;
   x: number;
@@ -22,6 +61,7 @@ export interface MiniMapProps {
   visitedTiles: boolean[][];
   variant?: 'hud' | 'modal' | 'sidebar';
   fallenMarkers?: Array<{ x: number; y: number; name: string }>;
+  keyboardLayout?: 'AZERTY' | 'QWERTY';
   onClose?: () => void;
   onExpand?: () => void;
 }
@@ -34,13 +74,28 @@ export const MiniMap: React.FC<MiniMapProps> = ({
   visitedTiles,
   variant = 'hud',
   fallenMarkers = [],
+  keyboardLayout = 'AZERTY',
   onClose,
   onExpand
 }) => {
-  // Mode: 'radar' (7x7 local area around player) or 'full' (20x20 floor grid)
-  const [viewMode, setViewMode] = useState<'radar' | 'full'>(variant === 'modal' ? 'full' : 'radar');
-  const [revealAll, setRevealAll] = useState<boolean>(false);
-  const [showLegend, setShowLegend] = useState<boolean>(variant === 'modal');
+  // Persistent Mode: 'radar' (7x7 local area around player) or 'full' (20x20 floor grid)
+  const [viewMode, setViewMode] = useState<'radar' | 'full'>(() => {
+    const prefs = loadMiniMapPrefs();
+    return variant === 'modal' ? prefs.modalViewMode : prefs.hudViewMode;
+  });
+  const [revealAll, setRevealAll] = useState<boolean>(() => loadMiniMapPrefs().revealAll);
+  const [showLegend, setShowLegend] = useState<boolean>(() => {
+    const prefs = loadMiniMapPrefs();
+    return variant === 'modal' ? prefs.modalShowLegend : prefs.hudShowLegend;
+  });
+
+  useEffect(() => {
+    if (variant === 'modal') {
+      saveMiniMapPrefs({ modalViewMode: viewMode, revealAll, modalShowLegend: showLegend });
+    } else {
+      saveMiniMapPrefs({ hudViewMode: viewMode, revealAll, hudShowLegend: showLegend });
+    }
+  }, [variant, viewMode, revealAll, showLegend]);
 
   const dirNames = ['NORD', 'EST', 'SUD', 'OUEST'];
   const dirAngles = [0, 90, 180, 270];
@@ -619,7 +674,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
 
       {/* Footer Details */}
       <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Touches : <strong>W/A/S/D</strong> ou <strong>Flèches</strong></span>
+        <span>Touches ({keyboardLayout}) : <strong>{keyboardLayout === 'AZERTY' ? 'Z/Q/D' : 'W/A/D'}</strong> ou <strong>Flèches</strong></span>
         <span>Raccourci Carte : <kbd className="px-1 py-0.2 bg-slate-800 border border-slate-700 rounded text-amber-300 font-mono text-[10px]">M</kbd></span>
       </div>
     </div>
