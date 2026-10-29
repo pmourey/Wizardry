@@ -29,9 +29,16 @@ export const ChestView: React.FC<ChestViewProps> = ({
   onFinishChest,
   onPartyWipedOut
 }) => {
-  const [log, setLog] = useState<string[]>([
-    'Les monstres ont laissé un coffre au trésor bardé de ferrements !'
-  ]);
+  const [log, setLog] = useState<string[]>(() => {
+    const initial: string[] = [];
+    if (chest.expGainedPerSurvivor && chest.expGainedPerSurvivor > 0) {
+      initial.push(
+        `🏆 POUR AVOIR VAINCU LES MONSTRES, CHAQUE SURVIVANT (STATUT OK) REÇOIT +${chest.expGainedPerSurvivor.toLocaleString()} POINTS D'EXPÉRIENCE (${(chest.totalExpGained || chest.expGainedPerSurvivor).toLocaleString()} XP au total) !`
+      );
+    }
+    initial.push('Les monstres ont laissé un coffre au trésor bardé de ferrements !');
+    return initial;
+  });
   const [selectedHeroIdx, setSelectedHeroIdx] = useState<number>(0);
   const [selectedDisarmTrap, setSelectedDisarmTrap] = useState<TTrapType>('POISON_NEEDLE');
   const [opened, setOpened] = useState<boolean>(false);

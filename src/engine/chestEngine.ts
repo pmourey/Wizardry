@@ -41,6 +41,8 @@ export interface ChestReward {
   calfoRevealed: boolean;
   disarmed: boolean;
   exploded: boolean;
+  expGainedPerSurvivor?: number;
+  totalExpGained?: number;
 }
 
 export function generateChestReward(level: number): ChestReward {

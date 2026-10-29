@@ -125,6 +125,15 @@ class Scenario:
         tgt = packed(self.d, p, 51, 2)
         return [{'id': i, 'hash': hashes[i], 'tier': grp[i], 'target': SPEC_TARGET[tgt[i]]} for i in range(51)]
 
+    def exp_tables(self):
+        """ZEXP record (type 7): TEXP = ARRAY[FIGHTER..NINJA] OF ARRAY[0..12] OF TWIZLONG.
+        Index 0 is the per-level increment after level 13; indices 1..12 are cumulative XP for levels 2..13."""
+        zexp_off = self.bloff[7] * 512
+        return {
+            c: [wlong(self.d, zexp_off + (ci * 13 + li) * 6) for li in range(13)]
+            for ci, c in enumerate(CLS)
+        }
+
     def items(self):
         out = []
         for i in range(self.rdk[4]):
@@ -307,12 +316,137 @@ def write_monster_pictures(sc, out_dir='src/assets/monsters'):
     print('wrote 20 monster pictures to', out_dir)
 
 
+def decode_ucsd_text(raw: bytes) -> str:
+    """Decode a UCSD-Pascal .TEXT file from a disk image.
+    The first 1024 bytes (blocks 0..1) are the UCSD text editor header page.
+    Each subsequent 1024-byte page contains CR-terminated lines preceded by an optional
+    DLE (0x10) + indentation byte (indent = byte - 32 spaces) and padded with NUL (0x00).
+    """
+    lines = []
+    for page_offset in range(1024, len(raw), 1024):
+        page = raw[page_offset:page_offset + 1024]
+        i = 0
+        n = len(page)
+        while i < n:
+            b = page[i]
+            if b == 0:
+                break
+            indent = 0
+            if b == 0x10:
+                i += 1
+                if i < n:
+                    indent = max(0, page[i] - 32)
+                    i += 1
+            line_bytes = bytearray()
+            while i < n and page[i] != 0x0D and page[i] != 0:
+                line_bytes.append(page[i])
+                i += 1
+            if i < n and page[i] == 0x0D:
+                i += 1
+            lines.append(' ' * indent + line_bytes.decode('ascii', errors='replace'))
+    return '\n'.join(lines) + '\n'
+
+
+def extract_pascal_source(disks_dir: str, out_dir: str = 'pascal_source'):
+    """Extract all UCSD-Pascal .TEXT source files from Wiz1A.DSK..Wiz1E.DSK
+    into out_dir/<Disk>/<Unit>.TEXT.pas and build a consolidated reference file
+    out_dir/Wizardry1_UCSD_Pascal.pas following WIZ.TEXT compilation include order.
+    """
+    os.makedirs(out_dir, exist_ok=True)
+    extracted = {}
+    for dsk in ['Wiz1A.DSK', 'Wiz1B.DSK', 'Wiz1C.DSK', 'Wiz1D.DSK', 'Wiz1E.DSK']:
+        dsk_path = os.path.join(disks_dir, dsk)
+        if not os.path.exists(dsk_path):
+            continue
+        disk_tag = os.path.splitext(dsk)[0]
+        disk_out = os.path.join(out_dir, disk_tag)
+        os.makedirs(disk_out, exist_ok=True)
+        files = read_files(dsk_path)
+        extracted[disk_tag] = {}
+        for name, raw in files.items():
+            if name.endswith('.TEXT'):
+                text = decode_ucsd_text(raw)
+                extracted[disk_tag][name] = text
+                unit_path = os.path.join(disk_out, name + '.pas')
+                with open(unit_path, 'w', encoding='utf-8') as f:
+                    f.write(f'(* === {dsk} : {name} === *)\n')
+                    f.write(text)
+
+    # Build consolidated Pascal source in exact WIZ.TEXT compilation order
+    compile_order = [
+        ('Wiz1A', 'WIZ.TEXT'),
+        ('Wiz1C', 'UTILITIE.TEXT'),
+        ('Wiz1B', 'UTILITIE2.TEXT'),
+        ('Wiz1B', 'UTILITIE3.TEXT'),
+        ('Wiz1B', 'SHOPS.TEXT'),
+        ('Wiz1A', 'SHOPS2.TEXT'),
+        ('Wiz1B', 'SPECIALS.TEXT'),
+        ('Wiz1B', 'SPECIALS2.TEXT'),
+        ('Wiz1B', 'COMBAT.TEXT'),
+        ('Wiz1B', 'COMBAT2.TEXT'),
+        ('Wiz1B', 'COMBAT3.TEXT'),
+        ('Wiz1B', 'COMBAT4.TEXT'),
+        ('Wiz1B', 'COMBAT5.TEXT'),
+        ('Wiz1C', 'CASTLE.TEXT'),
+        ('Wiz1C', 'CASTLE2.TEXT'),
+        ('Wiz1C', 'ROLLER.TEXT'),
+        ('Wiz1C', 'CAMP.TEXT'),
+        ('Wiz1C', 'CAMP2.TEXT'),
+        ('Wiz1C', 'REWARDS.TEXT'),
+        ('Wiz1C', 'REWARDS2.TEXT'),
+        ('Wiz1C', 'RUNNER.TEXT'),
+        ('Wiz1C', 'RUNNER2.TEXT'),
+        ('Wiz1A', 'WIZ2.TEXT'),
+        # 6502 Assembler routines (Wiz1D)
+        ('Wiz1D', 'CLRRECT.TEXT'),
+        ('Wiz1D', 'MVCURSOR.TEXT'),
+        ('Wiz1D', 'PRGRCHR.TEXT'),
+        ('Wiz1D', 'DRAWLINE.TEXT'),
+        ('Wiz1D', 'CLRPICT.TEXT'),
+        ('Wiz1D', 'KEYAVAIL.TEXT'),
+        ('Wiz1D', 'RANDOM.TEXT'),
+        # Boot / Scenario Utilities (Wiz1E)
+        ('Wiz1E', 'STARTUP.TEXT'),
+        ('Wiz1E', 'WIZUTILB.TEXT'),
+        ('Wiz1E', 'WIZUTILC.TEXT'),
+        ('Wiz1E', 'TITLELOA.TEXT'),
+        ('Wiz1E', 'OPTIONS.TEXT'),
+        ('Wiz1E', 'LZDECOMP.TEXT'),
+        ('Wiz1E', 'CHKSYNCH.TEXT'),
+        ('Wiz1E', 'SCREENPT.TEXT'),
+    ]
+    combined_path = os.path.join(out_dir, 'Wizardry1_UCSD_Pascal.pas')
+    total_units = 0
+    with open(combined_path, 'w', encoding='utf-8') as f:
+        f.write('(* ========================================================================== *)\n')
+        f.write('(* WIZARDRY I: PROVING GROUNDS OF THE MAD OVERLORD — UCSD PASCAL SOURCE CODE  *)\n')
+        f.write('(* Extracted directly from Apple II UCSD-Pascal disk images (Wiz1A..Wiz1E.DSK)*)\n')
+        f.write('(* by scripts/extract_pgmo.py (UCSD block reader compatible with WizardryApp) *)\n')
+        f.write('(* ========================================================================== *)\n\n')
+        for disk_tag, unit_name in compile_order:
+            txt = extracted.get(disk_tag, {}).get(unit_name)
+            if txt:
+                total_units += 1
+                f.write('\n(* ========================================================================== *)\n')
+                f.write(f'(* DISK: {disk_tag}.DSK | FILE: {unit_name:<43} *)\n')
+                f.write('(* ========================================================================== *)\n\n')
+                f.write(txt)
+    print(f'extracted {total_units} UCSD-Pascal .TEXT units into {out_dir}/ and {combined_path}')
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
-    sc = Scenario(sys.argv[1])
-    out = sys.argv[2] if len(sys.argv) > 2 else 'src/data/provingGroundsData.ts'
+    args = sys.argv[1:]
+    pascal_dir = None
+    if '--pascal-disks' in args:
+        idx = args.index('--pascal-disks')
+        pascal_dir = args[idx + 1]
+        del args[idx:idx + 2]
+    sc = Scenario(args[0])
+    out = args[1] if len(args) > 1 else 'src/data/provingGroundsData.ts'
     items, monsters, msgs = sc.items(), sc.monsters(), sc.messages()
+    exp_tables = sc.exp_tables()
     data = {
         'PG_SPELL_TABLE': sc.spells(), 'PG_ITEMS': items, 'PG_MONSTERS': monsters,
         'PG_REWARDS': sc.rewards(), 'PG_MESSAGES': msgs, 'PG_MAZES': sc.mazes(items, monsters, msgs)}
@@ -320,7 +454,8 @@ def main():
              'PG_REWARDS': 'TReward[]', 'PG_MESSAGES': 'PGMessage[]', 'PG_MAZES': 'PGRawMaze[]'}
     with open(out, 'w') as f:
         f.write('/* eslint-disable */\n// GENERATED by scripts/extract_pgmo.py from "%s". Do not edit by hand.\n' % sc.name)
-        f.write("import type { TItem, TMonster, TReward, PGSpellRecord, PGMessage, PGRawMaze } from '../types/wizardry';\n\n")
+        f.write("import type { TClass, TItem, TMonster, TReward, PGSpellRecord, PGMessage, PGRawMaze } from '../types/wizardry';\n\n")
+        f.write('export const PG_EXP_TABLES: Record<TClass, number[]> = ' + json.dumps(exp_tables, separators=(',', ':')) + ';\n\n')
         for k, v in data.items():
             f.write('export const %s: %s = [\n' % (k, types[k]))
             for e in v:
@@ -328,6 +463,8 @@ def main():
             f.write('];\n\n')
     write_monster_pictures(sc)
     print('wrote', out, {k: len(v) for k, v in data.items()})
+    if pascal_dir:
+        extract_pascal_source(pascal_dir)
 
 
 if __name__ == '__main__':

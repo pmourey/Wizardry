@@ -5,8 +5,8 @@ Une recréation moderne, fidèle et enrichie du jeu de rôle culte de **Sir-Tech
 Ce projet combine l'authenticité des règles historiques de Wizardry 1 avec une interface web moderne, un moteur 3D temps réel Three.js, un système de cartographie tactique, un journal d'aventures narratif et un système de récupération des corps conforme au jeu de 1981.
 
 > 📜 **DIRECTIVE IMPÉRATIVE DE DÉVELOPPEMENT :**
-> Pour **toute modification, correction de bogue ou ajout de fonctionnalité** touchant aux règles, tables de monstres, probabilités, calculs de dégâts ou mécanismes du moteur de jeu, **TOUJOURS se référer impérativement au code source Pascal originel de Wizardry I** présent dans :
-> `public/assets/aistudio/Wiz1WizardryPascal_fb30a53c.txt` (voir également `INSTRUCTIONS_DEVELOPPEUR.md`).
+> Pour **toute modification, correction de bogue ou ajout de fonctionnalité** touchant aux règles, tables de monstres, probabilités, calculs de dégâts ou mécanismes du moteur de jeu, **TOUJOURS se référer impérativement au code source Pascal UCSD originel et aux données extraites des images disques Apple II** via `scripts/extract_pgmo.py` (basé sur `WizardryApp`) :
+> `pascal_source/Wizardry1_UCSD_Pascal.pas`, `pascal_source/Wiz1A..Wiz1E/` et `src/data/provingGroundsData.ts` (voir également `INSTRUCTIONS_DEVELOPPEUR.md`).
 
 ---
 
@@ -25,10 +25,11 @@ Le projet propose une expérience de *dungeon crawler* à la première personne 
 ## 🏗️ Architecture du Projet
 
 ```
-├── public/
-│   └── assets/
-│       └── aistudio/
-│           └── Wiz1WizardryPascal_fb30a53c.txt   # Code source Pascal de référence
+├── pascal_source/
+│   ├── Wizardry1_UCSD_Pascal.pas    # Code source Pascal UCSD complet extrait des disquettes
+│   └── Wiz1A..Wiz1E/*.TEXT.pas      # Unités Pascal UCSD et routines Assembleur 6502 par disquette
+├── scripts/
+│   └── extract_pgmo.py              # Extracteur UCSD (SCENARIO.DATA, SCENARIO.MESGS & code source Pascal)
 ├── src/
 │   ├── components/
 │   │   ├── AdventureJournal.tsx     # Composant Journal d'Aventures (10 derniers récits)
@@ -200,4 +201,4 @@ npm run build
 
 ## 📜 Références et Crédits
 - **Jeu d'origine** : *Wizardry: Proving Grounds of the Mad Overlord* © 1981 Sir-Tech Software, Inc. Conçu par Andrew Greenberg et Robert Woodhead.
-- **Référence technique** : Code source Pascal UCSD décompilé et documenté inclus dans `public/assets/aistudio/Wiz1WizardryPascal_fb30a53c.txt`.
+- **Référence technique** : Code source Pascal UCSD et données binaires extraits des images disques Apple II via `scripts/extract_pgmo.py` (basé sur `WizardryApp`) dans `pascal_source/Wizardry1_UCSD_Pascal.pas` et `src/data/provingGroundsData.ts`.

@@ -7,7 +7,8 @@ import {
 import { 
   CombatGroup, 
   PlayerCombatAction, 
-  executeCombatRound 
+  executeCombatRound,
+  attemptPartyRun
 } from '../engine/combatEngine';
 import { SPELLS } from '../data/wizardryData';
 import { CombatEffects, isFriendlySingleSpell } from '../engine/spellEngine';
@@ -122,6 +123,53 @@ export const CombatView: React.FC<CombatViewProps> = ({
       // All conscious heroes chose actions -> resolve combat round
       resolveRound(nextActions);
     }
+  };
+
+  // Authentic Pascal PROCEDURE RUNAWAY (COMBAT2.TEXT l. 279-313):
+  // Run is a collective decision for the entire party, not per individual character.
+  const handlePartyRun = () => {
+    sounds.playTurn();
+    setIsResolving(true);
+    setSelectingSpell(false);
+    setPendingSpell(null);
+
+    if (attemptPartyRun(party, groups, mazeLevel)) {
+      setRoundLog([`🏃 Fuite collective réussie ! Votre escouade décroche et échappe aux monstres !`]);
+      setTimeout(() => onCombatEnd(false, true, false), 1400);
+      return;
+    }
+
+    // RUNFAILD: entire party forfeits its turn (AGILITY := -1) and monsters attack
+    const result = executeCombatRound(party, groups, [], 'NONE', { mazeLevel, acModifier: acModifierRef.current });
+    const fx = result.effects;
+    if (fx.lightAdd || fx.lightMax || fx.acModifier) onSpellEffects?.(fx);
+    setParty([...party]);
+    setRoundLog([
+      `⚠️ Échec de la fuite collective (RUNFAILD) ! Toute l'escouade perd son tour pendant que les monstres attaquent !`,
+      ...result.combatLog
+    ]);
+
+    if (currentSurprise !== 'NONE') {
+      setCurrentSurprise('NONE');
+    }
+
+    if (!result.partyAlive) {
+      sounds.playBell();
+      setTimeout(() => onCombatEnd(false, false, false), 2000);
+      return;
+    }
+
+    if (!result.monstersAlive) {
+      sounds.playFanfare();
+      setTimeout(() => onCombatEnd(true, false, result.alarmTriggered), 2000);
+      return;
+    }
+
+    setTimeout(() => {
+      setActions([]);
+      setCurrentHeroIdx(0);
+      setIsResolving(false);
+    }, 1200);
   };
 
   const resolveRound = (finalActions: PlayerCombatAction[]) => {
@@ -531,11 +579,12 @@ export const CombatView: React.FC<CombatViewProps> = ({
               )}
 
               <button
-                onClick={() => handleSelectAction('RUN')}
+                onClick={handlePartyRun}
                 className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center gap-1 text-xs font-bold transition"
+                title="Fuite collective du groupe (PROCEDURE RUNAWAY)"
               >
                 <Footprints className="w-4 h-4 text-emerald-400" />
-                <span>Fuir</span>
+                <span>Fuir (Groupe)</span>
               </button>
             </div>
           ) : (

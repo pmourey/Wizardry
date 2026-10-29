@@ -1,18 +1,40 @@
-# 📜 DIRECTIVES DE DÉVELOPPEMENT — MOTEUR ORIGINEL WIZARDRY I (PASCAL)
+# 📜 DIRECTIVES DE DÉVELOPPEMENT — MOTEUR ORIGINEL WIZARDRY I (PASCAL & IMAGES DISQUES)
 
-> **DIRECTIVE IMPÉRATIVE :**
-> Pour **toute modification, correction de bogue ou ajout de fonctionnalité** relatif aux règles et au moteur du jeu, vous devez **TOUJOURS vous référer au code source Pascal UCSD originel de Wizardry I** présent dans ce dépôt :
-> 📁 **`public/assets/aistudio/Wiz1WizardryPascal_fb30a53c.txt`**
+> **DIRECTIVE IMPÉRATIVE POUR GEMINI AI & LES DÉVELOPPEURS :**
+> Pour **toute modification, correction de bogue ou ajout de fonctionnalité** relatif aux règles, aux données du scénario et au moteur du jeu, vous devez **TOUJOURS vous référer au code source Pascal UCSD originel et aux données extraites des images disques Apple II** via l'architecture `WizardryApp` (`/Users/display/IdeaProjects/WizardryApp`) et le script d'extraction UCSD `scripts/extract_pgmo.py` :
+> - 📁 **`pascal_source/Wizardry1_UCSD_Pascal.pas`** (ainsi que les 38 unités `.TEXT.pas` extraites des disquettes `Wiz1A.DSK` à `Wiz1E.DSK` dans **`pascal_source/Wiz1A/`..`pascal_source/Wiz1E/`**)
+> - 📁 **`src/data/provingGroundsData.ts`** (données authentiques `SCENARIO.DATA` et `SCENARIO.MESGS` extraites de l'image disque du scénario via **`scripts/extract_pgmo.py`**)
 
 ---
 
 ## 🏛️ Principes directeurs d'ingénierie
 
-1. **Priorité absolue au code source Pascal** :
-   - Toute formule, probabilité, règle de ciblage ou comportement doit être vérifié dans `Wiz1WizardryPascal_fb30a53c.txt` avant d'être codé.
-   - Ne pas inventer de règles modernes génériques lorsqu'un mécanisme historique est codé en Pascal.
+1. **Priorité absolue au code source Pascal (`pascal_source/`) et aux disquettes du scénario (`provingGroundsData.ts`)** :
+   - Toute formule, probabilité, table d'expérience (`ZEXP` / `PG_EXP_TABLES`), attribution de sorts, règle de ciblage ou comportement doit être vérifié dans `pascal_source/Wizardry1_UCSD_Pascal.pas` (ou dans les unités `pascal_source/Wiz1A..E/*.TEXT.pas`) avant d'être codé.
+   - Le décodage binaire des images disques UCSD Pascal (`.dsk`, ordonnancement DOS 140K, répertoire UCSD blocs `2..5`, pages texte `.TEXT` de 1024 octets avec indentation `0x10` DLE, et enregistrements `SCENARIO.DATA`) suit l'implémentation de référence **`WizardryApp`** (`/Users/display/IdeaProjects/WizardryApp`) automatisée dans **`scripts/extract_pgmo.py`**.
+   - Ne jamais inventer de règles modernes génériques lorsqu'un mécanisme historique est codé en Pascal.
 
-2. **Références clés du code source Pascal** :
+2. **Références clés du code source Pascal (`pascal_source/`)** :
+   - **Gain d'Expérience (XP) en Combat (`Wiz1C/REWARDS2.TEXT.pas` — `GIVEEXP`, `CALC1EXP`, `TOTALEXP`, `CALCKILL`)** :
+     - La valeur d'XP unitaire de chaque monstre est calculée par `CALCKILL` (précalculée dans `PG_MONSTERS[i].expReward` via `monster_exp` dans `scripts/extract_pgmo.py`).
+     - Lors d'une victoire, l'XP totale de chaque groupe de monstres vaincu est `expReward * count` (`MULTLONG(KILLEXP, BATRESLT.ENMYCNT[CHARXXX])`).
+     - La somme totale est divisée équitablement (`DIVLONG(EXPPERCH, ALIVECNT)`) uniquement entre les membres survivants ayant le statut `OK` (`CNTALIVE` : `CHARACTR[i].STATUS = OK`).
+   - **Attribution des Points de Sort et Apprentissage (`Wiz1C/CASTLE2.TEXT.pas` — `SETSPELS`, `SPLPERLV`, `MINSPCNT`, `TRYLEARN` & `Wiz1C/ROLLER.TEXT.pas` — `KEEPCHYN`)** :
+     - **Création de personnage Niveau 1 (`KEEPCHYN`)** :
+       - `MAGE` et `BISHOP` commencent avec 2 sorts de Mage de cercle 1 connus : `#1 HALITO` et `#3 KATINO`, et `MAGESP[1] = 2` (le `BISHOP` n'a aucun sort de Prêtre au niveau 1).
+       - `PRIEST` commence avec 2 sorts de Prêtre de cercle 1 connus : `#23 DIOS` et `#24 BADIOS`, et `PRIESTSP[1] = 2`.
+       - `FIGHTER`, `THIEF`, `SAMURAI`, `LORD`, `NINJA` commencent au niveau 1 avec `0` sort connu et `0` point de sort dans tous les cercles (`1..7`).
+     - **Calcul du maximum de points de sort par cercle (`SETSPELS`)** :
+       - `MINMAG` et `MINPRI` initialisent chaque cercle `1..7` au nombre de sorts connus par le personnage dans ce cercle (`MINSPCNT`).
+       - Ensuite, `SPLPERLV(SPELGRPS, LEVELMOD, LEVMOD2)` applique la progression selon la classe et le niveau (`CHARLEV`) :
+         - `PRIEST` : `NWPRIEST(0, 2)` (`SPELLCNT = CHARLEV - 0`, diminue de `2` à chaque cercle suivant).
+         - `MAGE` : `NWMAGE(0, 2)` (`SPELLCNT = CHARLEV - 0`, diminue de `2` à chaque cercle suivant).
+         - `BISHOP` : `NWMAGE(0, 4)` et `NWPRIEST(3, 4)` (les sorts de Prêtre commencent au niveau 4).
+         - `LORD` : `NWPRIEST(3, 2)` (les sorts de Prêtre commencent au niveau 4).
+         - `SAMURAI` : `NWMAGE(3, 3)` (les sorts de Mage commencent au niveau 4).
+       - Pour chaque cercle `1..7`, le nombre de points de sort est `min(9, max(spellsKnownInCircle, SPELLCNT))`.
+     - **Apprentissage de nouveaux sorts à la montée de niveau (`TRYLEARN`)** :
+       - Pour chaque cercle `1..7` où `MAGESP[c] > 0` (resp. `PRIESTSP[c] > 0`), le personnage teste chaque sort non connu du cercle : il l'apprend si `RANDOM MOD 30 < IQ` (resp. `PIETY`) **ou** s'il ne connaissait encore aucun sort dans ce cercle (`OR (NOT SPLKNOWN)`), puis `SETSPELS` est recalculé.
    - **Coffres et Pièges (`PROCEDURE ACHEST`)** (l. 9935-9980) :
      Les 5 choix fondamentaux sont :
      `O)PEN` : Forcer l'ouverture du coffre (déclenche le piège s'il n'a pas été désamorcé ou n'a pas déjà sauté).

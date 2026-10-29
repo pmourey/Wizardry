@@ -15,7 +15,9 @@ import {
   DEFAULT_PARTY, 
   generateLevel1Maze, 
   getMazeForFloor,
-  MONSTERS_DATABASE, ITEMS_DATABASE 
+  MONSTERS_DATABASE,
+  ITEMS_DATABASE,
+  getMaxCharacterSpells
 } from './data/wizardryData';
 import { CastleView } from './components/CastleView';
 import { DungeonView } from './components/DungeonView';
@@ -24,7 +26,8 @@ import { ChestView } from './components/ChestView';
 import { PySide6Exporter } from './components/PySide6Exporter';
 import { 
   initCombatEncounter, 
-  CombatGroup 
+  CombatGroup,
+  calculateVictoryExp
 } from './engine/combatEngine';
 import { 
   generateChestReward, 
@@ -61,12 +64,23 @@ interface TDungeonSession {
 }
 
 export default function App() {
+  // Clamp any legacy saved character spell slots to their authentic Pascal maximum (SETSPELS)
+  const sanitizeCharacterSpells = (chars: TCharacter[]): TCharacter[] =>
+    chars.map(h => {
+      const maxSp = getMaxCharacterSpells(h);
+      return {
+        ...h,
+        mageSpells: (h.mageSpells || [0, 0, 0, 0, 0, 0, 0, 0]).map((v, i) => Math.min(v, maxSp.mageSpells[i] || 0)),
+        priestSpells: (h.priestSpells || [0, 0, 0, 0, 0, 0, 0, 0]).map((v, i) => Math.min(v, maxSp.priestSpells[i] || 0)),
+      };
+    });
+
   // Persistence in localStorage
   const [party, setParty] = useState<TCharacter[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('wiz1_party');
       if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+        try { return sanitizeCharacterSpells(JSON.parse(saved)); } catch (e) { /* ignore */ }
       }
     }
     return DEFAULT_PARTY;
@@ -76,7 +90,7 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('wiz1_roster');
       if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+        try { return sanitizeCharacterSpells(JSON.parse(saved)); } catch (e) { /* ignore */ }
       }
     }
     return DEFAULT_PARTY;
@@ -640,13 +654,30 @@ export default function App() {
       return;
     }
 
-    // Battle won! Calculate chest chance
+    // Battle won! Award experience per Pascal GIVEEXP / CALC1EXP / TOTALEXP (REWARDS2.TEXT l. 807-1015)
+    const { totalExp, survivorCount, expPerSurvivor } = calculateVictoryExp(party, combatGroups);
+    if (expPerSurvivor > 0) {
+      const updatedParty = party.map(h => {
+        if (h.status === 'OK' && h.hpLeft > 0) {
+          return { ...h, exp: (h.exp || 0) + expPerSurvivor };
+        }
+        return h;
+      });
+      setParty(updatedParty);
+      setAllCharacters(prev =>
+        prev.map(c => {
+          const inParty = updatedParty.find(p => p.id === c.id);
+          return inParty ? { ...inParty } : c;
+        })
+      );
+    }
+
     const monstersDesc = combatGroups.map(g => `${g.count}x ${g.monster.name}`).join(', ');
     addAdventureEvent(
       'COMBAT',
-      `Victoire contre ${monstersDesc || 'des monstres'}`,
-      `Vos braves ont terrassé l'ennemi au terme d'un rude corps-à-corps dans les couloirs de pierre.`,
-      `Monstres éliminés : ${monstersDesc || 'Créatures du donjon'}`,
+      `Victoire contre ${monstersDesc || 'des monstres'} (+${expPerSurvivor.toLocaleString()} XP)`,
+      `Vos braves ont terrassé l'ennemi au terme d'un rude corps-à-corps dans les couloirs de pierre. Chacun des ${survivorCount} survivant(s) (statut OK) reçoit +${expPerSurvivor.toLocaleString()} XP.`,
+      `Monstres éliminés : ${monstersDesc || 'Créatures du donjon'} · Total XP : ${totalExp.toLocaleString()} (+${expPerSurvivor.toLocaleString()} XP / survivant)`,
       dungeonLevel,
       { x: posX, y: posY }
     );
@@ -666,6 +697,8 @@ export default function App() {
     }
 
     const chest = generateChestReward(dungeonLevel);
+    chest.expGainedPerSurvivor = expPerSurvivor;
+    chest.totalExpGained = totalExp;
     setChestReward(chest);
     setLocation('CHEST');
   };
@@ -702,22 +735,55 @@ export default function App() {
     }
   };
 
+  // Authentic Pascal PROCEDURE CHK4WIN (pascal_source/Wiz1A/SHOPS2.TEXT.pas, l. 1341-1381):
+  // Upon returning to the Castle, clear lostLocation, sync all party members to the roster,
+  // and remove dead/ashed characters from the active party so they rest at the Temple of Cant.
+  const handleReturnPartyToCastle = () => {
+    sounds.playDoor();
+    const cleanedParty = party.map(h => ({
+      ...h,
+      inMaze: false,
+      lostLocation: undefined,
+      poisonAmount: 0,
+      silencedRounds: 0,
+      combatAcMod: 0
+    }));
+    const fallenHeroes = cleanedParty.filter(h => h.status === 'DEAD' || h.status === 'ASHES');
+    const survivingParty = cleanedParty.filter(h => h.status !== 'DEAD' && h.status !== 'ASHES');
+
+    setAllCharacters(prev => {
+      const updated = [...prev];
+      cleanedParty.forEach(p => {
+        const idx = updated.findIndex(c => c.id === p.id);
+        if (idx >= 0) updated[idx] = { ...p };
+        else updated.push({ ...p });
+      });
+      return updated;
+    });
+    setParty(survivingParty);
+    setLocation('CASTLE');
+    setDungeonLevel(1);
+    setPosX(0);
+    setPosY(0);
+    setDirection(0);
+    setLightLevel(0);
+    setAcModifier(0);
+
+    addAdventureEvent(
+      'CASTLE',
+      "Retour au Château de Trebor",
+      fallenHeroes.length > 0
+        ? `L'escouade regagne le château. Les dépouilles de ${fallenHeroes.map(f => f.name).join(', ')} ont été retirées du groupe et confiées au Temple de Cant.`
+        : "L'escouade a gravi les marches pour regagner la sécurité du château.",
+      fallenHeroes.length > 0 ? `Transférés au Temple de Cant : ${fallenHeroes.map(f => f.name).join(', ')}` : undefined,
+      dungeonLevel,
+      { x: posX, y: posY }
+    );
+  };
+
   const handleTakeStairs = (targetLevel: number, targetX: number, targetY: number) => {
     if (targetLevel === 0) {
-      sounds.playDoor();
-      setLocation('CASTLE');
-      setDungeonLevel(1);
-      setPosX(0);
-      setPosY(0);
-      setDirection(0);
-      addAdventureEvent(
-        'CASTLE',
-        "Retour au Château de Trebor",
-        "L'escouade a gravi les marches pour regagner la sécurité du château.",
-        undefined,
-        dungeonLevel,
-        { x: posX, y: posY }
-      );
+      handleReturnPartyToCastle();
       return;
     }
 
@@ -815,14 +881,19 @@ export default function App() {
 
   // Cheat (castle menu): heal and revive the whole roster without moving anyone in the maze
   const handleCheatRestoreParty = () => {
-    const restore = (h: TCharacter): TCharacter => ({
-      ...h,
-      status: 'OK',
-      hpLeft: h.hpMax,
-      poisonAmount: 0,
-      lostLocation: undefined,
-      inMaze: false
-    });
+    const restore = (h: TCharacter): TCharacter => {
+      const maxSp = getMaxCharacterSpells(h);
+      return {
+        ...h,
+        status: 'OK',
+        hpLeft: h.hpMax,
+        mageSpells: maxSp.mageSpells,
+        priestSpells: maxSp.priestSpells,
+        poisonAmount: 0,
+        lostLocation: undefined,
+        inMaze: false
+      };
+    };
     setAllCharacters(prev => prev.map(restore));
     setParty(prev => prev.map(restore));
   };
@@ -913,14 +984,7 @@ export default function App() {
             onRotate={handleRotate}
             onKickDoor={handleKickDoor}
             onInspectArea={handleInspectArea}
-            onReturnToCastle={() => {
-              setLocation('CASTLE');
-              setDungeonLevel(1);
-              setPosX(0);
-              setPosY(0);
-              setDirection(0);
-              sounds.playDoor();
-            }}
+            onReturnToCastle={handleReturnPartyToCastle}
             onTakeStairs={handleTakeStairs}
             onTriggerEncounter={() => triggerBattleEncounter()}
           />

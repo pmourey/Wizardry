@@ -1,8 +1,8 @@
 /**
  * Authentic Wizardry I Data Tables matching Pascal reverse engineering
  */
-import { TItem, TMonster, TRace, TClass, TAlign, TSpell, TCharacter, TMazeFloor, TReward, PGMessage, TWall } from '../types/wizardry';
-import { PG_ITEMS, PG_MONSTERS, PG_REWARDS, PG_MESSAGES, PG_MAZES, PG_SPELL_TABLE } from './provingGroundsData';
+import { TItem, TMonster, TRace, TClass, TAlign, TAttrib, TSpell, TCharacter, TMazeFloor, TReward, PGMessage, TWall } from '../types/wizardry';
+import { PG_EXP_TABLES, PG_ITEMS, PG_MONSTERS, PG_REWARDS, PG_MESSAGES, PG_MAZES, PG_SPELL_TABLE } from './provingGroundsData';
 
 export const RACE_BASE_ATTRIBUTES: Record<TRace, Record<string, number>> = {
   HUMAN:  { STRENGTH: 8,  IQ: 8,  PIETY: 5,  VITALITY: 8,  AGILITY: 8,  LUCK: 9 },
@@ -12,17 +12,306 @@ export const RACE_BASE_ATTRIBUTES: Record<TRace, Record<string, number>> = {
   HOBBIT: { STRENGTH: 5,  IQ: 7,  PIETY: 7,  VITALITY: 6,  AGILITY: 10, LUCK: 15 },
 };
 
-// Experience point thresholds for Level 1 to 13
-export const EXP_TABLES: Record<TClass, number[]> = {
-  FIGHTER: [1000, 1000, 1724, 2972, 5124, 8834, 15231, 26260, 45275, 78060, 134586, 232044, 400000],
-  MAGE:    [1100, 1100, 1896, 3269, 5636, 9717, 16753, 28884, 49799, 85859, 148015, 255198, 440000],
-  PRIEST:  [1050, 1050, 1810, 3120, 5379, 9274, 15989, 27567, 47529, 81946, 141286, 243596, 420000],
-  THIEF:   [900,  900,  1551, 2674, 4610, 7948, 13703, 23625, 40732, 70227, 121081, 208760, 360000],
-  BISHOP:  [1200, 1200, 2068, 3565, 6146, 10596, 18268, 31496, 54299, 93618, 161393, 278255, 480000],
-  SAMURAI: [1250, 1250, 2155, 3715, 6405, 11043, 19039, 32825, 56594, 97575, 168232, 290055, 500000],
-  LORD:    [1300, 1300, 2241, 3863, 6660, 11482, 19796, 34131, 58846, 101458, 174927, 301598, 520000],
-  NINJA:   [1450, 1450, 2500, 4310, 7431, 12812, 22089, 38084, 65662, 113201, 195174, 336500, 580000],
-};
+// Authentic Experience point thresholds (ZEXP record from SCENARIO.DATA).
+// Index 0 = XP increment per level above 13; indices 1..12 = cumulative XP required for levels 2..13.
+export const EXP_TABLES: Record<TClass, number[]> = PG_EXP_TABLES;
+
+/**
+ * Authentic Pascal CHNEWLEV formula (pascal_source/Wiz1C/CASTLE2.TEXT.pas, l. 694-720):
+ * Returns the cumulative XP required to advance from `charLevel` to `charLevel + 1`.
+ * When `charLevel <= 0`, returns 0 (baseline XP for level 1).
+ */
+export function getExpForNextLevel(charClass: TClass, charLevel: number): number {
+  if (charLevel <= 0) return 0;
+  const table = EXP_TABLES[charClass] || EXP_TABLES.FIGHTER;
+  if (charLevel <= 12) {
+    return table[charLevel];
+  }
+  let expNext = table[12];
+  for (let bigLev = 13; bigLev <= charLevel; bigLev++) {
+    expNext += table[0];
+  }
+  return expNext;
+}
+
+// Spell index ranges per circle 1..7 from MINMAG & MINPRI (pascal_source/Wiz1C/CASTLE2.TEXT.pas, l. 424-453)
+export const MAGE_CIRCLE_RANGES: ReadonlyArray< readonly [number, number] > = [
+  [1, 4],   // Circle 1
+  [5, 6],   // Circle 2
+  [7, 8],   // Circle 3
+  [9, 11],  // Circle 4
+  [12, 14], // Circle 5
+  [15, 18], // Circle 6
+  [19, 21], // Circle 7
+];
+
+export const PRIEST_CIRCLE_RANGES: ReadonlyArray< readonly [number, number] > = [
+  [22, 26], // Circle 1
+  [27, 30], // Circle 2
+  [31, 34], // Circle 3
+  [35, 38], // Circle 4
+  [39, 44], // Circle 5
+  [45, 48], // Circle 6
+  [49, 50], // Circle 7
+];
+
+/**
+ * Authentic Pascal SPLPERLV helper (pascal_source/Wiz1C/CASTLE2.TEXT.pas, l. 363-387)
+ */
+function splPerLv(spelGrps: number[], charLev: number, levelMod: number, levMod2: number): void {
+  let spellCnt = charLev - levelMod;
+  if (spellCnt <= 0) return;
+  let spGrpI = 1;
+  while (spGrpI >= 1 && spGrpI <= 7 && spellCnt > 0) {
+    if (spellCnt > spelGrps[spGrpI]) {
+      spelGrps[spGrpI] = spellCnt;
+    }
+    spGrpI += 1;
+    spellCnt -= levMod2;
+  }
+  for (let i = 1; i <= 7; i++) {
+    if (spelGrps[i] > 9) {
+      spelGrps[i] = 9;
+    }
+  }
+}
+
+/**
+ * Computes the authentic maximum spell slots per circle (1..7) for a character
+ * according to PROCEDURE SETSPELS (pascal_source/Wiz1C/CASTLE2.TEXT.pas, l. 360-469).
+ */
+export function getMaxCharacterSpells(
+  hero: Pick<TCharacter, 'class' | 'charLevel' | 'spellsKnown'>
+): { mageSpells: number[]; priestSpells: number[] } {
+  const mageSpells = [0, 0, 0, 0, 0, 0, 0, 0];
+  const priestSpells = [0, 0, 0, 0, 0, 0, 0, 0];
+
+  // MINMAG: count known Mage spells in each circle 1..7
+  MAGE_CIRCLE_RANGES.forEach(([low, high], idx) => {
+    let known = 0;
+    for (let s = low; s <= high; s++) {
+      if (hero.spellsKnown?.[s]) known++;
+    }
+    mageSpells[idx + 1] = known;
+  });
+
+  // MINPRI: count known Priest spells in each circle 1..7
+  PRIEST_CIRCLE_RANGES.forEach(([low, high], idx) => {
+    let known = 0;
+    for (let s = low; s <= high; s++) {
+      if (hero.spellsKnown?.[s]) known++;
+    }
+    priestSpells[idx + 1] = known;
+  });
+
+  // Apply class & level progression (SPLPERLV)
+  switch (hero.class) {
+    case 'PRIEST':
+      splPerLv(priestSpells, hero.charLevel, 0, 2);
+      break;
+    case 'MAGE':
+      splPerLv(mageSpells, hero.charLevel, 0, 2);
+      break;
+    case 'BISHOP':
+      splPerLv(priestSpells, hero.charLevel, 3, 4);
+      splPerLv(mageSpells, hero.charLevel, 0, 4);
+      break;
+    case 'LORD':
+      splPerLv(priestSpells, hero.charLevel, 3, 2);
+      break;
+    case 'SAMURAI':
+      splPerLv(mageSpells, hero.charLevel, 3, 3);
+      break;
+    default:
+      break;
+  }
+
+  return { mageSpells, priestSpells };
+}
+
+/**
+ * Restores a character's spell slots (`mageSpells` and `priestSpells`) to their
+ * authentic maximums for their class, level, and known spells (`SETSPELS`).
+ */
+export function setCharacterSpells(hero: TCharacter): void {
+  const { mageSpells, priestSpells } = getMaxCharacterSpells(hero);
+  hero.mageSpells = mageSpells;
+  hero.priestSpells = priestSpells;
+}
+
+/**
+ * Initializes a newly created Level 1 character's known spells and spell slots
+ * according to PROCEDURE KEEPCHYN in pascal_source/Wiz1C/ROLLER.TEXT.pas (l. 1298-1309).
+ */
+export function initLevel1CharacterSpells(hero: TCharacter): void {
+  hero.spellsKnown = new Array(51).fill(false);
+  hero.mageSpells = [0, 0, 0, 0, 0, 0, 0, 0];
+  hero.priestSpells = [0, 0, 0, 0, 0, 0, 0, 0];
+
+  if (hero.class === 'MAGE' || hero.class === 'BISHOP') {
+    hero.spellsKnown[1] = true; // HALITO
+    hero.spellsKnown[3] = true; // KATINO
+    hero.mageSpells[1] = 2;
+  } else if (hero.class === 'PRIEST') {
+    hero.spellsKnown[23] = true; // DIOS
+    hero.spellsKnown[24] = true; // BADIOS
+    hero.priestSpells[1] = 2;
+  }
+  setCharacterSpells(hero);
+}
+
+/**
+ * Authentic Pascal PROCEDURE TRYLEARN (pascal_source/Wiz1C/CASTLE2.TEXT.pas, l. 517-603).
+ * Attempts to learn unknown spells in every circle where the character has >0 spell points,
+ * then recomputes SETSPELS. Returns the list of newly learned spell names.
+ */
+export function tryLearnSpells(hero: TCharacter): string[] {
+  setCharacterSpells(hero);
+  const learned: string[] = [];
+
+  const try2Lrn = (low: number, high: number, statVal: number) => {
+    let splKnown = false;
+    for (let s = low; s <= high; s++) {
+      if (hero.spellsKnown[s]) splKnown = true;
+    }
+    for (let s = low; s <= high; s++) {
+      if (!hero.spellsKnown[s]) {
+        if (Math.floor(Math.random() * 30) < statVal || !splKnown) {
+          hero.spellsKnown[s] = true;
+          splKnown = true;
+          learned.push(SPELLS[s]?.name || `SORT #${s}`);
+        }
+      }
+    }
+  };
+
+  // TRYMAGE (uses IQ)
+  MAGE_CIRCLE_RANGES.forEach(([low, high], idx) => {
+    if ((hero.mageSpells[idx + 1] || 0) > 0) {
+      try2Lrn(low, high, hero.attrib.IQ);
+    }
+  });
+
+  // TRYPRI (uses PIETY)
+  PRIEST_CIRCLE_RANGES.forEach(([low, high], idx) => {
+    if ((hero.priestSpells[idx + 1] || 0) > 0) {
+      try2Lrn(low, high, hero.attrib.PIETY);
+    }
+  });
+
+  setCharacterSpells(hero);
+  return learned;
+}
+
+/**
+ * Authentic Pascal PROCEDURE MADELEV (pascal_source/Wiz1C/CASTLE2.TEXT.pas, l. 481-691):
+ * Increments character level, updates spell slots & learns new spells (SETSPELS + TRYLEARN),
+ * rolls attribute changes (GAINLOST), and rolls new HPMAX (MOREHP).
+ */
+export function levelUpCharacter(hero: TCharacter): {
+  hpGain: number;
+  learnedSpells: string[];
+  statChanges: string[];
+} {
+  hero.charLevel += 1;
+  if (hero.charLevel > (hero.maxLevel || 1)) {
+    hero.maxLevel = hero.charLevel;
+  }
+
+  // SETSPELS & TRYLEARN
+  setCharacterSpells(hero);
+  const learnedSpells = tryLearnSpells(hero);
+
+  // GAINLOST (attribute changes on level up)
+  const statChanges: string[] = [];
+  const attrLabels: Record<TAttrib, string> = {
+    STRENGTH: 'FOR',
+    IQ: 'INT',
+    PIETY: 'PIE',
+    VITALITY: 'VIT',
+    AGILITY: 'AGI',
+    LUCK: 'CHA',
+  };
+  const ageYears = Math.floor((hero.age || 18 * 52) / 52);
+  (Object.keys(attrLabels) as TAttrib[]).forEach(attr => {
+    if (Math.floor(Math.random() * 4) !== 0) {
+      let val = hero.attrib[attr];
+      if (Math.floor(Math.random() * 130) < ageYears) {
+        if (val === 18 && Math.floor(Math.random() * 6) !== 4) {
+          // 5/6 chance to keep 18
+        } else if (val > 3) {
+          val -= 1;
+          statChanges.push(`-1 ${attrLabels[attr]}`);
+        }
+      } else if (val < 18) {
+        val += 1;
+        statChanges.push(`+1 ${attrLabels[attr]}`);
+      }
+      hero.attrib[attr] = val;
+    }
+  });
+
+  // MOREHP (re-rolls cumulative HP for CHARLEV dice, min +1 HP)
+  const moreHp = (): number => {
+    let die = 4;
+    switch (hero.class) {
+      case 'FIGHTER':
+      case 'LORD':
+        die = 10;
+        break;
+      case 'PRIEST':
+      case 'SAMURAI':
+        die = 8;
+        break;
+      case 'THIEF':
+      case 'BISHOP':
+      case 'NINJA':
+        die = 6;
+        break;
+      case 'MAGE':
+        die = 4;
+        break;
+    }
+    let hitPts = Math.floor(Math.random() * die) + 1;
+    const vit = hero.attrib.VITALITY;
+    if (vit === 3) hitPts -= 2;
+    else if (vit === 4 || vit === 5) hitPts -= 1;
+    else if (vit === 16) hitPts += 1;
+    else if (vit === 17) hitPts += 2;
+    else if (vit >= 18) hitPts += 3;
+    return Math.max(1, hitPts);
+  };
+
+  let newHpMax = 0;
+  for (let lv = 1; lv <= hero.charLevel; lv++) {
+    newHpMax += moreHp();
+  }
+  if (hero.class === 'SAMURAI') {
+    newHpMax += moreHp();
+  }
+  if (newHpMax <= hero.hpMax) {
+    newHpMax = hero.hpMax + 1;
+  }
+  const hpGain = newHpMax - hero.hpMax;
+  hero.hpMax = newHpMax;
+
+  // Update base combat hitMod & swingCount from level & strength (EQUIPCHR in Wiz1B/UTILITIE2.TEXT.pas)
+  if (hero.class === 'FIGHTER' || hero.class === 'PRIEST' || hero.class === 'SAMURAI' || hero.class === 'LORD' || hero.class === 'NINJA') {
+    hero.hitMod = 2 + Math.floor(hero.charLevel / 3);
+  } else {
+    hero.hitMod = Math.floor(hero.charLevel / 5);
+  }
+  if (hero.attrib.STRENGTH > 15) {
+    hero.hitMod += hero.attrib.STRENGTH - 15;
+  } else if (hero.attrib.STRENGTH < 6) {
+    hero.hitMod += hero.attrib.STRENGTH - 6;
+  }
+  if (hero.class === 'FIGHTER' || hero.class === 'SAMURAI' || hero.class === 'LORD' || hero.class === 'NINJA') {
+    hero.swingCount = Math.min(10, Math.max(hero.swingCount || 1, 1 + Math.floor(hero.charLevel / 5) + (hero.class === 'NINJA' ? 1 : 0)));
+  }
+
+  return { hpGain, learnedSpells, statChanges };
+}
 
 // All 50 Spells from Pascal source (0..50)
 const SPELL_TEXTS: TSpell[] = [
@@ -209,14 +498,12 @@ export const DEFAULT_PARTY: TCharacter[] = [
     hpMax: 10,
     spellsKnown: (() => {
       const sp = new Array(51).fill(false);
-      sp[22] = true; // Kalki
       sp[23] = true; // Dios
       sp[24] = true; // Badios
-      sp[25] = true; // Milwa
       return sp;
     })(),
     mageSpells: [0, 0, 0, 0, 0, 0, 0, 0],
-    priestSpells: [0, 3, 0, 0, 0, 0, 0, 0], // 3 casts of Tier 1
+    priestSpells: [0, 2, 0, 0, 0, 0, 0, 0], // 2 casts of Tier 1 per KEEPCHYN / SETSPELS
     armorClass: 6,
     healPts: 0,
     critHit: false,
@@ -285,12 +572,10 @@ export const DEFAULT_PARTY: TCharacter[] = [
     spellsKnown: (() => {
       const sp = new Array(51).fill(false);
       sp[1] = true; // Halito
-      sp[2] = true; // Mogref
       sp[3] = true; // Katino
-      sp[4] = true; // Dumapic
       return sp;
     })(),
-    mageSpells: [0, 3, 0, 0, 0, 0, 0, 0], // 3 casts of Tier 1
+    mageSpells: [0, 2, 0, 0, 0, 0, 0, 0], // 2 casts of Tier 1 per KEEPCHYN / SETSPELS
     priestSpells: [0, 0, 0, 0, 0, 0, 0, 0],
     armorClass: 9, // Robes
     healPts: 0,
@@ -326,12 +611,10 @@ export const DEFAULT_PARTY: TCharacter[] = [
       const sp = new Array(51).fill(false);
       sp[1] = true;  // Halito
       sp[3] = true;  // Katino
-      sp[23] = true; // Dios
-      sp[24] = true; // Badios
       return sp;
     })(),
     mageSpells: [0, 2, 0, 0, 0, 0, 0, 0],
-    priestSpells: [0, 2, 0, 0, 0, 0, 0, 0],
+    priestSpells: [0, 0, 0, 0, 0, 0, 0, 0], // Bishop unlocks Priest spells at level 4 (NWPRIEST(3, 4))
     armorClass: 8,
     healPts: 0,
     critHit: false,

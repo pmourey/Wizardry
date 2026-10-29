@@ -38,6 +38,57 @@ export interface CombatRoundResult {
   fled: boolean;
   alarmTriggered: boolean;
   effects: CombatEffects;
+  expGainedPerSurvivor?: number;
+}
+
+/**
+ * Authentic Pascal GIVEEXP / CALC1EXP / TOTALEXP / CNTALIVE calculation
+ * (pascal_source/Wiz1C/REWARDS2.TEXT.pas, l. 807-1015):
+ * Total XP is the sum over all defeated monster groups of (monster.expReward * group.count),
+ * divided equally (integer division) among surviving party members whose status is 'OK'.
+ */
+export function calculateVictoryExp(
+  party: TCharacter[],
+  groups: CombatGroup[]
+): { totalExp: number; survivorCount: number; expPerSurvivor: number } {
+  const survivorCount = party.filter(h => h.status === 'OK' && h.hpLeft > 0).length;
+  const totalExp = groups.reduce((acc, grp) => {
+    const unitExp = grp.monster.expReward || 0;
+    return acc + unitExp * grp.count;
+  }, 0);
+  const expPerSurvivor = survivorCount > 0 ? Math.floor(totalExp / survivorCount) : 0;
+  return { totalExp, survivorCount, expPerSurvivor };
+}
+
+/**
+ * Authentic Pascal PROCEDURE RUNAWAY (pascal_source/Wiz1B/COMBAT2.TEXT.pas, l. 279-313):
+ * Run is a party-wide action. If it succeeds, the entire party escapes immediately.
+ * If it fails (RUNFAILD), the entire party forfeits its turn (AGILITY := -1) and monsters attack.
+ */
+export function attemptPartyRun(
+  party: TCharacter[],
+  groups: CombatGroup[],
+  mazeLevel: number
+): boolean {
+  const partyCnt = party.length;
+  let temp = 38 - 3 * mazeLevel;
+  if (partyCnt < 4) {
+    temp += 20 - 5 * partyCnt;
+  }
+  const myStreng = party
+    .filter(h => h.status === 'OK' && h.hpLeft > 0)
+    .reduce((sum, h) => sum + h.charLevel, 0);
+  const enStreng = groups.reduce((sum, g) => {
+    const aliveInGroup = g.instances.filter(i => i.status === 'OK' && i.hpLeft > 0).length;
+    return sum + aliveInGroup * (g.monster.level || 1);
+  }, 0);
+  if (myStreng > enStreng) {
+    temp += 20;
+  }
+  if (mazeLevel === 10) {
+    temp = -1;
+  }
+  return Math.floor(Math.random() * 100) <= temp;
 }
 
 export interface EncounterOptions {
@@ -152,6 +203,18 @@ export function executeCombatRound(
   let fled = false;
   let alarmTriggered = false;
 
+  // Per Pascal Wizardry 1 (SPELLHSH = 0 in COMBAT2.TEXT / COMBAT3.TEXT):
+  // PARRY grants a -2 AC bonus ONLY for the current combat round and never stacks across rounds.
+  const parryingHeroIds = new Set<string>();
+  actions.forEach(act => {
+    if (act.actionType === 'PARRY') {
+      const h = party[act.charIndex];
+      if (h && h.status === 'OK' && h.hpLeft > 0) {
+        parryingHeroIds.add(h.id);
+      }
+    }
+  });
+
   // 1. Gather all action turns with agility initiative (1-10 + agility roll)
   interface InitiativeUnit {
     isPlayer: boolean;
@@ -217,18 +280,16 @@ export function executeCombatRound(
       if (!action) continue;
 
       if (action.actionType === 'RUN') {
-        // Runaway calculation from Pascal: 38 - 3 * level + party size modifier
-        const runChance = Math.min(85, Math.max(10, 45 + hero.attrib.AGILITY * 2));
-        if (Math.random() * 100 < runChance) {
-          log.push(`${hero.name} s’échappe avec le groupe ! Fuite réussie.`);
+        if (attemptPartyRun(party, groups, ctx.mazeLevel)) {
+          log.push(`🏃 L'escouade parvient à décrocher et s'enfuit du combat !`);
           fled = true;
           break;
         } else {
-          log.push(`${hero.name} tente de fuir mais les monstres bloquent le passage !`);
+          log.push(`⚠️ La tentative de fuite du groupe échoue ! Les monstres bloquent toute retraite !`);
         }
       } else if (action.actionType === 'PARRY') {
-        hero.combatAcMod = (hero.combatAcMod || 0) + 2;
-        log.push(`${hero.name} se met en garde défensive (-2 CA pour le combat).`);
+        parryingHeroIds.add(hero.id);
+        log.push(`🛡️ ${hero.name} se met en garde défensive (-2 CA pour ce tour uniquement).`);
       } else if (action.actionType === 'DISPELL') {
         // Dispell undead ability for Priest, Bishop, Lord
         const targetGroup = groups[action.targetGroupIndex ?? 0];
@@ -289,7 +350,15 @@ export function executeCombatRound(
       const monsterInst = group.instances[unit.instanceIndex];
       if (!monsterInst || monsterInst.status !== 'OK' || monsterInst.hpLeft <= 0) continue;
 
-      executeMonsterTurn(group, monsterInst, party, log, () => { alarmTriggered = true; }, ctx.acModifier + (effects.acModifier ?? 0));
+      executeMonsterTurn(
+        group,
+        monsterInst,
+        party,
+        log,
+        () => { alarmTriggered = true; },
+        ctx.acModifier + (effects.acModifier ?? 0),
+        parryingHeroIds
+      );
     }
   }
 
@@ -339,8 +408,23 @@ export function executeCombatRound(
     g.aliveCount = g.instances.filter(i => i.status !== 'DEAD' && i.hpLeft > 0).length;
   });
 
+  // Shift any fallen heroes to the rear of the party so living heroes step up to the front rank
+  const shiftResult = shiftDeadHeroesToEnd(party);
+  if (shiftResult.changed) {
+    log.push(`🔄 Les héros tombés (${shiftResult.movedNames.join(', ')}) sont placés en queue de groupe ; les survivants avancent en première ligne.`);
+  }
+
   const partyAlive = party.some(p => p.status !== 'DEAD' && p.status !== 'ASHES' && p.hpLeft > 0);
   const monstersAlive = groups.some(g => g.aliveCount > 0);
+
+  let expGainedPerSurvivor = 0;
+  if (!monstersAlive && partyAlive && !fled && !effects.malor && !effects.loktofeit) {
+    const { totalExp, survivorCount, expPerSurvivor } = calculateVictoryExp(party, groups);
+    expGainedPerSurvivor = expPerSurvivor;
+    if (survivorCount > 0 && expPerSurvivor > 0) {
+      log.push(`🏆 VICTOIRE ! Pour avoir éliminé les monstres (${totalExp.toLocaleString()} XP au total), chacun des ${survivorCount} survivant(s) (statut OK) reçoit +${expPerSurvivor.toLocaleString()} XP !`);
+    }
+  }
 
   return {
     combatLog: log,
@@ -348,7 +432,8 @@ export function executeCombatRound(
     monstersAlive,
     fled,
     alarmTriggered,
-    effects
+    effects,
+    expGainedPerSurvivor
   };
 }
 
@@ -419,7 +504,8 @@ function executeMonsterTurn(
   party: TCharacter[],
   log: string[],
   onAlarm: () => void,
-  acModifier = 0
+  acModifier = 0,
+  parryingHeroIds: Set<string> = new Set()
 ) {
   const monster = group.monster;
   const monsterName = group.identified ? monster.name : monster.nameUnknown;
@@ -497,7 +583,8 @@ function executeMonsterTurn(
   const eligibleMeleeTargets = frontRankCandidates.length > 0 ? frontRankCandidates : livingHeroes;
   const chosenTarget = eligibleMeleeTargets[Math.floor(Math.random() * eligibleMeleeTargets.length)].hero;
 
-  const toHitThreshold = Math.max(1, Math.min(19, 20 - chosenTarget.armorClass - monster.level + (chosenTarget.combatAcMod || 0) + acModifier));
+  const parryBonus = parryingHeroIds.has(chosenTarget.id) ? 2 : 0;
+  const toHitThreshold = Math.max(1, Math.min(19, 20 - chosenTarget.armorClass - monster.level + (chosenTarget.combatAcMod || 0) + parryBonus + acModifier));
 
   let totalDmg = 0;
   let hits = 0;

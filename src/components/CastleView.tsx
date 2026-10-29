@@ -11,7 +11,11 @@ import {
   RACE_BASE_ATTRIBUTES, 
   ITEMS_DATABASE, 
   EXP_TABLES, 
-  SPELLS 
+  SPELLS,
+  getExpForNextLevel,
+  setCharacterSpells,
+  initLevel1CharacterSpells,
+  levelUpCharacter
 } from '../data/wizardryData';
 import { CharacterSheetModal } from './CharacterSheetModal';
 import { sounds } from '../utils/soundEffects';
@@ -140,49 +144,79 @@ export const CastleView: React.FC<CastleViewProps> = ({
   }, [party, setParty]);
 
   // ==========================================
-  // INN LOGIC (HEALING & LEVEL UP)
+  // INN LOGIC (HEALING & LEVEL UP — CASTLE2.TEXT: ADVNTINN / TAKENAP / CHNEWLEV / SETSPELS)
   // ==========================================
   const handleRestAtInn = (roomType: 'STABLES' | 'COTS' | 'ECONOMY' | 'MERCHANT' | 'ROYAL') => {
+    if (!selectedHero) return;
     sounds.playGold();
-    const costMap = { STABLES: 0, COTS: 10, ECONOMY: 50, MERCHANT: 200, ROYAL: 500 };
-    const cost = costMap[roomType];
+    const roomSpecs = {
+      STABLES:  { hpAdd: 0,  cost: 0 },
+      COTS:     { hpAdd: 1,  cost: 10 },
+      ECONOMY:  { hpAdd: 3,  cost: 50 },
+      MERCHANT: { hpAdd: 7,  cost: 200 },
+      ROYAL:    { hpAdd: 10, cost: 500 }
+    };
+    const { hpAdd, cost } = roomSpecs[roomType];
 
-    if (selectedHero.gold < cost) {
-      setMessage(`Fonds insuffisants ! ${selectedHero.name} n'a pas assez d'or.`);
+    if (cost > 0 && selectedHero.gold < cost && selectedHero.hpLeft < selectedHero.hpMax) {
+      setMessage(`Fonds insuffisants ! ${selectedHero.name} n'a pas assez d'or (${cost} PO/sem.).`);
       return;
     }
 
-    // Deduct cost and rest
-    selectedHero.gold -= cost;
-    selectedHero.hpLeft = selectedHero.hpMax;
-    // Recharge all spells
-    if (selectedHero.class === 'MAGE' || selectedHero.class === 'SAMURAI' || selectedHero.class === 'BISHOP') {
-      selectedHero.mageSpells = [0, 3, 2, 2, 1, 1, 1, 1];
+    // Authentic TAKENAP loop (CASTLE2.TEXT l. 765-774):
+    // In Stables (cost = 0), no HP is healed ("IS NAPPING").
+    // In paid rooms (cost > 0), heals hpAdd per week while gold >= cost and hpLeft < hpMax.
+    let weeksRested = 0;
+    let totalGoldSpent = 0;
+    const hpBefore = selectedHero.hpLeft;
+    if (cost > 0) {
+      while (selectedHero.gold >= cost && selectedHero.hpLeft < selectedHero.hpMax) {
+        selectedHero.hpLeft = Math.min(selectedHero.hpMax, selectedHero.hpLeft + hpAdd);
+        selectedHero.gold -= cost;
+        selectedHero.age = (selectedHero.age || 18 * 52) + 1;
+        weeksRested += 1;
+        totalGoldSpent += cost;
+      }
     }
-    if (selectedHero.class === 'PRIEST' || selectedHero.class === 'LORD' || selectedHero.class === 'BISHOP') {
-      selectedHero.priestSpells = [0, 3, 2, 2, 1, 1, 1, 1];
-    }
+    const hpHealed = selectedHero.hpLeft - hpBefore;
 
-    // Check level up
-    const expNeeded = EXP_TABLES[selectedHero.class][Math.min(EXP_TABLES[selectedHero.class].length - 1, selectedHero.charLevel - 1)];
+    // Authentic CHNEWLEV check (CASTLE2.TEXT l. 694-720)
+    const expNeeded = getExpForNextLevel(selectedHero.class, selectedHero.charLevel);
     let levelUpMsg = '';
     if (selectedHero.exp >= expNeeded) {
-      selectedHero.charLevel += 1;
-      const hpGain = Math.floor(Math.random() * 8) + 4;
-      selectedHero.hpMax += hpGain;
-      selectedHero.hpLeft = selectedHero.hpMax;
-      levelUpMsg = ` 🌟 NIVEAU SUPÉRIEUR ! ${selectedHero.name} est maintenant Niveau ${selectedHero.charLevel} (+${hpGain} PV Max) !`;
+      const { hpGain, learnedSpells, statChanges } = levelUpCharacter(selectedHero);
+      const spellsNote = learnedSpells.length > 0
+        ? ` · Nouveaux sorts appris : ${learnedSpells.join(', ')} !`
+        : '';
+      const statsNote = statChanges.length > 0
+        ? ` (${statChanges.join(', ')})`
+        : '';
+      levelUpMsg = ` 🌟 NIVEAU SUPÉRIEUR ! ${selectedHero.name} atteint le Niveau ${selectedHero.charLevel} (+${hpGain} PV Max${statsNote})${spellsNote}`;
       sounds.playFanfare();
       onAddAdventureEvent?.(
         'CASTLE',
         `Montée de Niveau : ${selectedHero.name} (Niveau ${selectedHero.charLevel})`,
-        `Après un repos mérité à l'Auberge de l'Aventurier, ${selectedHero.name} perfectionne son art du combat et sa résistance (+${hpGain} PV Max).`,
-        `Niveau actuel : ${selectedHero.charLevel} · PV Max : ${selectedHero.hpMax}`
+        `Après son séjour à l'Auberge de l'Aventurier, ${selectedHero.name} passe au Niveau ${selectedHero.charLevel} (+${hpGain} PV Max${statsNote}).${spellsNote}`,
+        `Niveau : ${selectedHero.charLevel} · PV Max : ${selectedHero.hpMax}${learnedSpells.length > 0 ? ` · Sorts : ${learnedSpells.join(', ')}` : ''}`
       );
+    } else {
+      const expMissing = expNeeded - selectedHero.exp;
+      levelUpMsg = ` (Il manque ${expMissing.toLocaleString()} XP pour le Niveau ${selectedHero.charLevel + 1}).`;
     }
 
+    // Authentic SETSPELS (CASTLE2.TEXT l. 783): recharge spell slots according to class, level & known spells
+    setCharacterSpells(selectedHero);
+
     setParty([...party]);
-    setMessage(`${selectedHero.name} a passé un repos réparateur. Tous ses PV et sorts sont restaurés !${levelUpMsg}`);
+    setAllCharacters(prev => prev.map(c => c.id === selectedHero.id ? { ...selectedHero } : c));
+
+    const healNote = roomType === 'STABLES'
+      ? `a dormi aux Écuries (sorts restaurés, PV inchangés : ${selectedHero.hpLeft}/${selectedHero.hpMax}).`
+      : weeksRested > 0
+      ? `s'est reposé ${weeksRested} sem. (-${totalGoldSpent} PO, +${hpHealed} PV, PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}) et a restauré ses sorts.`
+      : `a restauré ses sorts (PV déjà au maximum : ${selectedHero.hpLeft}/${selectedHero.hpMax}).`;
+
+    setMessage(`${selectedHero.name} ${healNote}${levelUpMsg}`);
   };
 
   // ==========================================
@@ -523,6 +557,44 @@ export const CastleView: React.FC<CastleViewProps> = ({
     }
     sounds.playFanfare();
 
+    // Authentic KEEPCHYN Level 1 HP calculation (pascal_source/Wiz1C/ROLLER.TEXT.pas, l. 1310-1334)
+    let clsHpMod = 6;
+    switch (chosenClass) {
+      case 'FIGHTER':
+      case 'LORD':
+        clsHpMod = 10;
+        break;
+      case 'PRIEST':
+        clsHpMod = 8;
+        break;
+      case 'THIEF':
+      case 'BISHOP':
+      case 'NINJA':
+        clsHpMod = 6;
+        break;
+      case 'MAGE':
+        clsHpMod = 4;
+        break;
+      case 'SAMURAI':
+        clsHpMod = 16;
+        break;
+    }
+    let vitHpMod = 0;
+    const vit = allocatedStats.VITALITY;
+    if (vit === 3) vitHpMod = -2;
+    else if (vit === 4 || vit === 5) vitHpMod = -1;
+    else if (vit === 16) vitHpMod = 1;
+    else if (vit === 17) vitHpMod = 2;
+    else if (vit >= 18) vitHpMod = 3;
+
+    clsHpMod += vitHpMod;
+    for (let i = 0; i < 2; i++) {
+      if (Math.floor(Math.random() * 2) === 1) {
+        clsHpMod = Math.floor((9 * clsHpMod) / 10);
+      }
+    }
+    if (clsHpMod < 2) clsHpMod = 2;
+
     const newHero: TCharacter = {
       id: `hero-${Date.now()}`,
       name: newCharName.toUpperCase().trim(),
@@ -530,24 +602,24 @@ export const CastleView: React.FC<CastleViewProps> = ({
       class: chosenClass,
       align: newCharAlign,
       status: 'OK',
-      age: 18 * 52,
+      age: (18 * 52) + Math.floor(Math.random() * 300),
       attrib: { ...allocatedStats },
       luckSkill: [16, 16, 16, 16, 16],
-      gold: 100 + Math.floor(Math.random() * 50),
+      gold: 90 + Math.floor(Math.random() * 100),
       exp: 0,
       maxLevel: 1,
       charLevel: 1,
-      hpLeft: 10,
-      hpMax: 10,
+      hpLeft: clsHpMod,
+      hpMax: clsHpMod,
       spellsKnown: new Array(51).fill(false),
-      mageSpells: [0, 2, 0, 0, 0, 0, 0, 0],
-      priestSpells: [0, 2, 0, 0, 0, 0, 0, 0],
+      mageSpells: [0, 0, 0, 0, 0, 0, 0, 0],
+      priestSpells: [0, 0, 0, 0, 0, 0, 0, 0],
       armorClass: 10,
       healPts: 0,
       critHit: chosenClass === 'NINJA',
-      swingCount: 1,
+      swingCount: chosenClass === 'NINJA' ? 2 : 1,
       wepDamage: { level: 1, hpFac: 6, hpMinAdd: 1 },
-      hitMod: 0,
+      hitMod: (chosenClass === 'FIGHTER' || chosenClass === 'PRIEST' || chosenClass === 'SAMURAI' || chosenClass === 'LORD' || chosenClass === 'NINJA') ? 2 : 0,
       poisonAmount: 0,
       awards: [0, 0, 0, 0, 0],
       inMaze: false,
@@ -555,6 +627,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
         { equipped: true, cursed: false, identified: true, itemIndex: 6 } // Dagger
       ]
     };
+
+    // Authentic KEEPCHYN Level 1 spells & spell points (MAGE/BISHOP: Halito & Katino [2 pts]; PRIEST: Dios & Badios [2 pts])
+    initLevel1CharacterSpells(newHero);
 
     setAllCharacters(prev => [...prev, newHero]);
     if (party.length < 6) {

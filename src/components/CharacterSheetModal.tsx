@@ -7,8 +7,9 @@ import {
 } from '../types/wizardry';
 import { 
   ITEMS_DATABASE, 
-  EXP_TABLES, 
-  SPELLS 
+  SPELLS,
+  getExpForNextLevel,
+  getMaxCharacterSpells
 } from '../data/wizardryData';
 import { sounds } from '../utils/soundEffects';
 import { 
@@ -138,13 +139,12 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentIndex, party.length, onClose, onSelectCharacter]);
 
-  // Compute Experience progress
-  const expTable = EXP_TABLES[hero.class] || EXP_TABLES.FIGHTER;
-  const currentLevelIndex = Math.min(expTable.length - 1, Math.max(0, hero.charLevel - 1));
-  const expCurrentTier = expTable[currentLevelIndex] || 1000;
-  const nextLevelTier = expTable[Math.min(expTable.length - 1, currentLevelIndex + 1)] || expCurrentTier * 2;
+  // Compute Experience progress using authentic ZEXP table (CHNEWLEV)
+  const expCurrentTier = getExpForNextLevel(hero.class, hero.charLevel - 1);
+  const nextLevelTier = getExpForNextLevel(hero.class, hero.charLevel);
   const expDiff = Math.max(1, nextLevelTier - expCurrentTier);
   const expProgress = Math.min(100, Math.max(0, Math.round(((hero.exp - expCurrentTier) / expDiff) * 100)));
+  const maxSpellSlots = getMaxCharacterSpells(hero);
 
   // Equip / Unequip handler
   const handleToggleEquip = (slotIdx: number) => {
@@ -716,6 +716,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                         <div className="text-[9px] text-slate-400 font-sans">T{tier}</div>
                         <div className="text-sm font-bold text-cyan-300">
                           {hero.mageSpells?.[tier] || 0}
+                          <span className="text-[10px] text-slate-500">/{maxSpellSlots.mageSpells[tier] || 0}</span>
                         </div>
                       </div>
                     ))}
@@ -734,6 +735,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                         <div className="text-[9px] text-slate-400 font-sans">T{tier}</div>
                         <div className="text-sm font-bold text-amber-300">
                           {hero.priestSpells?.[tier] || 0}
+                          <span className="text-[10px] text-slate-500">/{maxSpellSlots.priestSpells[tier] || 0}</span>
                         </div>
                       </div>
                     ))}
