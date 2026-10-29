@@ -24,6 +24,8 @@ import { DungeonView } from './components/DungeonView';
 import { CombatView } from './components/CombatView';
 import { ChestView } from './components/ChestView';
 import { PySide6Exporter } from './components/PySide6Exporter';
+import { ScenarioMenuView } from './components/ScenarioMenuView';
+import { WIZARDRY_SCENARIOS } from './data/scenariosCatalog';
 import { 
   initCombatEncounter, 
   CombatGroup,
@@ -45,8 +47,31 @@ import {
   Volume2, 
   VolumeX,
   Skull,
-  Users
+  Users,
+  Library
 } from 'lucide-react';
+
+export function getStorageKeysForScenario(scenarioId: string) {
+  if (!scenarioId || scenarioId === 'proving-grounds') {
+    return {
+      party: 'wiz1_party',
+      roster: 'wiz1_roster',
+      session: 'wiz1_dungeon_session',
+      journal: 'wiz1_adventure_journal',
+      visited: 'wiz1_visited_tiles_all',
+      usedEvents: 'wiz1_event_uses'
+    };
+  }
+  const prefix = `wiz_${scenarioId}`;
+  return {
+    party: `${prefix}_party`,
+    roster: `${prefix}_roster`,
+    session: `${prefix}_dungeon_session`,
+    journal: `${prefix}_adventure_journal`,
+    visited: `${prefix}_visited_tiles_all`,
+    usedEvents: `${prefix}_event_uses`
+  };
+}
 
 // Persistent Dungeon & Exploration Session Type
 interface TDungeonSession {
@@ -75,10 +100,49 @@ export default function App() {
       };
     });
 
-  // Persistence in localStorage
+  // Active Scenario ID (persisted in localStorage)
+  const [activeScenarioId, setActiveScenarioId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('wiz_active_scenario_id') || 'proving-grounds';
+    }
+    return 'proving-grounds';
+  });
+
+  const activeScenario = WIZARDRY_SCENARIOS.find(s => s.id === activeScenarioId) || WIZARDRY_SCENARIOS[0];
+  const storageKeys = getStorageKeysForScenario(activeScenarioId);
+
+  // Stored dungeon outing & exploration session state
+  const savedSession: Partial<TDungeonSession> | null = (() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(storageKeys.session);
+      if (saved) {
+        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+      }
+    }
+    return null;
+  })();
+
+  // Show Scenario Selection Menu at site startup unless refreshing mid-dungeon or already launched in this tab
+  const [showScenarioMenu, setShowScenarioMenu] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      if (
+        savedSession?.location === 'MAZE' ||
+        savedSession?.location === 'COMBAT' ||
+        savedSession?.location === 'CHEST'
+      ) {
+        return false;
+      }
+      if (sessionStorage.getItem('wiz_scenario_launched') === '1') {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // Persistence in localStorage (isolated per scenario)
   const [party, setParty] = useState<TCharacter[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('wiz1_party');
+      const saved = localStorage.getItem(storageKeys.party);
       if (saved) {
         try { return sanitizeCharacterSpells(JSON.parse(saved)); } catch (e) { /* ignore */ }
       }
@@ -88,24 +152,13 @@ export default function App() {
 
   const [allCharacters, setAllCharacters] = useState<TCharacter[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('wiz1_roster');
+      const saved = localStorage.getItem(storageKeys.roster);
       if (saved) {
         try { return sanitizeCharacterSpells(JSON.parse(saved)); } catch (e) { /* ignore */ }
       }
     }
     return DEFAULT_PARTY;
   });
-
-  // Stored dungeon outing & exploration session state
-  const savedSession: Partial<TDungeonSession> | null = (() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('wiz1_dungeon_session');
-      if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
-      }
-    }
-    return null;
-  })();
 
   // Location & Navigation State (restores exact place in dungeon on page refresh)
   const [location, setLocation] = useState<GameLocation>(() => savedSession?.location || 'CASTLE');
@@ -129,10 +182,10 @@ export default function App() {
     () => savedSession?.lastWipeoutInfo || null
   );
 
-  // Adventure Journal Events (persisted in localStorage)
+  // Adventure Journal Events (persisted in localStorage per scenario)
   const [adventureEvents, setAdventureEvents] = useState<AdventureLogEvent[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('wiz1_adventure_journal');
+      const saved = localStorage.getItem(storageKeys.journal);
       if (saved) {
         try { return JSON.parse(saved); } catch (e) { /* ignore */ }
       }
@@ -188,10 +241,10 @@ export default function App() {
   const [visitedTilesByLevel, setVisitedTilesByLevel] = useState<Record<number, boolean[][]>>(() => {
     const initialByLevel: Record<number, boolean[][]> = {};
     if (typeof window !== 'undefined') {
-      const savedAll = localStorage.getItem('wiz1_visited_tiles_all');
+      const savedAll = localStorage.getItem(storageKeys.visited);
       if (savedAll) {
         try { Object.assign(initialByLevel, JSON.parse(savedAll)); } catch (e) { /* ignore */ }
-      } else {
+      } else if (activeScenarioId === 'proving-grounds') {
         const savedL1 = localStorage.getItem('wiz1_visited_level1');
         if (savedL1) {
           try { initialByLevel[1] = JSON.parse(savedL1); } catch (e) { /* ignore */ }
@@ -219,14 +272,89 @@ export default function App() {
     return fresh;
   });
 
+  // Switch Scenario & Load its isolated localStorage state
+  const handleSelectScenario = (scenarioId: string) => {
+    const keys = getStorageKeysForScenario(scenarioId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wiz_active_scenario_id', scenarioId);
+      sessionStorage.setItem('wiz_scenario_launched', '1');
+    }
+    setActiveScenarioId(scenarioId);
+
+    let nextParty = DEFAULT_PARTY;
+    let nextRoster = DEFAULT_PARTY;
+    let nextSession: Partial<TDungeonSession> | null = null;
+    let nextVisited: Record<number, boolean[][]> = {};
+    let nextJournal: AdventureLogEvent[] = [];
+
+    if (typeof window !== 'undefined') {
+      try {
+        const rawP = localStorage.getItem(keys.party);
+        if (rawP) nextParty = sanitizeCharacterSpells(JSON.parse(rawP));
+      } catch { /* ignore */ }
+      try {
+        const rawR = localStorage.getItem(keys.roster);
+        if (rawR) nextRoster = sanitizeCharacterSpells(JSON.parse(rawR));
+      } catch { /* ignore */ }
+      try {
+        const rawS = localStorage.getItem(keys.session);
+        if (rawS) nextSession = JSON.parse(rawS);
+      } catch { /* ignore */ }
+      try {
+        const rawV = localStorage.getItem(keys.visited);
+        if (rawV) nextVisited = JSON.parse(rawV);
+      } catch { /* ignore */ }
+      try {
+        const rawJ = localStorage.getItem(keys.journal);
+        if (rawJ) nextJournal = JSON.parse(rawJ);
+      } catch { /* ignore */ }
+      try {
+        eventUsesRef.current = JSON.parse(localStorage.getItem(keys.usedEvents) || '{}');
+      } catch {
+        eventUsesRef.current = {};
+      }
+    }
+
+    const lvl = nextSession?.dungeonLevel || 1;
+    const px = nextSession?.posX ?? 0;
+    const py = nextSession?.posY ?? 0;
+    if (!nextVisited[lvl]) {
+      const fresh = Array.from({ length: 20 }, () => Array(20).fill(false));
+      if (fresh[px]) fresh[px][py] = true;
+      nextVisited[lvl] = fresh;
+    }
+
+    setParty(nextParty);
+    setAllCharacters(nextRoster);
+    setLocation(nextSession?.location || 'CASTLE');
+    setDungeonLevel(lvl);
+    setMaze(getMazeForFloor(lvl));
+    setPosX(px);
+    setPosY(py);
+    setDirection(nextSession?.direction ?? 0);
+    setLightLevel(nextSession?.lightLevel ?? 0);
+    setAcModifier(nextSession?.acModifier ?? 0);
+    setCombatGroups(nextSession?.combatGroups || []);
+    setCombatSurprise(nextSession?.combatSurprise || 'NONE');
+    setChestReward(nextSession?.chestReward || null);
+    setLastWipeoutInfo(nextSession?.lastWipeoutInfo || null);
+    setVisitedTilesByLevel(nextVisited);
+    setVisitedTiles(nextVisited[lvl]);
+    if (nextJournal.length > 0) setAdventureEvents(nextJournal);
+    setShowScenarioMenu(false);
+  };
+
   // Save all game and dungeon session state to localStorage on changes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('wiz1_party', JSON.stringify(party));
-      localStorage.setItem('wiz1_roster', JSON.stringify(allCharacters));
-      localStorage.setItem('wiz1_visited_level1', JSON.stringify(visitedTilesByLevel[1] || visitedTiles));
-      localStorage.setItem('wiz1_visited_tiles_all', JSON.stringify(visitedTilesByLevel));
-      localStorage.setItem('wiz1_adventure_journal', JSON.stringify(adventureEvents));
+      const keys = getStorageKeysForScenario(activeScenarioId);
+      localStorage.setItem(keys.party, JSON.stringify(party));
+      localStorage.setItem(keys.roster, JSON.stringify(allCharacters));
+      if (activeScenarioId === 'proving-grounds') {
+        localStorage.setItem('wiz1_visited_level1', JSON.stringify(visitedTilesByLevel[1] || visitedTiles));
+      }
+      localStorage.setItem(keys.visited, JSON.stringify(visitedTilesByLevel));
+      localStorage.setItem(keys.journal, JSON.stringify(adventureEvents));
 
       const sessionData: TDungeonSession = {
         location,
@@ -241,9 +369,10 @@ export default function App() {
         chestReward: location === 'CHEST' ? chestReward : null,
         lastWipeoutInfo
       };
-      localStorage.setItem('wiz1_dungeon_session', JSON.stringify(sessionData));
+      localStorage.setItem(keys.session, JSON.stringify(sessionData));
     }
   }, [
+    activeScenarioId,
     party, 
     allCharacters, 
     visitedTiles, 
@@ -342,7 +471,7 @@ export default function App() {
   const eventUsesRef = useRef<Record<string, number>>(
     (() => {
       try {
-        return JSON.parse(localStorage.getItem('wiz1_event_uses') || '{}');
+        return JSON.parse(localStorage.getItem(storageKeys.usedEvents) || '{}');
       } catch {
         return {};
       }
@@ -350,7 +479,8 @@ export default function App() {
   );
   const markEventUsed = (key: string, count: number) => {
     eventUsesRef.current[key] = count;
-    localStorage.setItem('wiz1_event_uses', JSON.stringify(eventUsesRef.current));
+    const keys = getStorageKeysForScenario(activeScenarioId);
+    localStorage.setItem(keys.usedEvents, JSON.stringify(eventUsesRef.current));
   };
 
   const giveItemToParty = (itemId: number): string | null => {
@@ -901,24 +1031,37 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
       {/* Top Application Bar */}
-      <header className="flex items-center justify-between gap-8 px-6 py-3 border-b border-slate-800 bg-slate-900/90 z-20 shrink-0">
+      <header className="flex items-center justify-between gap-4 px-6 py-3 border-b border-slate-800 bg-slate-900/90 z-20 shrink-0">
         <div className="flex items-center gap-3">
           <div className="text-amber-400 font-serif font-black text-lg tracking-wider whitespace-nowrap shrink-0">
-            WIZARDRY I
+            WIZARDRY #{activeScenario.number}
           </div>
-          <span className="text-xs text-slate-400 hidden sm:inline">
-            Proving Grounds of the Mad Overlord (1981)
+          <span className="text-xs text-slate-300 font-medium hidden sm:inline">
+            {activeScenario.title}
           </span>
         </div>
 
         {/* Center Zone: Status tags */}
         <div className="hidden md:flex items-center gap-6 text-xs text-slate-400">
-          <span>Lieu : <strong className="text-white">{location === 'MAZE' ? `Donjon N.${dungeonLevel}` : location}</strong></span>
+          <span>Lieu : <strong className="text-white">{showScenarioMenu ? 'Menu Principal' : location === 'MAZE' ? `Donjon N.${dungeonLevel}` : location}</strong></span>
           <span>Aventuriers : <strong className="text-emerald-400">{party.filter(p => p.status === 'OK').length}/{party.length}</strong></span>
         </div>
 
         {/* Right Zone: Controls */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => setShowScenarioMenu(prev => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition border ${
+              showScenarioMenu
+                ? 'bg-amber-600 text-white border-amber-400'
+                : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-600/30'
+            }`}
+            title="Ouvrir le menu principal de sélection des 10 scénarios"
+          >
+            <Library className="w-3.5 h-3.5" />
+            <span>{showScenarioMenu ? 'Retour au Jeu' : 'Scénarios (10)'}</span>
+          </button>
+
           <button
             onClick={toggleSound}
             className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
@@ -939,7 +1082,15 @@ export default function App() {
 
       {/* Main Content Area based on Location State Machine */}
       <main className="flex-1 relative overflow-hidden">
-        {location === 'CASTLE' && (
+        {showScenarioMenu ? (
+          <ScenarioMenuView
+            activeScenarioId={activeScenarioId}
+            onSelectScenario={handleSelectScenario}
+            getStorageKeysForScenario={getStorageKeysForScenario}
+          />
+        ) : null}
+
+        {!showScenarioMenu && location === 'CASTLE' && (
           <CastleView
             party={party}
             setParty={setParty}
@@ -963,7 +1114,7 @@ export default function App() {
           />
         )}
 
-        {location === 'MAZE' && (
+        {!showScenarioMenu && location === 'MAZE' && (
           <DungeonView
             party={party}
             setParty={setParty}
@@ -990,7 +1141,7 @@ export default function App() {
           />
         )}
 
-        {location === 'COMBAT' && (
+        {!showScenarioMenu && location === 'COMBAT' && (
           <CombatView
             party={party}
             setParty={setParty}
@@ -1003,7 +1154,7 @@ export default function App() {
           />
         )}
 
-        {location === 'CHEST' && chestReward && (
+        {!showScenarioMenu && location === 'CHEST' && chestReward && (
           <ChestView
             party={party}
             setParty={setParty}
@@ -1015,7 +1166,7 @@ export default function App() {
         )}
 
         {/* GAME OVER CEMETERY SCREEN (WIZARDRY 1 AUTHENTIC BODY RECOVERY) */}
-        {location === 'GAME_OVER' && (
+        {!showScenarioMenu && location === 'GAME_OVER' && (
           <div className="flex flex-col items-center justify-center h-full p-6 text-center space-y-5 bg-black overflow-y-auto">
             <div className="p-4 bg-red-950/80 border-2 border-red-700 rounded-full text-red-500 animate-pulse">
               <Skull className="w-14 h-14" />
@@ -1096,7 +1247,7 @@ export default function App() {
         )}
 
         {/* VICTORY ENDGAME SCREEN */}
-        {location === 'VICTORY' && (
+        {!showScenarioMenu && location === 'VICTORY' && (
           <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-6 bg-slate-950">
             <div className="p-4 bg-amber-950/80 border border-amber-500 rounded-full text-amber-400">
               <Trophy className="w-16 h-16 animate-bounce" />
