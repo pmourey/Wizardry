@@ -54,7 +54,8 @@ import {
 import { getActiveStatusEffects } from '../engine/statusSystem';
 import { AdventureJournal } from './AdventureJournal';
 import { AdventureLogEvent, AdventureLogCategory } from '../types/wizardry';
-import { WIZARDRY_SCENARIOS } from '../data/scenariosCatalog';
+import { WIZARDRY_SCENARIOS, getLocalizedScenario } from '../data/scenariosCatalog';
+import { useLanguage, UI_TEXT } from '../utils/language';
 
 interface CastleViewProps {
   activeScenarioId?: string;
@@ -92,19 +93,23 @@ export const CastleView: React.FC<CastleViewProps> = ({
   onOpenPySide6Export,
   onCheatRestoreParty
 }) => {
-  const scenarioMeta = WIZARDRY_SCENARIOS.find(s => s.id === activeScenarioId) || WIZARDRY_SCENARIOS[0];
-  const castleName = scenarioMeta.castleName || 'Château de Trebor';
-  const castleSubtitle = scenarioMeta.castleSubtitle || 'Cité de garnison surplombant le Labyrinthe';
-  const castleWelcome = scenarioMeta.castleWelcome || `Bienvenue dans les Terres de ${scenarioMeta.title}`;
+  const [lang] = useLanguage();
+  const t = UI_TEXT[lang];
+
+  const rawMeta = WIZARDRY_SCENARIOS.find(s => s.id === activeScenarioId) || WIZARDRY_SCENARIOS[0];
+  const scenarioMeta = getLocalizedScenario(rawMeta, lang);
+  const castleName = scenarioMeta.castleName || (lang === 'fr' ? 'Château de Trebor' : 'Castle of Trebor');
+  const castleSubtitle = scenarioMeta.castleSubtitle || (lang === 'fr' ? 'Cité de garnison surplombant le Labyrinthe' : 'Garrison city overlooking the Maze');
+  const castleWelcome = scenarioMeta.castleWelcome || t.welcomeFallback(scenarioMeta.title);
   const castleDescription = scenarioMeta.castleDescription || scenarioMeta.description;
-  const trainingGroundsName = scenarioMeta.trainingGroundsName || "Terrain d'Entraînement";
+  const trainingGroundsName = scenarioMeta.trainingGroundsName || (lang === 'fr' ? "Terrain d'Entraînement" : "Training Grounds");
 
   const [currentTab, setCurrentTab] = useState<CastleTab>('COURTYARD');
-  const [message, setMessage] = useState<string>(`Bienvenue à : ${castleName}. Choisissez votre destination.`);
+  const [message, setMessage] = useState<string>(() => t.welcomeToCastle(castleName));
 
   useEffect(() => {
-    setMessage(`Bienvenue à : ${castleName}. Choisissez votre destination.`);
-  }, [castleName]);
+    setMessage(t.welcomeToCastle(castleName));
+  }, [castleName, lang]);
 
   useEffect(() => {
     switch (currentTab) {

@@ -28,7 +28,8 @@ import { CombatView } from './components/CombatView';
 import { ChestView } from './components/ChestView';
 import { PySide6Exporter } from './components/PySide6Exporter';
 import { ScenarioMenuView } from './components/ScenarioMenuView';
-import { WIZARDRY_SCENARIOS } from './data/scenariosCatalog';
+import { WIZARDRY_SCENARIOS, getLocalizedScenario } from './data/scenariosCatalog';
+import { useLanguage, UI_TEXT } from './utils/language';
 import { 
   initCombatEncounter, 
   CombatGroup,
@@ -136,7 +137,11 @@ export default function App() {
     return 'proving-grounds';
   });
 
-  const activeScenario = WIZARDRY_SCENARIOS.find(s => s.id === activeScenarioId) || WIZARDRY_SCENARIOS[0];
+  const [lang, setLang] = useLanguage();
+  const t = UI_TEXT[lang];
+
+  const rawScenario = WIZARDRY_SCENARIOS.find(s => s.id === activeScenarioId) || WIZARDRY_SCENARIOS[0];
+  const activeScenario = getLocalizedScenario(rawScenario, lang);
   const storageKeys = getStorageKeysForScenario(activeScenarioId);
 
   // Stored dungeon outing & exploration session state
@@ -1115,6 +1120,33 @@ export default function App() {
 
         {/* Right Zone: Controls */}
         <div className="flex items-center gap-2.5 shrink-0">
+          {/* Language Selector FR | EN */}
+          <div className="flex items-center rounded-lg bg-slate-800 border border-amber-600/30 p-0.5 text-xs font-bold text-amber-300">
+            <button
+              onClick={() => { setLang('fr'); sounds.playTurn(); }}
+              className={`px-2 py-1 rounded transition ${
+                lang === 'fr'
+                  ? 'bg-amber-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Afficher l'interface et les scénarios en Français"
+            >
+              FR
+            </button>
+            <span className="text-slate-600 px-0.5">|</span>
+            <button
+              onClick={() => { setLang('en'); sounds.playTurn(); }}
+              className={`px-2 py-1 rounded transition ${
+                lang === 'en'
+                  ? 'bg-amber-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Display interface and scenarios in English"
+            >
+              EN
+            </button>
+          </div>
+
           <button
             onClick={() => setShowScenarioMenu(prev => !prev)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition border ${
@@ -1125,13 +1157,13 @@ export default function App() {
             title="Ouvrir le menu principal de sélection des scénarios"
           >
             <Library className="w-3.5 h-3.5" />
-            <span>{showScenarioMenu ? 'Retour au Jeu' : `Scénarios (${WIZARDRY_SCENARIOS.length})`}</span>
+            <span>{showScenarioMenu ? t.backToGame : `${t.scenarios} (${WIZARDRY_SCENARIOS.length})`}</span>
           </button>
 
           <button
             onClick={() => { toggleKeyboardLayout(); sounds.playTurn(); }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-mono font-bold whitespace-nowrap shrink-0 transition"
-            title={`Disposition clavier actuelle : ${keyboardLayout} (${keyboardLayout === 'AZERTY' ? 'Z=Avancer, Q=Gauche, D=Droite' : 'W=Avancer, A=Gauche, D=Droite'}). Cliquer pour basculer AZERTY / QWERTY.`}
+            title={t.keyboardLayoutTitle(keyboardLayout)}
           >
             <Keyboard className="w-3.5 h-3.5" />
             <span>{keyboardLayout}</span>
@@ -1144,16 +1176,16 @@ export default function App() {
                 ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-600/30'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-500 border-slate-800'
             }`}
-            title={musicOn ? `Musique d'ambiance active (${music.getCurrentTrackTitle() || 'We Love Wizardry'}) — Cliquer pour couper` : "Activer la musique d'ambiance (We Love Wizardry)"}
+            title={musicOn ? t.musicActive(music.getCurrentTrackTitle() || 'We Love Wizardry') : t.musicInactive}
           >
             <Music className={`w-3.5 h-3.5 ${musicOn ? 'text-amber-400' : 'text-slate-500'}`} />
-            <span className="hidden lg:inline">{musicOn ? 'Musique' : 'Muet'}</span>
+            <span className="hidden lg:inline">{musicOn ? t.music : t.mute}</span>
           </button>
 
           <button
             onClick={toggleSound}
             className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
-            title={soundOn ? 'Couper les bruitages (SFX)' : 'Activer les bruitages (SFX)'}
+            title={soundOn ? t.sfxMute : t.sfxUnmute}
           >
             {soundOn ? <Volume2 className="w-4 h-4 text-amber-400" /> : <VolumeX className="w-4 h-4" />}
           </button>

@@ -1,23 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { WIZARDRY_SCENARIOS, WizardryScenarioMeta } from '../data/scenariosCatalog';
+import { WIZARDRY_SCENARIOS, WizardryScenarioMeta, getLocalizedScenario } from '../data/scenariosCatalog';
 import { TCharacter } from '../types/wizardry';
+import { useLanguage, UI_TEXT } from '../utils/language';
 import {
-  Sword,
-  Shield,
   Sparkles,
   Compass,
-  FolderUp,
   Download,
   Upload,
   Play,
   Users,
-  Layers,
-  Award,
-  AlertTriangle,
   HardDrive,
   ArrowRightLeft,
   CheckCircle2,
-  Cpu
+  Cpu,
+  Languages
 } from 'lucide-react';
 
 interface ScenarioLocalSummary {
@@ -46,25 +42,34 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
   onSelectScenario,
   getStorageKeysForScenario
 }) => {
+  const [lang, setLang] = useLanguage();
+  const t = UI_TEXT[lang];
+
   const [selectedId, setSelectedId] = useState<string>(activeScenarioId || 'proving-grounds');
   const [filterTheme, setFilterTheme] = useState<'ALL' | 'LVL1' | 'HIGH' | 'ORIENTAL' | 'GOTHIC' | 'SCIFI'>('ALL');
   const [transferSourceId, setTransferSourceId] = useState<string>('proving-grounds');
   const [transferNotice, setTransferNotice] = useState<string | null>(null);
   const [refreshTick, setRefreshTick] = useState<number>(0);
 
-  const selectedScenario = useMemo(
+  const rawSelected = useMemo(
     () => WIZARDRY_SCENARIOS.find(s => s.id === selectedId) || WIZARDRY_SCENARIOS[0],
     [selectedId]
+  );
+
+  const selectedScenario = useMemo(
+    () => getLocalizedScenario(rawSelected, lang),
+    [rawSelected, lang]
   );
 
   // Compute localStorage summary per scenario
   const scenarioSummaries = useMemo(() => {
     const map: Record<string, ScenarioLocalSummary> = {};
     for (const scen of WIZARDRY_SCENARIOS) {
+      const localized = getLocalizedScenario(scen, lang);
       const keys = getStorageKeysForScenario(scen.id);
       let party: TCharacter[] = [];
       let roster: TCharacter[] = [];
-      let locationLabel = 'Nouvelle Partie';
+      let locationLabel = t.newGame;
       let hasSave = false;
 
       if (typeof window !== 'undefined') {
@@ -84,11 +89,11 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
           if (rawSession) {
             const sess = JSON.parse(rawSession);
             if (sess.location === 'MAZE' || sess.location === 'COMBAT' || sess.location === 'CHEST') {
-              locationLabel = `En expédition (Niv. ${sess.dungeonLevel || 1}, [${sess.posX ?? 0},${sess.posY ?? 0}])`;
+              locationLabel = t.exploringMaze(sess.dungeonLevel || 1, sess.posX ?? 0, sess.posY ?? 0);
             } else if (sess.location === 'GAME_OVER') {
-              locationLabel = `Cimetière (Niv. ${sess.dungeonLevel || 1})`;
+              locationLabel = t.graveyard(sess.dungeonLevel || 1);
             } else {
-              locationLabel = 'Au Château de Trebor';
+              locationLabel = t.atCastle(localized.castleName || 'Castle');
             }
           }
         } catch { /* ignore */ }
@@ -104,7 +109,7 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
       };
     }
     return map;
-  }, [getStorageKeysForScenario, refreshTick]);
+  }, [getStorageKeysForScenario, refreshTick, lang, t]);
 
   const filteredScenarios = useMemo(() => {
     return WIZARDRY_SCENARIOS.filter(s => {
@@ -118,14 +123,14 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
   // Transfer characters from one scenario to selectedScenario (WITHOUT equipment, per Zimlab / Wizardry rules)
   const handleTransferCharacters = () => {
     if (transferSourceId === selectedScenario.id) {
-      setTransferNotice('Veuillez choisir un scénario source différent du scénario cible.');
+      setTransferNotice(t.transferDiffPrompt);
       return;
     }
     const sourceKeys = getStorageKeysForScenario(transferSourceId);
     const targetKeys = getStorageKeysForScenario(selectedScenario.id);
     const rawSourceRoster = localStorage.getItem(sourceKeys.roster);
     if (!rawSourceRoster) {
-      setTransferNotice('Aucun personnage trouvé dans la sauvegarde locale du scénario source.');
+      setTransferNotice(t.transferNoHeroes);
       return;
     }
 
@@ -152,7 +157,7 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
         }));
 
       if (imported.length === 0) {
-        setTransferNotice('Tous les héros du scénario source sont déjà présents dans ce scénario.');
+        setTransferNotice(t.transferAllPresent);
         return;
       }
 
@@ -161,12 +166,10 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
       if (!localStorage.getItem(targetKeys.party)) {
         localStorage.setItem(targetKeys.party, JSON.stringify(mergedRoster.slice(0, 6)));
       }
-      setRefreshTick(t => t + 1);
-      setTransferNotice(
-        `${imported.length} personnage(s) transféré(s) vers "${selectedScenario.title}" (sans équipement, conformément aux règles inter-scénarios Wizardry).`
-      );
+      setRefreshTick(tick => tick + 1);
+      setTransferNotice(t.transferSuccess(imported.length, selectedScenario.title));
     } catch {
-      setTransferNotice('Erreur lors de la lecture des personnages à transférer.');
+      setTransferNotice(t.transferError);
     }
   };
 
@@ -200,10 +203,10 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
             localStorage.setItem(k, v);
           }
         });
-        setRefreshTick(t => t + 1);
-        setTransferNotice('Sauvegardes locales importées avec succès dans le navigateur.');
+        setRefreshTick(tick => tick + 1);
+        setTransferNotice(t.importSuccess);
       } catch {
-        setTransferNotice('Fichier JSON de sauvegarde invalide.');
+        setTransferNotice(t.importInvalid);
       }
     };
     reader.readAsText(file);
@@ -222,6 +225,12 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
     }
   };
 
+  const lvl1Count = WIZARDRY_SCENARIOS.filter(s => s.minLevel === 1).length;
+  const highCount = WIZARDRY_SCENARIOS.filter(s => s.minLevel >= 7).length;
+  const orientalCount = WIZARDRY_SCENARIOS.filter(s => s.theme === 'ORIENTAL').length;
+  const gothicCount = WIZARDRY_SCENARIOS.filter(s => s.theme === 'GOTHIC').length;
+  const scifiCount = WIZARDRY_SCENARIOS.filter(s => s.theme === 'SCIFI').length;
+
   return (
     <div className="h-full w-full bg-slate-950 text-slate-100 overflow-y-auto p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-5">
@@ -231,33 +240,63 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-semibold">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>ANTHOLOGIE WIZARDRY ENGINE v3.3 — {WIZARDRY_SCENARIOS.length} SCÉNARIOS</span>
+                <span>{t.badgeAnthology(WIZARDRY_SCENARIOS.length)}</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-serif font-black tracking-wider text-white">
-                CHOISISSEZ VOTRE SCÉNARIO D’AVENTURE
+                {t.chooseScenario}
               </h1>
-              <p className="text-xs md:text-sm text-slate-300 max-w-3xl">
-                Explorez la trilogie classique officielle (<strong className="text-amber-300">#1 Proving Grounds of the Mad Overlord</strong>, <strong className="text-amber-300">#2 Knight of Diamonds</strong>, <strong className="text-amber-300">#3 The Legacy of Llylgamyn</strong>) ou l’une des 9 campagnes alternatives de la collection <span className="text-amber-200">Zimlab / Snafaru</span>. Chaque scénario dispose de sa propre sauvegarde isolée dans le stockage local de votre navigateur (<code className="text-amber-300">localStorage</code>).
+              <p className="text-xs md:text-sm text-slate-300 max-w-3xl leading-relaxed">
+                {t.heroDescription}
               </p>
             </div>
 
-            {/* Backup & LocalStorage Controls */}
+            {/* Language Switcher, Backup & LocalStorage Controls */}
             <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              {/* Language Selector FR | EN */}
+              <div className="flex items-center rounded-xl bg-slate-950/90 border border-slate-700 p-1 text-xs font-bold shadow-inner">
+                <Languages className="w-3.5 h-3.5 text-amber-400 mx-1.5" />
+                <button
+                  onClick={() => setLang('fr')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                    lang === 'fr'
+                      ? 'bg-amber-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Afficher l'interface et les résumés en Français"
+                >
+                  FR
+                </button>
+                <span className="text-slate-600 px-0.5">|</span>
+                <button
+                  onClick={() => setLang('en')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                    lang === 'en'
+                      ? 'bg-amber-600 text-white shadow'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Display interface and scenario summaries in English"
+                >
+                  EN
+                </button>
+              </div>
+
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-700 text-xs text-slate-300">
                 <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Stockage : <strong className="text-emerald-400">Navigateur (Local)</strong></span>
+                <span>{t.storageLabel}</span>
               </div>
+
               <button
                 onClick={handleExportAllSaves}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-semibold text-amber-300 transition"
-                title="Exporter toutes vos sauvegardes locales en JSON"
+                title={t.exportSavesTooltip}
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Exporter Sauvegardes</span>
+                <span>{t.exportSaves}</span>
               </button>
+
               <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-semibold text-sky-300 cursor-pointer transition">
                 <Upload className="w-3.5 h-3.5" />
-                <span>Importer JSON</span>
+                <span>{t.importJson}</span>
                 <input type="file" accept=".json" onChange={handleImportAllSaves} className="hidden" />
               </label>
             </div>
@@ -266,12 +305,12 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
           {/* Filter Pills */}
           <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-800/80">
             {[
-              { id: 'ALL', label: 'Tous les scénarios (10)' },
-              { id: 'LVL1', label: 'Débutants Niv. 1+ (8)' },
-              { id: 'HIGH', label: 'Vétérans Niv. 7+ / 13+ (2)' },
-              { id: 'ORIENTAL', label: 'Cycle Oriental (3)' },
-              { id: 'GOTHIC', label: 'Gothique & Cryptes (2)' },
-              { id: 'SCIFI', label: 'Sci-Fi 2098 (1)' }
+              { id: 'ALL', label: t.filterAll(WIZARDRY_SCENARIOS.length) },
+              { id: 'LVL1', label: t.filterLvl1(lvl1Count) },
+              { id: 'HIGH', label: t.filterHigh(highCount) },
+              { id: 'ORIENTAL', label: t.filterOriental(orientalCount) },
+              { id: 'GOTHIC', label: t.filterGothic(gothicCount) },
+              { id: 'SCIFI', label: t.filterScifi(scifiCount) }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -290,9 +329,10 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
 
         {/* Main 2-Column Layout: Scenario Grid + Selected Scenario Inspector */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left Column: 10 Scenario Cards */}
+          {/* Left Column: Scenario Cards */}
           <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
-            {filteredScenarios.map(scen => {
+            {filteredScenarios.map(rawScen => {
+              const scen = getLocalizedScenario(rawScen, lang);
               const summary = scenarioSummaries[scen.id];
               const isSelected = scen.id === selectedScenario.id;
               return (
@@ -311,7 +351,7 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-mono font-bold text-amber-400">
-                        SCÉNARIO #{scen.number}
+                        {t.scenarioTag}{scen.number}
                       </span>
                       <div className="flex items-center gap-1.5">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${themeBadge(scen.theme)}`}>
@@ -340,14 +380,14 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                       <span className="flex items-center gap-1 text-emerald-400 font-medium">
                         <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                         <span>
-                          {summary.rosterCount} héros (Max N.{summary.maxHeroLevel})
+                          {t.heroSaveSummary(summary.rosterCount, summary.maxHeroLevel)}
                         </span>
                       </span>
                     ) : (
-                      <span className="text-slate-500">Aucune sauvegarde locale</span>
+                      <span className="text-slate-500">{t.noLocalSave}</span>
                     )}
 
-                    <span className="text-slate-400 font-mono">{scen.floors} niv.</span>
+                    <span className="text-slate-400 font-mono">{t.floorsCount(scen.floors)}</span>
                   </div>
                 </div>
               );
@@ -360,13 +400,13 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
               <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
                 <div>
                   <div className="text-xs font-mono text-amber-400 font-bold">
-                    SCÉNARIO #{selectedScenario.number} • MOTEUR {selectedScenario.engineVersion}
+                    {t.scenarioTag}{selectedScenario.number} • {t.engineTag} {selectedScenario.engineVersion}
                   </div>
                   <h2 className="text-xl font-serif font-black text-white mt-0.5">
                     {selectedScenario.title}
                   </h2>
                   <p className="text-xs text-slate-400">
-                    Par {selectedScenario.author} ({selectedScenario.year})
+                    {t.byAuthorYear(selectedScenario.author, selectedScenario.year)}
                   </p>
                 </div>
                 <span className={`text-xs px-2.5 py-1 rounded-lg border font-bold ${themeBadge(selectedScenario.theme)}`}>
@@ -381,15 +421,15 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
               {/* Key Specs */}
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-[10px] text-slate-400 uppercase">Niveau Recommandé</div>
+                  <div className="text-[10px] text-slate-400 uppercase">{t.recommendedLevel}</div>
                   <div className="text-xs font-bold text-amber-300 mt-0.5">{selectedScenario.recommendedLevel}</div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-[10px] text-slate-400 uppercase">Profondeur</div>
-                  <div className="text-xs font-bold text-white mt-0.5">{selectedScenario.floors} Étages</div>
+                  <div className="text-[10px] text-slate-400 uppercase">{t.depth}</div>
+                  <div className="text-xs font-bold text-white mt-0.5">{t.floorsLabel(selectedScenario.floors)}</div>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-[10px] text-slate-400 uppercase">Disquette Source</div>
+                  <div className="text-[10px] text-slate-400 uppercase">{t.sourceDisk}</div>
                   <div className="text-[11px] font-mono text-emerald-400 truncate mt-0.5" title={selectedScenario.diskFileName}>
                     {selectedScenario.diskFileName}
                   </div>
@@ -400,9 +440,9 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
               <div className="p-3 rounded-xl bg-slate-950/90 border border-slate-800 space-y-1.5">
                 <div className="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
                   <Compass className="w-3.5 h-3.5" />
-                  <span>Notes du Guide du Joueur (Zimlab)</span>
+                  <span>{t.zimlabNotes}</span>
                 </div>
-                <ul className="space-y-1 text-xs text-slate-300 list-disc list-inside">
+                <ul className="space-y-1 text-xs text-slate-300 list-disc list-inside leading-relaxed">
                   {selectedScenario.tips.map((tip, idx) => (
                     <li key={idx}>{tip}</li>
                   ))}
@@ -414,7 +454,7 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
                     <Users className="w-4 h-4" />
-                    <span>État de la session locale ({selectedScenario.id})</span>
+                    <span>{t.localSessionStatus(selectedScenario.id)}</span>
                   </span>
                   <span className="text-[11px] font-mono text-emerald-400">
                     {scenarioSummaries[selectedScenario.id]?.locationLabel}
@@ -422,10 +462,10 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                 </div>
                 <div className="text-xs text-slate-300 flex items-center justify-between">
                   <span>
-                    Escouade active : <strong>{scenarioSummaries[selectedScenario.id]?.partyCount || 0}</strong> héros
+                    {t.activeParty} <strong>{scenarioSummaries[selectedScenario.id]?.partyCount || 0}</strong> {t.heroes}
                   </span>
                   <span>
-                    Guilde (Roster) : <strong>{scenarioSummaries[selectedScenario.id]?.rosterCount || 0}</strong> inscrits
+                    {t.rosterGuild} <strong>{scenarioSummaries[selectedScenario.id]?.rosterCount || 0}</strong> {t.registered}
                   </span>
                 </div>
               </div>
@@ -434,7 +474,7 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
               <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
                 <div className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
                   <ArrowRightLeft className="w-3.5 h-3.5" />
-                  <span>Transférer des personnages depuis un autre scénario (sans équipement)</span>
+                  <span>{t.transferHeader}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <select
@@ -444,7 +484,7 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                   >
                     {WIZARDRY_SCENARIOS.map(s => (
                       <option key={s.id} value={s.id}>
-                        #{s.number} - {s.title} ({scenarioSummaries[s.id]?.rosterCount || 0} héros)
+                        {t.transferSelectOption(s.number, s.title, scenarioSummaries[s.id]?.rosterCount || 0)}
                       </option>
                     ))}
                   </select>
@@ -452,7 +492,7 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                     onClick={handleTransferCharacters}
                     className="px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold transition shrink-0"
                   >
-                    Importer
+                    {t.transferBtn}
                   </button>
                 </div>
                 {transferNotice && (
@@ -466,7 +506,9 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                 <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-700/40 text-[11px] text-amber-200 flex items-start gap-2">
                   <Cpu className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <span>
-                    Ce scénario utilise actuellement sa propre sauvegarde locale isolée sur le moteur Wizardry v3.2. L’extraction automatique de son fichier <code className="text-amber-300">{selectedScenario.diskFileName}</code> via <code className="text-amber-300">scripts/extract_pgmo.py</code> chargera ses cartes, monstres et objets dédiés.
+                    {lang === 'fr'
+                      ? `Ce scénario utilise actuellement sa propre sauvegarde locale isolée sur le moteur Wizardry v3.2. L’extraction automatique de son fichier ${selectedScenario.diskFileName} via scripts/extract_pgmo.py chargera ses cartes, monstres et objets dédiés.`
+                      : `This scenario uses its own isolated local save on the Wizardry v3.2 engine. Extraction of its ${selectedScenario.diskFileName} disk via scripts/extract_pgmo.py loads its dedicated maps, monsters, and items.`}
                   </span>
                 </div>
               )}
@@ -479,8 +521,8 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                 <Play className="w-4 h-4 fill-current" />
                 <span>
                   {scenarioSummaries[selectedScenario.id]?.hasSave
-                    ? `REPRENDRE "${selectedScenario.title.toUpperCase()}"`
-                    : `LANCER "${selectedScenario.title.toUpperCase()}"`}
+                    ? t.resumeBtn(selectedScenario.title)
+                    : t.launchBtn(selectedScenario.title)}
                 </span>
               </button>
             </div>
