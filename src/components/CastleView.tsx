@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TCharacter, 
   GameLocation, 
@@ -21,6 +21,7 @@ import {
 } from '../data/provingGroundsData';
 import { CharacterSheetModal } from './CharacterSheetModal';
 import { sounds } from '../utils/soundEffects';
+import { music } from '../utils/musicManager';
 import { 
   Shield, 
   Sparkles, 
@@ -90,6 +91,29 @@ export const CastleView: React.FC<CastleViewProps> = ({
 }) => {
   const [currentTab, setCurrentTab] = useState<CastleTab>('COURTYARD');
   const [message, setMessage] = useState<string>('Bienvenue au Château de Trebor. Choisissez votre destination.');
+
+  useEffect(() => {
+    switch (currentTab) {
+      case 'TAVERN':
+        music.playTrack('03-gilgamesh-s-tavern');
+        break;
+      case 'INN':
+        music.playTrack('04-adventurer-s-inn');
+        break;
+      case 'BOLTAC':
+        music.playTrack('05-boltac-s-trading-post');
+        break;
+      case 'TEMPLE':
+        music.playTrack('06-temple-of-cant');
+        break;
+      case 'TRAINING':
+        music.playTrack('07-edge-of-town');
+        break;
+      default:
+        music.playTrack('02-castle');
+        break;
+    }
+  }, [currentTab]);
   const [selectedCharIndex, setSelectedCharIndex] = useState<number>(0);
   const [inspectingPartyIndex, setInspectingPartyIndex] = useState<number | null>(null);
   const [inspectingRosterHero, setInspectingRosterHero] = useState<TCharacter | null>(null);

@@ -8,6 +8,7 @@ import {
 import { DungeonRenderer3D } from '../engine/dungeonRenderer3D';
 import { ITEMS_DATABASE, SPELLS, formatDamageDice, recalculateCharacterCombatStats } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
+import { music } from '../utils/musicManager';
 import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
 import { MiniMap, loadMiniMapPrefs, saveMiniMapPrefs } from './MiniMap';
 import { 
@@ -179,6 +180,10 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   const forwardKeyLabel = keyboardLayout === 'AZERTY' ? 'Z' : 'W';
   const leftKeyLabel = keyboardLayout === 'AZERTY' ? 'Q' : 'A';
   const rightKeyLabel = 'D';
+
+  useEffect(() => {
+    music.playTrack(showCamp ? '09-camp' : '08-dungeon');
+  }, [showCamp]);
 
   // Keyboard navigation shortcuts (adapts to AZERTY [Z/Q/D] or QWERTY [W/A/D] + Arrow keys)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {

@@ -39,6 +39,7 @@ import {
   ChestReward 
 } from './engine/chestEngine';
 import { sounds } from './utils/soundEffects';
+import { music } from './utils/musicManager';
 import { applyPoisonDamage } from './engine/statusSystem';
 import confetti from 'canvas-confetti';
 import { 
@@ -49,6 +50,7 @@ import {
   Compass, 
   Volume2, 
   VolumeX,
+  Music,
   Skull,
   Users,
   Library,
@@ -209,6 +211,7 @@ export default function App() {
       (window.location.hostname.includes('itch.zone') || window.location.hostname.includes('itch.io')));
   const [showPySide6Export, setShowPySide6Export] = useState<boolean>(false);
   const [soundOn, setSoundOn] = useState<boolean>(true);
+  const [musicOn, setMusicOn] = useState<boolean>(() => music.isEnabled());
   const [lastWipeoutInfo, setLastWipeoutInfo] = useState<{ x: number; y: number; level: number; heroes: string[] } | null>(
     () => savedSession?.lastWipeoutInfo || null
   );
@@ -491,6 +494,36 @@ export default function App() {
     setSoundOn(next);
     sounds.setEnabled(next);
   };
+
+  const toggleMusic = () => {
+    const next = !musicOn;
+    setMusicOn(next);
+    music.setEnabled(next);
+  };
+
+  // Switch background music track automatically based on game state
+  useEffect(() => {
+    if (showScenarioMenu) {
+      music.playTrack('01-opening');
+      return;
+    }
+    if (location === 'MAZE') {
+      music.playTrack('08-dungeon');
+    } else if (location === 'CHEST') {
+      music.playTrack('09-camp');
+    } else if (location === 'COMBAT') {
+      const isBossFight =
+        dungeonLevel >= 10 ||
+        combatGroups.some(g => g.monster.name.toUpperCase().includes('WERDNA'));
+      music.playTrack(isBossFight ? '12-werdna' : '10-fight');
+    } else if (location === 'GAMEOVER') {
+      music.playTrack('11-exterminated');
+    } else if (location === 'VICTORY') {
+      music.playTrack('13-complete');
+    } else if (location === 'CASTLE') {
+      music.playTrack('02-castle');
+    }
+  }, [showScenarioMenu, location, dungeonLevel, combatGroups]);
 
   // Per-square usage counters for scenario events (key: level:x:y)
   const [scenarioMessage, setScenarioMessage] = useState<{ title: string; lines: string[]; details?: string } | null>(null);
@@ -1089,10 +1122,10 @@ export default function App() {
                 ? 'bg-amber-600 text-white border-amber-400'
                 : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-600/30'
             }`}
-            title="Ouvrir le menu principal de sélection des 10 scénarios"
+            title="Ouvrir le menu principal de sélection des scénarios"
           >
             <Library className="w-3.5 h-3.5" />
-            <span>{showScenarioMenu ? 'Retour au Jeu' : 'Scénarios (10)'}</span>
+            <span>{showScenarioMenu ? 'Retour au Jeu' : `Scénarios (${WIZARDRY_SCENARIOS.length})`}</span>
           </button>
 
           <button
@@ -1105,9 +1138,22 @@ export default function App() {
           </button>
 
           <button
+            onClick={toggleMusic}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition border ${
+              musicOn
+                ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-600/30'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-500 border-slate-800'
+            }`}
+            title={musicOn ? `Musique d'ambiance active (${music.getCurrentTrackTitle() || 'We Love Wizardry'}) — Cliquer pour couper` : "Activer la musique d'ambiance (We Love Wizardry)"}
+          >
+            <Music className={`w-3.5 h-3.5 ${musicOn ? 'text-amber-400' : 'text-slate-500'}`} />
+            <span className="hidden lg:inline">{musicOn ? 'Musique' : 'Muet'}</span>
+          </button>
+
+          <button
             onClick={toggleSound}
             className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
-            title={soundOn ? 'Couper le son' : 'Activer le son'}
+            title={soundOn ? 'Couper les bruitages (SFX)' : 'Activer les bruitages (SFX)'}
           >
             {soundOn ? <Volume2 className="w-4 h-4 text-amber-400" /> : <VolumeX className="w-4 h-4" />}
           </button>

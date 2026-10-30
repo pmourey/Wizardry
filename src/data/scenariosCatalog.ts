@@ -239,5 +239,29 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
       'Les tables d’armes, d’armures et de classes y sont totalement repensées.'
     ],
     dataExtracted: true
+  },
+  {
+    id: 'knight-of-diamonds',
+    number: 11,
+    title: 'The Knight of Diamonds',
+    subtitle: 'Wizardry Scenario #2 officiel (Sir-Tech, 1982)',
+    author: 'Andrew Greenberg & Robert Woodhead',
+    year: '1982',
+    engineVersion: 'v2.0 / Apple II',
+    recommendedLevel: 'Niveau 9+',
+    minLevel: 9,
+    floors: 10,
+    theme: 'FANTASY',
+    difficulty: 'DIFFICILE',
+    diskFileName: 'Wizardry-II-Knight-of-Diamonds-Scenario.dsk',
+    description:
+      'Le légendaire deuxième scénario officiel de Wizardry ! La cité sainte de Llylgamyn est menacée : retrouvez les pièces de l’Armure de Diamant du Chevalier et le Bâton Sacré de Gnilda pour restaurer la bénédiction de la cité.',
+    tips: [
+      'Scénario officiel Sir-Tech d’origine (130 objets, 78 monstres, 30 portraits de monstres Apple II).',
+      'Fourni avec une escouade de départ niveau 9-10 équipée de reliques de diamant et d’armes +1.',
+      'Les sorts et combats y sont redoutables dès le premier sous-sol.'
+    ],
+    sequelTo: 'proving-grounds',
+    dataExtracted: true
   }
 ];
