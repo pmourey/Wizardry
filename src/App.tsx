@@ -80,6 +80,94 @@ export function getStorageKeysForScenario(scenarioId: string) {
   };
 }
 
+export function getDefaultJournalForScenario(scenarioId: string, lang: 'fr' | 'en'): AdventureLogEvent[] {
+  const rawScen = WIZARDRY_SCENARIOS.find(s => s.id === scenarioId) || WIZARDRY_SCENARIOS[0];
+  const scen = getLocalizedScenario(rawScen, lang);
+  const castle = scen.castleName || (lang === 'fr' ? 'Château de Trebor' : 'Castle of Trebor');
+
+  if (scenarioId === 'proving-grounds') {
+    return [
+      {
+        id: 'init-pg-1',
+        scenarioId: 'proving-grounds',
+        timestamp: '08:00',
+        dateStr: lang === 'fr' ? 'Décret Royal' : 'Royal Decree',
+        category: 'CASTLE',
+        title: lang === 'fr' ? "Proclamation de l'Overlord Trebor" : "Overlord Trebor's Proclamation",
+        description: lang === 'fr'
+          ? "Par décret souverain, la création de votre guilde d'aventuriers a été ratifiée. L'accès aux Proving Grounds vous est accordé pour terrasser le sorcier Werdna."
+          : "By royal decree, the charter of your adventuring guild is ratified. You are granted access to the Proving Grounds to vanquish Werdna.",
+        details: lang === 'fr' ? "Objectif suprême : Récupérer l'Amulette au 10e sous-sol" : "Supreme objective: Retrieve the Amulet on floor 10"
+      },
+      {
+        id: 'init-pg-2',
+        scenarioId: 'proving-grounds',
+        timestamp: '08:15',
+        dateStr: lang === 'fr' ? 'Préparatifs' : 'Preparations',
+        category: 'DISCOVERY',
+        title: lang === 'fr' ? "Constitution de l'Escouade & Fourbissage" : "Party Assembly & Arming",
+        description: lang === 'fr'
+          ? "Vos héros se sont rassemblés à la Taverne de Gilgamesh et ont acquis leurs premières armes chez Boltac avant de franchir la grille de fer."
+          : "Your adventurers gathered at Gilgamesh's Tavern and equipped their weapons at Boltac's before entering the iron gate.",
+        details: lang === 'fr' ? "6 aventuriers prêts à braver les pièges et les bêtes du dédale" : "6 adventurers ready to face the maze"
+      }
+    ];
+  }
+
+  return [
+    {
+      id: `init-${scenarioId}-1`,
+      scenarioId,
+      timestamp: '08:00',
+      dateStr: lang === 'fr' ? 'Chronique' : 'Chronicle',
+      category: 'CASTLE',
+      title: lang === 'fr' ? `Départ de la Quête : ${scen.title}` : `Quest Begins: ${scen.title}`,
+      description: lang === 'fr'
+        ? `L'enregistrement de votre escouade a été consigné au ${castle}. Votre mission débute au cœur de ce scénario.`
+        : `Your party's arrival has been recorded at ${castle}. Your mission begins in this scenario.`,
+      details: scen.subtitle || scen.description
+    }
+  ];
+}
+
+export function sanitizeScenarioJournal(
+  events: AdventureLogEvent[],
+  scenarioId: string,
+  lang: 'fr' | 'en'
+): AdventureLogEvent[] {
+  if (!Array.isArray(events) || events.length === 0) {
+    return getDefaultJournalForScenario(scenarioId, lang);
+  }
+
+  // Filter out any events that belong to a different scenario
+  const matching = events.filter(ev => {
+    if (ev.scenarioId) {
+      return ev.scenarioId === scenarioId;
+    }
+    // For legacy untagged events: if this scenario is NOT proving-grounds, discard old Trebor Proving Grounds init events
+    if (scenarioId !== 'proving-grounds') {
+      if (ev.id === 'init-1' || ev.id === 'init-2' || ev.id === 'init-pg-1' || ev.id === 'init-pg-2') {
+        return false;
+      }
+      if (
+        ev.title?.includes('Trebor') ||
+        ev.title?.includes('Werdna') ||
+        ev.description?.includes('Proving Grounds') ||
+        ev.details?.includes('Amulette')
+      ) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (matching.length === 0) {
+    return getDefaultJournalForScenario(scenarioId, lang);
+  }
+
+  return matching.map(ev => ({ ...ev, scenarioId }));
+}
+
 // Persistent Dungeon & Exploration Session Type
 interface TDungeonSession {
   location: GameLocation;
@@ -221,34 +309,18 @@ export default function App() {
     () => savedSession?.lastWipeoutInfo || null
   );
 
-  // Adventure Journal Events (persisted in localStorage per scenario)
+  // Adventure Journal Events (persisted in localStorage strictly isolated per scenario)
   const [adventureEvents, setAdventureEvents] = useState<AdventureLogEvent[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(storageKeys.journal);
       if (saved) {
-        try { return JSON.parse(saved); } catch (e) { /* ignore */ }
+        try {
+          const parsed = JSON.parse(saved);
+          return sanitizeScenarioJournal(parsed, activeScenarioId, lang);
+        } catch (e) { /* ignore */ }
       }
     }
-    return [
-      {
-        id: 'init-1',
-        timestamp: '08:00',
-        dateStr: 'Décret Royal',
-        category: 'CASTLE',
-        title: "Proclamation de l'Overlord Trebor",
-        description: "Par décret souverain, la création de votre guilde d'aventuriers a été ratifiée. L'accès aux Proving Grounds vous est accordé pour terrasser le sorcier Werdna.",
-        details: "Objectif suprême : Récupérer l'Amulette au 10e sous-sol"
-      },
-      {
-        id: 'init-2',
-        timestamp: '08:15',
-        dateStr: 'Préparatifs',
-        category: 'DISCOVERY',
-        title: "Constitution de l'Escouade & Fourbissage",
-        description: "Vos héros se sont rassemblés à la Taverne de Gilgamesh et ont acquis leurs premières armes chez Boltac avant de franchir la grille de fer.",
-        details: "6 aventuriers prêts à braver les pièges et les bêtes du dédale"
-      }
-    ];
+    return getDefaultJournalForScenario(activeScenarioId, lang);
   });
 
   const addAdventureEvent = (
@@ -263,6 +335,7 @@ export default function App() {
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const newEvent: AdventureLogEvent = {
       id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      scenarioId: activeScenarioId,
       timestamp: timeStr,
       dateStr: "Aujourd'hui",
       category,
@@ -381,7 +454,7 @@ export default function App() {
     setLastWipeoutInfo(nextSession?.lastWipeoutInfo || null);
     setVisitedTilesByLevel(nextVisited);
     setVisitedTiles(nextVisited[lvl]);
-    if (nextJournal.length > 0) setAdventureEvents(nextJournal);
+    setAdventureEvents(sanitizeScenarioJournal(nextJournal, scenarioId, lang));
     setShowScenarioMenu(false);
   };
 
@@ -395,7 +468,8 @@ export default function App() {
         localStorage.setItem('wiz1_visited_level1', JSON.stringify(visitedTilesByLevel[1] || visitedTiles));
       }
       localStorage.setItem(keys.visited, JSON.stringify(visitedTilesByLevel));
-      localStorage.setItem(keys.journal, JSON.stringify(adventureEvents));
+      const activeEvents = adventureEvents.filter(ev => !ev.scenarioId || ev.scenarioId === activeScenarioId);
+      localStorage.setItem(keys.journal, JSON.stringify(activeEvents));
 
       const sessionData: TDungeonSession = {
         location,

@@ -303,6 +303,7 @@ export type AdventureLogCategory = 'COMBAT' | 'DISCOVERY' | 'LOSS' | 'RESCUE' | 
 
 export interface AdventureLogEvent {
   id: string;
+  scenarioId?: string;
   timestamp: string; // e.g. "14:32"
   dateStr: string;   // e.g. "Jour 1" or formatted
   category: AdventureLogCategory;
