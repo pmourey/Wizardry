@@ -237,7 +237,7 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(wireframeMode ? 0x000000 : 0x070b14);
-    scene.fog = wireframeMode ? null : new THREE.FogExp2(0x070b14, 0.018);
+    scene.fog = wireframeMode ? new THREE.Fog(0x000000, 16, 26) : new THREE.FogExp2(0x070b14, 0.018);
 
     const camera = new THREE.PerspectiveCamera(65, width / height, 0.1, 100);
     camera.position.set(x * 4, 1.6, -y * 4);
@@ -347,7 +347,7 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       // Authentic 1981 Apple II Vector Wireframe:
       // PURE JET BLACK background and fog (no blue floor, no blue ceiling, no colored haze)
       sceneRef.current.background = new THREE.Color(0x000000);
-      sceneRef.current.fog = null;
+      sceneRef.current.fog = new THREE.Fog(0x000000, 16, 26); // Authentic 5-tile visibility horizon
 
       ambientLightRef.current.intensity = 1.0;
       torchLightRef.current.intensity = 0;
@@ -430,38 +430,23 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     });
 
     // Outer wall 4 outline lines: top, right, bottom, left (Apple II DRAWLINE authentic coordinates)
-    // Rendered on both front (+0.005) and back (-0.005) faces with polygonOffset to completely prevent Z-fighting
+    // Inset slightly by 0.015 so lines never intersect perpendicular planes at corners
     const wallLinePoints = [
-      // Front side (+0.005)
-      new THREE.Vector3(-2.0, 1.6, 0.005), new THREE.Vector3(2.0, 1.6, 0.005),
-      new THREE.Vector3(2.0, 1.6, 0.005), new THREE.Vector3(2.0, -1.6, 0.005),
-      new THREE.Vector3(2.0, -1.6, 0.005), new THREE.Vector3(-2.0, -1.6, 0.005),
-      new THREE.Vector3(-2.0, -1.6, 0.005), new THREE.Vector3(-2.0, 1.6, 0.005),
-      // Back side (-0.005)
-      new THREE.Vector3(-2.0, 1.6, -0.005), new THREE.Vector3(2.0, 1.6, -0.005),
-      new THREE.Vector3(2.0, 1.6, -0.005), new THREE.Vector3(2.0, -1.6, -0.005),
-      new THREE.Vector3(2.0, -1.6, -0.005), new THREE.Vector3(-2.0, -1.6, -0.005),
-      new THREE.Vector3(-2.0, -1.6, -0.005), new THREE.Vector3(-2.0, 1.6, -0.005),
+      new THREE.Vector3(-1.985, 1.585, 0), new THREE.Vector3(1.985, 1.585, 0),
+      new THREE.Vector3(1.985, 1.585, 0), new THREE.Vector3(1.985, -1.585, 0),
+      new THREE.Vector3(1.985, -1.585, 0), new THREE.Vector3(-1.985, -1.585, 0),
+      new THREE.Vector3(-1.985, -1.585, 0), new THREE.Vector3(-1.985, 1.585, 0),
     ];
     const wallLineGeo = new THREE.BufferGeometry().setFromPoints(wallLinePoints);
 
-    // Door outline: outer wall frame + inner door frame & brass ring (Apple II DRAWLEFT/DRAWFRNT authentic)
+    // Door outline: outer wall frame + authentic 3-line rectangular doorway opening (Apple II DRAWFRNT)
+    // Strict historical fidelity: NO door handle, NO cross on the door
     const doorLinePoints = [
       ...wallLinePoints,
-      // Front Inner door frame (+0.005):
-      new THREE.Vector3(-0.9, -1.6, 0.005), new THREE.Vector3(-0.9, 0.65, 0.005),
-      new THREE.Vector3(-0.9, 0.65, 0.005), new THREE.Vector3(0.9, 0.65, 0.005),
-      new THREE.Vector3(0.9, 0.65, 0.005), new THREE.Vector3(0.9, -1.6, 0.005),
-      // Front Door handle / ring (+0.005):
-      new THREE.Vector3(0.45, -0.4, 0.005), new THREE.Vector3(0.65, -0.4, 0.005),
-      new THREE.Vector3(0.55, -0.3, 0.005), new THREE.Vector3(0.55, -0.5, 0.005),
-      // Back Inner door frame (-0.005):
-      new THREE.Vector3(-0.9, -1.6, -0.005), new THREE.Vector3(-0.9, 0.65, -0.005),
-      new THREE.Vector3(-0.9, 0.65, -0.005), new THREE.Vector3(0.9, 0.65, -0.005),
-      new THREE.Vector3(0.9, 0.65, -0.005), new THREE.Vector3(0.9, -1.6, -0.005),
-      // Back Door handle / ring (-0.005):
-      new THREE.Vector3(-0.45, -0.4, -0.005), new THREE.Vector3(-0.65, -0.4, -0.005),
-      new THREE.Vector3(-0.55, -0.3, -0.005), new THREE.Vector3(-0.55, -0.5, -0.005),
+      // Inner doorway frame (left jamb, top lintel, right jamb):
+      new THREE.Vector3(-0.95, -1.585, 0), new THREE.Vector3(-0.95, 0.75, 0),
+      new THREE.Vector3(-0.95, 0.75, 0), new THREE.Vector3(0.95, 0.75, 0),
+      new THREE.Vector3(0.95, 0.75, 0), new THREE.Vector3(0.95, -1.585, 0),
     ];
     const doorLineGeo = new THREE.BufferGeometry().setFromPoints(doorLinePoints);
 
@@ -519,83 +504,75 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       group.add(ceiling);
     }
 
-    // Build nearby walls (render distance 6 around player) with deduplication
-    const minX = Math.max(0, x - 5);
-    const maxX = Math.min(19, x + 5);
-    const minY = Math.max(0, y - 5);
-    const maxY = Math.min(19, y + 5);
-    const seenWalls = new Set<string>();
-
-    for (let cx = minX; cx <= maxX; cx++) {
-      for (let cy = minY; cy <= maxY; cy++) {
-        const wx = cx * 4;
-        const wy = -cy * 4;
-
-        // North Wall of (cx, cy) -> position (wx, 1.6, wy - 2)
-        const nWall = maze.n[cx][cy];
-        const nKey = `H_${cx}_${cy}`;
-        if (nWall !== 'OPEN' || cy === 0) {
-          if (!seenWalls.has(nKey)) {
-            seenWalls.add(nKey);
-            const isDoor = nWall === 'DOOR';
-            const isSecret = nWall === 'HIDEDOOR';
-            const mesh = createWallMesh(isDoor, isSecret);
-            mesh.position.set(wx, 1.6, wy - 2);
-            group.add(mesh);
-          }
+    // =========================================================================
+    // Build entire 20x20 floor grid ONCE without duplicates and without recreation on move:
+    // 1. Horizontal walls (running East-West along gy = 0..20, separating rows)
+    // =========================================================================
+    for (let cx = 0; cx < 20; cx++) {
+      for (let gy = 0; gy <= 20; gy++) {
+        let wallType: TWall = 'OPEN';
+        if (gy === 0) {
+          wallType = maze.s[cx]?.[0] || 'WALL';
+        } else if (gy === 20) {
+          wallType = maze.n[cx]?.[19] || 'WALL';
+        } else {
+          const nFromSouth = maze.n[cx]?.[gy - 1];
+          const sFromNorth = maze.s[cx]?.[gy];
+          if (nFromSouth === 'DOOR' || sFromNorth === 'DOOR') wallType = 'DOOR';
+          else if (nFromSouth === 'HIDEDOOR' || sFromNorth === 'HIDEDOOR') wallType = 'HIDEDOOR';
+          else if (nFromSouth === 'WALL' || sFromNorth === 'WALL') wallType = 'WALL';
         }
 
-        // South Wall of (cx, cy) -> position (wx, 1.6, wy + 2)
-        const sWall = maze.s[cx][cy];
-        const sKey = `H_${cx}_${cy + 1}`;
-        if (sWall !== 'OPEN' || cy === 19) {
-          if (!seenWalls.has(sKey)) {
-            seenWalls.add(sKey);
-            const isDoor = sWall === 'DOOR';
-            const isSecret = sWall === 'HIDEDOOR';
-            const mesh = createWallMesh(isDoor, isSecret);
-            mesh.position.set(wx, 1.6, wy + 2);
-            group.add(mesh);
-          }
+        if (wallType !== 'OPEN') {
+          const isDoor = wallType === 'DOOR';
+          const isSecret = wallType === 'HIDEDOOR';
+          const mesh = createWallMesh(isDoor, isSecret);
+          mesh.position.set(cx * 4, 1.6, -gy * 4 + 2);
+          group.add(mesh);
+        }
+      }
+    }
+
+    // =========================================================================
+    // 2. Vertical walls (running North-South along gx = 0..20, separating columns)
+    // =========================================================================
+    for (let cy = 0; cy < 20; cy++) {
+      for (let gx = 0; gx <= 20; gx++) {
+        let wallType: TWall = 'OPEN';
+        if (gx === 0) {
+          wallType = maze.w[0]?.[cy] || 'WALL';
+        } else if (gx === 20) {
+          wallType = maze.e[19]?.[cy] || 'WALL';
+        } else {
+          const eFromWest = maze.e[gx - 1]?.[cy];
+          const wFromEast = maze.w[gx]?.[cy];
+          if (eFromWest === 'DOOR' || wFromEast === 'DOOR') wallType = 'DOOR';
+          else if (eFromWest === 'HIDEDOOR' || wFromEast === 'HIDEDOOR') wallType = 'HIDEDOOR';
+          else if (eFromWest === 'WALL' || wFromEast === 'WALL') wallType = 'WALL';
         }
 
-        // East Wall of (cx, cy) -> position (wx + 2, 1.6, wy)
-        const eWall = maze.e[cx][cy];
-        const eKey = `V_${cx + 1}_${cy}`;
-        if (eWall !== 'OPEN' || cx === 19) {
-          if (!seenWalls.has(eKey)) {
-            seenWalls.add(eKey);
-            const isDoor = eWall === 'DOOR';
-            const isSecret = eWall === 'HIDEDOOR';
-            const mesh = createWallMesh(isDoor, isSecret);
-            mesh.rotation.y = Math.PI / 2;
-            mesh.position.set(wx + 2, 1.6, wy);
-            group.add(mesh);
-          }
+        if (wallType !== 'OPEN') {
+          const isDoor = wallType === 'DOOR';
+          const isSecret = wallType === 'HIDEDOOR';
+          const mesh = createWallMesh(isDoor, isSecret);
+          mesh.rotation.y = Math.PI / 2;
+          mesh.position.set(gx * 4 - 2, 1.6, -cy * 4);
+          group.add(mesh);
         }
+      }
+    }
 
-        // West Wall of (cx, cy) -> position (wx - 2, 1.6, wy)
-        const wWall = maze.w[cx][cy];
-        const wKey = `V_${cx}_${cy}`;
-        if (wWall !== 'OPEN' || cx === 0) {
-          if (!seenWalls.has(wKey)) {
-            seenWalls.add(wKey);
-            const isDoor = wWall === 'DOOR';
-            const isSecret = wWall === 'HIDEDOOR';
-            const mesh = createWallMesh(isDoor, isSecret);
-            mesh.rotation.y = Math.PI / 2;
-            mesh.position.set(wx - 2, 1.6, wy);
-            group.add(mesh);
-          }
-        }
-
-        // Special Square 3D Features (e.g. Staircase)
+    // =========================================================================
+    // 3. Special Square 3D Features (e.g. Staircases)
+    // =========================================================================
+    for (let cx = 0; cx < 20; cx++) {
+      for (let cy = 0; cy < 20; cy++) {
         const sqrCode = maze.sqrExtra[cx]?.[cy];
         const sqrDef = maze.extraDefs?.[sqrCode];
         if (sqrDef?.type === 'STAIRS') {
           const isDown = sqrDef.aux0 > maze.level;
           const stairsGroup = new THREE.Group();
-          stairsGroup.position.set(wx, 0.05, wy);
+          stairsGroup.position.set(cx * 4, 0.05, -cy * 4);
 
           if (!wireframeMode) {
             const stepMat = new THREE.MeshStandardMaterial({
@@ -638,7 +615,7 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
         }
       }
     }
-  }, [maze, x, y, wireframeMode]);
+  }, [maze, wireframeMode]);
 
   return (
     <div className="relative w-full h-full min-h-[360px] bg-black overflow-hidden select-none">
