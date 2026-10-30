@@ -262,7 +262,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
       </div>
 
       {/* Battlefield & Monster Groups */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 py-3 sm:py-6">
+      <div className="max-w-4xl mx-auto w-full flex flex-wrap justify-center items-stretch gap-2 sm:gap-4 py-3 sm:py-6">
         {groups.map((grp, gIdx) => {
           const isAlive = grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
           const isTargeted = selectedTargetGroupIdx === gIdx && isAlive;
@@ -276,7 +276,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   sounds.playTurn();
                 }
               }}
-              className={`p-2.5 sm:p-4 rounded-xl border flex flex-col justify-between transition cursor-pointer ${
+              className={`p-2.5 sm:p-4 rounded-xl border flex flex-col justify-between transition cursor-pointer flex-1 min-w-[140px] sm:min-w-[170px] max-w-[215px] ${
                 isTargeted
                   ? 'bg-amber-950/30 border-amber-500 ring-2 ring-amber-500/50 shadow-lg'
                   : isAlive 

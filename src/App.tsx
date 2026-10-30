@@ -33,7 +33,9 @@ import { useLanguage, UI_TEXT } from './utils/language';
 import { 
   initCombatEncounter, 
   CombatGroup,
-  calculateVictoryExp
+  calculateVictoryExp,
+  generateFightMap,
+  clearRoomFights
 } from './engine/combatEngine';
 import { 
   generateChestReward, 
@@ -384,6 +386,9 @@ export default function App() {
     return fresh;
   });
 
+  // Active monster room encounter maps per floor (Pascal FIGHTMAP: reset when switching floors or returning to castle)
+  const [fightMapsByLevel, setFightMapsByLevel] = useState<Record<number, boolean[][]>>({});
+
   // Switch Scenario & Load its isolated localStorage state
   const handleSelectScenario = (scenarioId: string) => {
     setActiveScenarioData(scenarioId);
@@ -454,6 +459,7 @@ export default function App() {
     setLastWipeoutInfo(nextSession?.lastWipeoutInfo || null);
     setVisitedTilesByLevel(nextVisited);
     setVisitedTiles(nextVisited[lvl]);
+    setFightMapsByLevel({});
     setAdventureEvents(sanitizeScenarioJournal(nextJournal, scenarioId, lang));
     setShowScenarioMenu(false);
   };
@@ -827,8 +833,21 @@ export default function App() {
     const event = maze.events?.find(ev => ev.x === newX && ev.y === newY);
     if (event && handleSquareEvent(event, newX, newY, false)) return;
 
-    // Random encounters only happen on squares flagged as fight zones
-    if (maze.fights[newX][newY] === 1 && Math.random() < 0.15) {
+    // Authentic Pascal Encounter Determination (Wizardry1_UCSD_Pascal.pas l. 11403-11411):
+    // 1. Room encounter: If this room tile has an active encounter primed in FIGHTMAP
+    let currentFightMap = fightMapsByLevel[dungeonLevel];
+    if (!currentFightMap && maze.fights) {
+      currentFightMap = generateFightMap(maze);
+      setFightMapsByLevel(prev => ({ ...prev, [dungeonLevel]: currentFightMap! }));
+    }
+    const hasRoomFight = currentFightMap ? !!currentFightMap[newX]?.[newY] : false;
+
+    // 2. Wandering encounter in corridors or cleared rooms:
+    // Pascal: (RANDOM MOD 99 = 35) (~1% to 2.5% chance per step)
+    // Ensures roaming monster patrols in hallways outside rooms
+    const isWanderingFight = Math.random() < 0.025;
+
+    if (hasRoomFight || isWanderingFight) {
       triggerBattleEncounter();
     }
   };
@@ -962,6 +981,17 @@ export default function App() {
       { x: posX, y: posY }
     );
 
+    // Authentic Pascal CLROOMFG: Clear room encounters upon victory
+    if (maze.fights?.[posX]?.[posY] === 1) {
+      setFightMapsByLevel(prev => {
+        const current = prev[dungeonLevel] || generateFightMap(maze);
+        return {
+          ...prev,
+          [dungeonLevel]: clearRoomFights(current, maze, posX, posY)
+        };
+      });
+    }
+
     if (alarmTriggered) {
       // Alarm calls another fight immediately!
       addAdventureEvent(
@@ -1048,6 +1078,7 @@ export default function App() {
     setDirection(0);
     setLightLevel(0);
     setAcModifier(0);
+    setFightMapsByLevel({});
 
     addAdventureEvent(
       'CASTLE',
@@ -1082,6 +1113,12 @@ export default function App() {
     setDungeonLevel(targetLevel);
     setPosX(targetX);
     setPosY(targetY);
+
+    // Pascal NEWMAZE: Respawn monster room encounters when changing floors
+    setFightMapsByLevel(prev => ({
+      ...prev,
+      [targetLevel]: generateFightMap(targetMaze)
+    }));
 
     // Load or initialize visited tiles for target floor
     setVisitedTiles(() => {
@@ -1305,11 +1342,15 @@ export default function App() {
             onAddAdventureEvent={addAdventureEvent}
             onEnterMaze={() => {
               // Original gameplay: the party always starts at the stairs of level 1
-              setMaze(getMazeForFloor(1));
+              const mazeL1 = getMazeForFloor(1);
+              setMaze(mazeL1);
               setDungeonLevel(1);
               setPosX(0);
               setPosY(0);
               setDirection(0);
+              setFightMapsByLevel({
+                1: generateFightMap(mazeL1)
+              });
               setLocation('MAZE');
               sounds.playDoor();
             }}

@@ -1,7 +1,7 @@
 /**
  * Faithful Wizardry I Combat Engine matching Pascal reverse engineering
  */
-import { TCharacter, TMonster, TSpell, TStatus } from '../types/wizardry';
+import { TCharacter, TMazeFloor, TMonster, TSpell, TStatus } from '../types/wizardry';
 import { MONSTERS_DATABASE, SPELLS } from '../data/provingGroundsData';
 import { castCombatSpell, CombatEffects, SpellContext } from './spellEngine';
 
@@ -189,6 +189,123 @@ export function initCombatEncounter(level: number, specialEnemyId?: number, opti
   const friendly = Math.random() * 100 < 10 && primaryMonster.monsterClass === 0;
 
   return { groups, surprise, friendly };
+}
+
+/**
+ * Authentic Pascal FIGHTS procedure (pascal_source/Wizardry1_UCSD_Pascal.pas l. 1077-1092):
+ * When entering or generating a maze level, up to 9 rooms with fights === 1 are populated.
+ * Any tile connected through OPEN doorways within that room is marked with true in FIGHTMAP.
+ */
+export function generateFightMap(mazeFloor: TMazeFloor): boolean[][] {
+  const map: boolean[][] = Array.from({ length: 20 }, () => Array(20).fill(false));
+  if (!mazeFloor || !mazeFloor.fights) return map;
+
+  const candidateRooms: { x: number; y: number }[] = [];
+  for (let x = 0; x < 20; x++) {
+    for (let y = 0; y < 20; y++) {
+      if (mazeFloor.fights[x] && mazeFloor.fights[x][y] === 1) {
+        candidateRooms.push({ x, y });
+      }
+    }
+  }
+
+  if (candidateRooms.length === 0) return map;
+
+  const fillRoom = (startX: number, startY: number) => {
+    const queue = [{ x: startX, y: startY }];
+    map[startX][startY] = true;
+    while (queue.length > 0) {
+      const { x, y } = queue.pop()!;
+      if (mazeFloor.n && mazeFloor.n[x] && mazeFloor.n[x][y] === 'OPEN') {
+        const ny = (y + 1) % 20;
+        if (mazeFloor.fights[x]?.[ny] === 1 && !map[x][ny]) {
+          map[x][ny] = true;
+          queue.push({ x, y: ny });
+        }
+      }
+      if (mazeFloor.e && mazeFloor.e[x] && mazeFloor.e[x][y] === 'OPEN') {
+        const nx = (x + 1) % 20;
+        if (mazeFloor.fights[nx]?.[y] === 1 && !map[nx][y]) {
+          map[nx][y] = true;
+          queue.push({ x: nx, y });
+        }
+      }
+      if (mazeFloor.s && mazeFloor.s[x] && mazeFloor.s[x][y] === 'OPEN') {
+        const ny = (y - 1 + 20) % 20;
+        if (mazeFloor.fights[x]?.[ny] === 1 && !map[x][ny]) {
+          map[x][ny] = true;
+          queue.push({ x, y: ny });
+        }
+      }
+      if (mazeFloor.w && mazeFloor.w[x] && mazeFloor.w[x][y] === 'OPEN') {
+        const nx = (x - 1 + 20) % 20;
+        if (mazeFloor.fights[nx]?.[y] === 1 && !map[nx][y]) {
+          map[nx][y] = true;
+          queue.push({ x: nx, y });
+        }
+      }
+    }
+  };
+
+  const pool = [...candidateRooms];
+  let roomsChosen = 0;
+  while (pool.length > 0 && roomsChosen < 9) {
+    const idx = Math.floor(Math.random() * pool.length);
+    const spot = pool.splice(idx, 1)[0];
+    if (!map[spot.x][spot.y]) {
+      fillRoom(spot.x, spot.y);
+      roomsChosen++;
+    }
+  }
+
+  return map;
+}
+
+/**
+ * Authentic Pascal CLROOMFG procedure (pascal_source/Wizardry1_UCSD_Pascal.pas l. 11450-11470):
+ * When an encounter inside a room is defeated, clears the entire room's fight flag.
+ * Defeated rooms do NOT respawn as long as the party remains on that floor.
+ */
+export function clearRoomFights(fightMap: boolean[][], mazeFloor: TMazeFloor, startX: number, startY: number): boolean[][] {
+  const nextMap = fightMap.map(row => [...row]);
+  if (!nextMap[startX] || !nextMap[startX][startY]) return nextMap;
+
+  const queue = [{ x: startX, y: startY }];
+  nextMap[startX][startY] = false;
+
+  while (queue.length > 0) {
+    const { x, y } = queue.pop()!;
+    if (mazeFloor.n && mazeFloor.n[x] && mazeFloor.n[x][y] === 'OPEN') {
+      const ny = (y + 1) % 20;
+      if (nextMap[x]?.[ny]) {
+        nextMap[x][ny] = false;
+        queue.push({ x, y: ny });
+      }
+    }
+    if (mazeFloor.e && mazeFloor.e[x] && mazeFloor.e[x][y] === 'OPEN') {
+      const nx = (x + 1) % 20;
+      if (nextMap[nx]?.[y]) {
+        nextMap[nx][y] = false;
+        queue.push({ x: nx, y });
+      }
+    }
+    if (mazeFloor.s && mazeFloor.s[x] && mazeFloor.s[x][y] === 'OPEN') {
+      const ny = (y - 1 + 20) % 20;
+      if (nextMap[x]?.[ny]) {
+        nextMap[x][ny] = false;
+        queue.push({ x, y: ny });
+      }
+    }
+    if (mazeFloor.w && mazeFloor.w[x] && mazeFloor.w[x][y] === 'OPEN') {
+      const nx = (x - 1 + 20) % 20;
+      if (nextMap[nx]?.[y]) {
+        nextMap[nx][y] = false;
+        queue.push({ x: nx, y });
+      }
+    }
+  }
+
+  return nextMap;
 }
 
 export function executeCombatRound(
