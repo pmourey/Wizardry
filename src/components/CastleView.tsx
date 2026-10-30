@@ -54,8 +54,10 @@ import {
 import { getActiveStatusEffects } from '../engine/statusSystem';
 import { AdventureJournal } from './AdventureJournal';
 import { AdventureLogEvent, AdventureLogCategory } from '../types/wizardry';
+import { WIZARDRY_SCENARIOS } from '../data/scenariosCatalog';
 
 interface CastleViewProps {
+  activeScenarioId?: string;
   party: TCharacter[];
   setParty: React.Dispatch<React.SetStateAction<TCharacter[]>>;
   allCharacters: TCharacter[];
@@ -78,6 +80,7 @@ interface CastleViewProps {
 type CastleTab = 'COURTYARD' | 'TAVERN' | 'INN' | 'BOLTAC' | 'TEMPLE' | 'TRAINING' | 'JOURNAL';
 
 export const CastleView: React.FC<CastleViewProps> = ({
+  activeScenarioId = 'proving-grounds',
   party,
   setParty,
   allCharacters,
@@ -89,8 +92,19 @@ export const CastleView: React.FC<CastleViewProps> = ({
   onOpenPySide6Export,
   onCheatRestoreParty
 }) => {
+  const scenarioMeta = WIZARDRY_SCENARIOS.find(s => s.id === activeScenarioId) || WIZARDRY_SCENARIOS[0];
+  const castleName = scenarioMeta.castleName || 'Château de Trebor';
+  const castleSubtitle = scenarioMeta.castleSubtitle || 'Cité de garnison surplombant le Labyrinthe';
+  const castleWelcome = scenarioMeta.castleWelcome || `Bienvenue dans les Terres de ${scenarioMeta.title}`;
+  const castleDescription = scenarioMeta.castleDescription || scenarioMeta.description;
+  const trainingGroundsName = scenarioMeta.trainingGroundsName || "Terrain d'Entraînement";
+
   const [currentTab, setCurrentTab] = useState<CastleTab>('COURTYARD');
-  const [message, setMessage] = useState<string>('Bienvenue au Château de Trebor. Choisissez votre destination.');
+  const [message, setMessage] = useState<string>(`Bienvenue à : ${castleName}. Choisissez votre destination.`);
+
+  useEffect(() => {
+    setMessage(`Bienvenue à : ${castleName}. Choisissez votre destination.`);
+  }, [castleName]);
 
   useEffect(() => {
     switch (currentTab) {
@@ -291,6 +305,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
   };
 
   const handlePoolGold = () => {
+    if (!selectedHero) return;
     sounds.playGold();
     let total = 0;
     party.forEach(h => {
@@ -299,7 +314,32 @@ export const CastleView: React.FC<CastleViewProps> = ({
     });
     selectedHero.gold = total;
     setParty([...party]);
-    setMessage(`Tout l'or du groupe (${total} PO) a été rassemblé dans la bourse de ${selectedHero.name}.`);
+    setAllCharacters(prev => prev.map(c => {
+      const inParty = party.find(p => p.id === c.id);
+      return inParty ? { ...inParty } : c;
+    }));
+    setMessage(`Tout l'or du groupe (${total.toLocaleString()} PO) a été rassemblé sur ${selectedHero.name}.`);
+  };
+
+  const handleShareGold = () => {
+    const count = party.length;
+    if (count === 0) return;
+    sounds.playGold();
+    let total = 0;
+    party.forEach(h => {
+      total += h.gold;
+    });
+    const share = Math.floor(total / count);
+    const remainder = total % count;
+    party.forEach((h, idx) => {
+      h.gold = share + (idx === 0 ? remainder : 0);
+    });
+    setParty([...party]);
+    setAllCharacters(prev => prev.map(c => {
+      const inParty = party.find(p => p.id === c.id);
+      return inParty ? { ...inParty } : c;
+    }));
+    setMessage(`L'or du groupe (${total.toLocaleString()} PO) a été divisé équitablement entre les ${count} membres (${share.toLocaleString()} PO chacun).`);
   };
 
   // ==========================================
@@ -673,14 +713,14 @@ export const CastleView: React.FC<CastleViewProps> = ({
       <div className="flex items-center justify-between px-6 py-3.5 bg-slate-900 border-b border-slate-800">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-amber-950/80 border border-amber-600/40 flex items-center justify-center text-amber-400 font-bold font-serif shadow-sm">
-            W1
+            {`W${scenarioMeta.number}`}
           </div>
           <div>
             <h1 className="text-base font-bold text-white tracking-wide">
-              Château de Trebor
+              {castleName}
             </h1>
             <p className="text-xs text-slate-400">
-              Cité de garnison surplombant le Labyrinthe de Werdna
+              {castleSubtitle}
             </p>
           </div>
         </div>
@@ -784,19 +824,73 @@ export const CastleView: React.FC<CastleViewProps> = ({
         </button>
       </div>
 
-      {/* Information Banner */}
-      <div className="px-6 py-2.5 bg-slate-900/40 border-b border-slate-800/40 text-xs text-amber-300/90 font-medium flex items-center justify-between">
-        <span>{message}</span>
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400">
-            Héros sélectionné : <strong className="text-white">{selectedHero?.name}</strong> ({selectedHero?.gold} PO)
-          </span>
+      {/* Information Banner & Universal Party Selector / Gold Actions */}
+      <div className="px-6 py-2.5 bg-slate-900/70 border-b border-slate-800 text-xs flex flex-wrap items-center justify-between gap-3 shadow-inner">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-amber-300 font-medium">{message}</span>
+        </div>
+
+        {/* Global Party Switcher & Gold Actions in Castle */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Party Hero Selection Pills */}
+          {party.length > 0 && (
+            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+              <span className="text-[10px] uppercase font-bold text-slate-500 px-1 hidden md:inline">Héros actif :</span>
+              {party.map((hero, idx) => {
+                const isSelected = idx === selectedCharIndex;
+                return (
+                  <button
+                    key={hero.id}
+                    onClick={() => {
+                      setSelectedCharIndex(idx);
+                      sounds.playTurn();
+                    }}
+                    className={`px-2 py-1 rounded text-xs font-semibold transition flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-amber-600 text-white font-bold ring-1 ring-amber-400 shadow-md'
+                        : 'bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60'
+                    }`}
+                    title={`Sélectionner ${hero.name} (${hero.race} ${hero.class} Niv.${hero.charLevel} · ${hero.gold} PO)`}
+                  >
+                    <span>{hero.name}</span>
+                    <span className={`text-[10px] ${isSelected ? 'text-amber-100' : 'text-slate-400'}`}>
+                      ({hero.gold} PO)
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Gold Actions: Pool & Share */}
+          {party.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handlePoolGold}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                title={`Rassembler tout l'or du groupe (${party.reduce((sum, h) => sum + h.gold, 0)} PO) sur ${selectedHero?.name}`}
+              >
+                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                <span>Mettre l'or en commun</span>
+              </button>
+
+              <button
+                onClick={handleShareGold}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                title="Diviser équitablement la fortune du groupe entre tous les héros"
+              >
+                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                <span>Diviser l'or</span>
+              </button>
+            </div>
+          )}
+
           <button
             onClick={() => {
               setInspectingPartyIndex(selectedCharIndex);
               sounds.playTurn();
             }}
-            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-cyan-500/30 rounded text-[11px] font-semibold transition flex items-center gap-1"
+            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-cyan-500/30 rounded-lg text-xs font-semibold transition flex items-center gap-1"
           >
             <User className="w-3 h-3" />
             Voir Fiche
@@ -810,11 +904,10 @@ export const CastleView: React.FC<CastleViewProps> = ({
           <div className="max-w-4xl mx-auto space-y-6">
             <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-xl space-y-4">
               <h2 className="text-xl font-serif font-bold text-white tracking-wide">
-                Bienvenue dans les Terres de l'Overlord Trebor
+                {castleWelcome}
               </h2>
               <p className="text-sm text-slate-300 leading-relaxed">
-                Le tyran et mage maléfique <strong>Werdna</strong> s'est emparé de la sainte amulette et s'est retranché au dixième sous-sol du labyrinthe magique.
-                Composez votre escouade, équipez-vous chez Boltac, bénissez vos héros au Temple de Cant et plongez dans le dédale.
+                {castleDescription}
               </p>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4">
@@ -1182,7 +1275,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
               <div className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-5">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                   <div>
-                    <h2 className="text-lg font-serif font-bold text-white">Terrain d'Entraînement de Trebor</h2>
+                    <h2 className="text-lg font-serif font-bold text-white">{trainingGroundsName}</h2>
                     <p className="text-xs text-slate-400">Générez un nouvel aventurier, tirez les points bonus et répartissez-les selon votre classe désirée.</p>
                   </div>
                 </div>

@@ -1182,6 +1182,7 @@ export default function App() {
 
         {!showScenarioMenu && location === 'CASTLE' && (
           <CastleView
+            activeScenarioId={activeScenarioId}
             party={party}
             setParty={setParty}
             allCharacters={allCharacters}
