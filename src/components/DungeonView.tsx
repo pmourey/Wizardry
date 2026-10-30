@@ -772,7 +772,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
                   {currentSqrDef.aux0 === 0
-                    ? "Un large perron de pierre remonte vers la cour et la sécurité du Château de Trebor."
+                    ? "Un large perron de pierre remonte vers la cour et la sécurité du Château."
                     : currentSqrDef.aux0 > maze.level
                       ? `Un escalier en colimaçon taillé dans la roche brute s'enfonce dans les profondeurs vers le Niveau ${currentSqrDef.aux0}. L'air y est plus froid, et les rugissements des créatures résonnent plus près.`
                       : `Un escalier de pierre taillée remonte vers les couloirs du Niveau ${currentSqrDef.aux0}.`}

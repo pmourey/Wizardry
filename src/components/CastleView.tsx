@@ -832,33 +832,29 @@ export const CastleView: React.FC<CastleViewProps> = ({
 
         {/* Global Party Switcher & Gold Actions in Castle */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Party Hero Selection Pills */}
+          {/* Party Hero Dropdown Selector */}
           {party.length > 0 && (
-            <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
-              <span className="text-[10px] uppercase font-bold text-slate-500 px-1 hidden md:inline">Héros actif :</span>
-              {party.map((hero, idx) => {
-                const isSelected = idx === selectedCharIndex;
-                return (
-                  <button
-                    key={hero.id}
-                    onClick={() => {
-                      setSelectedCharIndex(idx);
-                      sounds.playTurn();
-                    }}
-                    className={`px-2 py-1 rounded text-xs font-semibold transition flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-amber-600 text-white font-bold ring-1 ring-amber-400 shadow-md'
-                        : 'bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60'
-                    }`}
-                    title={`Sélectionner ${hero.name} (${hero.race} ${hero.class} Niv.${hero.charLevel} · ${hero.gold} PO)`}
-                  >
-                    <span>{hero.name}</span>
-                    <span className={`text-[10px] ${isSelected ? 'text-amber-100' : 'text-slate-400'}`}>
-                      ({hero.gold} PO)
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-2 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-700/80 shadow-sm">
+              <label htmlFor="active-hero-select" className="text-[11px] font-bold text-amber-400 whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+                <User className="w-3.5 h-3.5 text-amber-400" />
+                <span>Héros actif :</span>
+              </label>
+              <select
+                id="active-hero-select"
+                value={selectedCharIndex}
+                onChange={e => {
+                  const idx = Number(e.target.value);
+                  setSelectedCharIndex(idx);
+                  sounds.playTurn();
+                }}
+                className="bg-slate-900 border border-slate-700 hover:border-amber-500/60 text-white font-semibold text-xs rounded-md px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer transition shadow-inner"
+              >
+                {party.map((hero, idx) => (
+                  <option key={hero.id} value={idx}>
+                    #{idx + 1} {hero.name} ({hero.class} Niv.{hero.charLevel} · {hero.hpLeft}/{hero.hpMax} PV · {hero.gold.toLocaleString()} PO)
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 

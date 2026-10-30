@@ -190,7 +190,11 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
 
       texturesRef.current.floor.wrapS = THREE.RepeatWrapping;
       texturesRef.current.floor.wrapT = THREE.RepeatWrapping;
-      texturesRef.current.floor.repeat.set(20, 20);
+      texturesRef.current.floor.repeat.set(75, 75);
+
+      texturesRef.current.ceiling.wrapS = THREE.RepeatWrapping;
+      texturesRef.current.ceiling.wrapT = THREE.RepeatWrapping;
+      texturesRef.current.ceiling.repeat.set(75, 75);
     }
   }, []);
 
@@ -387,26 +391,26 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
           metalness: 0.08 
         });
 
-    // Floor and Ceiling
+    // Floor and Ceiling - Expansive coverage ensuring no black empty strips on map edges
     if (!wireframeMode) {
-      const floorGeo = new THREE.PlaneGeometry(80, 80);
+      const floorGeo = new THREE.PlaneGeometry(300, 300);
       const floorMat = new THREE.MeshStandardMaterial({ 
         map: texturesRef.current.floor, 
         roughness: 0.90 
       });
       const floor = new THREE.Mesh(floorGeo, floorMat);
       floor.rotation.x = -Math.PI / 2;
-      floor.position.set(40, 0, -40);
+      floor.position.set(38, 0, -38);
       group.add(floor);
 
-      const ceilGeo = new THREE.PlaneGeometry(80, 80);
+      const ceilGeo = new THREE.PlaneGeometry(300, 300);
       const ceilMat = new THREE.MeshStandardMaterial({ 
         map: texturesRef.current.ceiling, 
         roughness: 0.85 
       });
       const ceiling = new THREE.Mesh(ceilGeo, ceilMat);
       ceiling.rotation.x = Math.PI / 2;
-      ceiling.position.set(40, 3.2, -40);
+      ceiling.position.set(38, 3.2, -38);
       group.add(ceiling);
     }
 
@@ -428,6 +432,11 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
           const mesh = new THREE.Mesh(wallGeo, mat);
           mesh.position.set(wx, 1.6, wy - 2);
           group.add(mesh);
+        } else if (cy === 0) {
+          // Perimeter solid stone wall closure on north boundary
+          const mesh = new THREE.Mesh(wallGeo, wallMat);
+          mesh.position.set(wx, 1.6, wy - 2);
+          group.add(mesh);
         }
 
         // South Wall
@@ -435,6 +444,12 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
         if (sWall !== 'OPEN') {
           const mat = sWall === 'DOOR' ? doorMat : sWall === 'HIDEDOOR' ? secretDoorMat : wallMat;
           const mesh = new THREE.Mesh(wallGeo, mat);
+          mesh.rotation.y = Math.PI;
+          mesh.position.set(wx, 1.6, wy + 2);
+          group.add(mesh);
+        } else if (cy === 19) {
+          // Perimeter solid stone wall closure on south boundary
+          const mesh = new THREE.Mesh(wallGeo, wallMat);
           mesh.rotation.y = Math.PI;
           mesh.position.set(wx, 1.6, wy + 2);
           group.add(mesh);
@@ -448,6 +463,12 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
           mesh.rotation.y = -Math.PI / 2;
           mesh.position.set(wx + 2, 1.6, wy);
           group.add(mesh);
+        } else if (cx === 19) {
+          // Perimeter solid stone wall closure on east boundary
+          const mesh = new THREE.Mesh(wallGeo, wallMat);
+          mesh.rotation.y = -Math.PI / 2;
+          mesh.position.set(wx + 2, 1.6, wy);
+          group.add(mesh);
         }
 
         // West Wall
@@ -455,6 +476,12 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
         if (wWall !== 'OPEN') {
           const mat = wWall === 'DOOR' ? doorMat : wWall === 'HIDEDOOR' ? secretDoorMat : wallMat;
           const mesh = new THREE.Mesh(wallGeo, mat);
+          mesh.rotation.y = Math.PI / 2;
+          mesh.position.set(wx - 2, 1.6, wy);
+          group.add(mesh);
+        } else if (cx === 0) {
+          // Perimeter solid stone wall closure on west boundary
+          const mesh = new THREE.Mesh(wallGeo, wallMat);
           mesh.rotation.y = Math.PI / 2;
           mesh.position.set(wx - 2, 1.6, wy);
           group.add(mesh);
