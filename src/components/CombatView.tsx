@@ -228,18 +228,18 @@ export const CombatView: React.FC<CombatViewProps> = ({
     : [];
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 text-slate-100 p-6 select-none overflow-y-auto">
+    <div className="flex flex-col h-full bg-slate-950 text-slate-100 p-3 sm:p-6 select-none overflow-y-auto safe-top safe-bottom safe-left safe-right">
       {/* Combat Banner */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 sm:pb-4 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-red-950/80 border border-red-600/40 rounded-lg text-red-400">
+          <div className="p-2 bg-red-950/80 border border-red-600/40 rounded-lg text-red-400 shrink-0">
             <Swords className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white tracking-wide">
+            <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">
               Engagement en Combat !
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-[11px] sm:text-xs text-slate-400">
               {currentSurprise === 'PARTY' 
                 ? '⚡ Vous surprenez les monstres (Tour gratuit pour vos aventuriers) !' 
                 : currentSurprise === 'MONSTERS' 
@@ -251,7 +251,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
 
         {/* Surprise round indicator */}
         {currentSurprise !== 'NONE' && (
-          <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+          <span className={`self-start sm:self-auto px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-bold border ${
             currentSurprise === 'PARTY'
               ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-400'
               : 'bg-red-950/80 border-red-500/60 text-red-400 animate-pulse'
@@ -262,7 +262,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
       </div>
 
       {/* Battlefield & Monster Groups */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 py-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 py-3 sm:py-6">
         {groups.map((grp, gIdx) => {
           const isAlive = grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
           const isTargeted = selectedTargetGroupIdx === gIdx && isAlive;
@@ -276,47 +276,47 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   sounds.playTurn();
                 }
               }}
-              className={`p-4 rounded-xl border flex flex-col justify-between transition cursor-pointer ${
+              className={`p-2.5 sm:p-4 rounded-xl border flex flex-col justify-between transition cursor-pointer ${
                 isTargeted
                   ? 'bg-amber-950/30 border-amber-500 ring-2 ring-amber-500/50 shadow-lg'
                   : isAlive 
-                  ? 'bg-slate-900/80 border-slate-700/80 hover:border-slate-600 shadow-md' 
+                  ? 'bg-slate-900/80 border-slate-700/80 hover:border-slate-600 shadow-md active:bg-slate-800' 
                   : 'bg-slate-950 border-slate-800/40 opacity-40 cursor-not-allowed'
               }`}
             >
               <div>
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-amber-400">GROUPE #{gIdx + 1}</span>
+                <div className="flex items-center justify-between pb-1.5 sm:pb-2 border-b border-slate-800">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] sm:text-xs font-bold text-amber-400">GRP #{gIdx + 1}</span>
                     {isTargeted && (
-                      <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-300 font-bold bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-600/50">
-                        <Target className="w-2.5 h-2.5" /> Cible
+                      <span className="inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] text-amber-300 font-bold bg-amber-950/80 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded border border-amber-600/50">
+                        <Target className="w-2.5 h-2.5" />
                       </span>
                     )}
                   </div>
-                  <span className="text-xs font-semibold text-slate-300">
-                    {grp.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length}/{grp.count} Vivant(s)
+                  <span className="text-[10px] sm:text-xs font-semibold text-slate-300">
+                    {grp.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length}/{grp.count}
                   </span>
                 </div>
-                <div className="py-3 text-center">
-                  <div className="mx-auto mb-2 w-[140px] h-[100px] bg-black border border-slate-700 rounded shadow-inner flex items-center justify-center overflow-hidden">
+                <div className="py-2 sm:py-3 text-center">
+                  <div className="mx-auto mb-1.5 sm:mb-2 w-full max-w-[140px] aspect-[7/5] bg-black border border-slate-700 rounded shadow-inner flex items-center justify-center overflow-hidden">
                     {getMonsterPictureUrl(grp.monster.picId) ? (
-                      <MonsterPicture picId={grp.monster.picId} alt={grp.identified ? grp.monster.name : grp.monster.nameUnknown} className="w-[140px] h-[100px]" />
+                      <MonsterPicture picId={grp.monster.picId} alt={grp.identified ? grp.monster.name : grp.monster.nameUnknown} className="w-full h-full object-contain" />
                     ) : (
-                      <span className="text-amber-400 text-2xl font-serif font-bold">{grp.monster.name[0]}</span>
+                      <span className="text-amber-400 text-xl sm:text-2xl font-serif font-bold">{grp.monster.name[0]}</span>
                     )}
                   </div>
-                  <div className="font-bold text-sm text-white">
+                  <div className="font-bold text-xs sm:text-sm text-white truncate" title={grp.identified ? grp.monster.name : grp.monster.nameUnknown}>
                     {grp.identified ? grp.monster.name : grp.monster.nameUnknown}
                   </div>
-                  <div className="text-xs text-slate-400">
-                    Niveau {grp.monster.level} · CA {grp.monster.ac}
+                  <div className="text-[10px] sm:text-xs text-slate-400">
+                    Niv.{grp.monster.level} · CA {grp.monster.ac}
                   </div>
                 </div>
               </div>
 
               {/* Living status pill badges */}
-              <div className="flex flex-wrap gap-1 justify-center pt-2">
+              <div className="flex flex-wrap gap-1 justify-center pt-1.5 sm:pt-2">
                 {grp.instances.map((inst, iIdx) => {
                   const isInstAlive = inst.status !== 'DEAD' && inst.status !== 'ASHES' && inst.hpLeft > 0;
                   const isAsleep = inst.status === 'ASLEEP';
@@ -325,7 +325,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   return (
                     <div 
                       key={iIdx}
-                      className={`px-1.5 py-0.5 rounded-full text-[10px] flex items-center justify-center font-bold ${
+                      className={`px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] flex items-center justify-center font-bold ${
                         !isInstAlive
                           ? 'bg-red-950 text-red-500'
                           : isAsleep
@@ -346,13 +346,13 @@ export const CombatView: React.FC<CombatViewProps> = ({
         })}
       </div>
 
-      {/* Party Status Overview Strip in Combat */}
-      <div className="bg-slate-900/60 border border-slate-800 p-3 rounded-xl max-w-4xl mx-auto w-full mb-4">
-        <div className="text-[11px] font-bold text-slate-400 mb-2 flex items-center justify-between">
-          <span>Escouade en Combat ({party.filter(p => p.status !== 'DEAD' && p.status !== 'ASHES').length}/{party.length} debout)</span>
-          <span className="text-[10px] text-slate-500">Statuts & Afflictions en temps réel</span>
+      {/* Party Status Overview Strip in Combat: 3 Frontline / 3 Backline */}
+      <div className="bg-slate-900/60 border border-slate-800 p-2 sm:p-3 rounded-xl max-w-4xl mx-auto w-full mb-3 sm:mb-4">
+        <div className="text-[10px] sm:text-[11px] font-bold text-slate-400 mb-1.5 sm:mb-2 flex items-center justify-between">
+          <span>Escouade ({party.filter(p => p.status !== 'DEAD' && p.status !== 'ASHES').length}/{party.length} debout)</span>
+          <span className="text-[9px] sm:text-[10px] text-slate-500 hidden sm:inline">Statuts & Afflictions en temps réel</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2">
           {party.map((hero, hIdx) => {
             const effs = getActiveStatusEffects(hero);
             const isTurn = !isResolving && activeHero && activeHero.id === hero.id;
@@ -360,7 +360,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
             return (
               <div 
                 key={hero.id}
-                className={`p-2 rounded-lg border text-xs flex flex-col justify-between transition ${
+                className={`p-1.5 sm:p-2 rounded-lg border text-xs flex flex-col justify-between transition ${
                   isTurn 
                     ? 'bg-amber-950/40 border-amber-500/80 shadow-md ring-1 ring-amber-500/50' 
                     : hero.status === 'DEAD' || hero.status === 'ASHES'
@@ -369,36 +369,36 @@ export const CombatView: React.FC<CombatViewProps> = ({
                 }`}
               >
                 <div>
-                  <div className="flex items-center justify-between font-bold text-white">
+                  <div className="flex items-center justify-between font-bold text-white text-[11px] sm:text-xs">
                     <span className="truncate">{hero.name}</span>
-                    <span className="text-[9px] text-amber-400 font-mono">N{hero.charLevel}</span>
+                    <span className="text-[8px] sm:text-[9px] text-amber-400 font-mono">N{hero.charLevel}</span>
                   </div>
-                  <div className="flex justify-between text-[10px] text-slate-400 pt-0.5">
-                    <span>{hero.class}</span>
+                  <div className="flex justify-between text-[9px] sm:text-[10px] text-slate-400 pt-0.5">
+                    <span className="truncate">{hero.class}</span>
                     <span>CA {hero.armorClass}</span>
                   </div>
                 </div>
 
-                <div className="pt-1.5">
-                  <div className="flex justify-between text-[10px] font-semibold">
+                <div className="pt-1">
+                  <div className="flex justify-between text-[9px] sm:text-[10px] font-semibold">
                     <span className="text-slate-400">PV:</span>
                     <span className={hero.hpLeft < hero.hpMax / 3 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
                       {hero.hpLeft}/{hero.hpMax}
                     </span>
                   </div>
                   {/* Status Badges */}
-                  <div className="flex flex-wrap gap-1 pt-1 min-h-[18px]">
+                  <div className="flex flex-wrap gap-0.5 sm:gap-1 pt-0.5 min-h-[16px]">
                     {effs.map(e => (
                       <span 
                         key={e.id}
-                        className={`text-[9px] font-bold px-1 py-0.2 rounded border ${e.bgColor} ${e.borderColor} ${e.color}`}
+                        className={`text-[8px] sm:text-[9px] font-bold px-1 py-0.2 rounded border ${e.bgColor} ${e.borderColor} ${e.color}`}
                         title={e.description}
                       >
                         {e.badge}
                       </span>
                     ))}
                     {effs.length === 0 && (
-                      <span className="text-[9px] text-emerald-500 font-medium">OK</span>
+                      <span className="text-[8px] sm:text-[9px] text-emerald-500 font-medium">OK</span>
                     )}
                   </div>
                 </div>
@@ -450,27 +450,27 @@ export const CombatView: React.FC<CombatViewProps> = ({
 
       {/* Command Panel for Active Hero */}
       {!isResolving && currentSurprise !== 'MONSTERS' && !allHelpless && activeHero && (
-        <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-xl space-y-4 max-w-3xl mx-auto w-full shadow-lg">
+        <div className="bg-slate-900/90 border border-slate-800 p-3 sm:p-5 rounded-xl space-y-3 sm:space-y-4 max-w-3xl mx-auto w-full shadow-lg">
           {(() => {
             const heroPartyIdx = party.findIndex(p => p.id === activeHero.id);
             const isFrontRank = heroPartyIdx < 3;
 
             return (
               <>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-400">
                       Ordre #{currentHeroIdx + 1}/{livingHeroes.length} :
                     </span>
-                    <span className="text-sm font-bold text-white">
+                    <span className="text-xs sm:text-sm font-bold text-white">
                       {activeHero.name} ({activeHero.class} · CA {activeHero.armorClass} · {activeHero.hpLeft}/{activeHero.hpMax} PV)
                     </span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                    <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded border ${
                       isFrontRank 
                         ? 'bg-amber-950/80 border-amber-500/60 text-amber-300' 
                         : 'bg-blue-950/80 border-blue-500/60 text-blue-300'
                     }`}>
-                      {isFrontRank ? `Avant-garde · Rang #${heroPartyIdx + 1}` : `Arrière-garde · Rang #${heroPartyIdx + 1}`}
+                      {isFrontRank ? `Avant-garde · #${heroPartyIdx + 1}` : `Arrière-garde · #${heroPartyIdx + 1}`}
                     </span>
                   </div>
                   {currentHeroIdx > 0 && (
@@ -479,18 +479,18 @@ export const CombatView: React.FC<CombatViewProps> = ({
                         setCurrentHeroIdx(currentHeroIdx - 1);
                         setActions(actions.slice(0, -1));
                       }}
-                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1"
+                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1 shrink-0 p-1"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" /> Revenir
+                      <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Revenir</span>
                     </button>
                   )}
                 </div>
 
                 {/* Target Group Selector for Current Order */}
-                <div className="flex items-center gap-2 text-xs pt-1 border-t border-slate-800/80">
-                  <span className="font-bold text-slate-400 flex items-center gap-1">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs pt-1 border-t border-slate-800/80">
+                  <span className="font-bold text-slate-400 flex items-center gap-1 shrink-0 text-[11px] sm:text-xs">
                     <Target className="w-3.5 h-3.5 text-amber-400" />
-                    Groupe ciblé :
+                    Cible :
                   </span>
                   <div className="flex gap-1.5 flex-wrap">
                     {groups.map((grp, gIdx) => {
@@ -507,7 +507,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                             setSelectedTargetGroupIdx(gIdx);
                             sounds.playTurn();
                           }}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                          className={`px-2.5 py-1.5 sm:py-1 rounded-lg text-xs font-semibold border min-h-[36px] flex items-center transition ${
                             isSel 
                               ? 'bg-amber-600/30 border-amber-500 text-amber-300 shadow-sm' 
                               : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:text-white'
@@ -529,12 +529,12 @@ export const CombatView: React.FC<CombatViewProps> = ({
                 )}
 
                 {!selectingSpell ? (
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                     {/* Fight attack button: ONLY front 3 characters can attack in melee as per Pascal */}
                     <button
                       onClick={() => handleSelectAction('FIGHT', undefined, selectedTargetGroupIdx)}
                       disabled={!isFrontRank}
-                      className={`p-3 rounded-lg flex flex-col items-center gap-1 text-xs font-bold transition ${
+                      className={`p-2.5 sm:p-3 min-h-[52px] rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95 ${
                         isFrontRank 
                           ? 'bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/60 text-amber-300' 
                           : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-50'
@@ -546,100 +546,100 @@ export const CombatView: React.FC<CombatViewProps> = ({
                       {!isFrontRank && <span className="text-[9px] text-slate-400 font-normal">Arrière-garde</span>}
                     </button>
 
-              <button
-                onClick={() => setSelectingSpell(true)}
-                disabled={availableSpells.length === 0 || (activeHero.silencedRounds !== undefined && activeHero.silencedRounds > 0)}
-                className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center gap-1 text-xs font-bold transition disabled:opacity-30 disabled:pointer-events-none"
-                title={activeHero.silencedRounds && activeHero.silencedRounds > 0 ? "Sous l'effet du silence magique MONTINO !" : undefined}
-              >
-                <Sparkles className="w-4 h-4 text-purple-400" />
-                <span>
-                  {activeHero.silencedRounds && activeHero.silencedRounds > 0 
-                    ? `Silence (${activeHero.silencedRounds}T)` 
-                    : `Sorts (${availableSpells.length})`}
-                </span>
-              </button>
+                    <button
+                      onClick={() => setSelectingSpell(true)}
+                      disabled={availableSpells.length === 0 || (activeHero.silencedRounds !== undefined && activeHero.silencedRounds > 0)}
+                      className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
+                      title={activeHero.silencedRounds && activeHero.silencedRounds > 0 ? "Sous l'effet du silence magique MONTINO !" : undefined}
+                    >
+                      <Sparkles className="w-4 h-4 text-purple-400" />
+                      <span>
+                        {activeHero.silencedRounds && activeHero.silencedRounds > 0 
+                          ? `Silence (${activeHero.silencedRounds}T)` 
+                          : `Sorts (${availableSpells.length})`}
+                      </span>
+                    </button>
 
-              <button
-                onClick={() => handleSelectAction('PARRY')}
-                className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center gap-1 text-xs font-bold transition"
-              >
-                <ShieldAlert className="w-4 h-4 text-blue-400" />
-                <span>Parade (-2 CA)</span>
-              </button>
+                    <button
+                      onClick={() => handleSelectAction('PARRY')}
+                      className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
+                    >
+                      <ShieldAlert className="w-4 h-4 text-blue-400" />
+                      <span>Parade (-2 CA)</span>
+                    </button>
 
-              {(activeHero.class === 'PRIEST' || activeHero.class === 'BISHOP' || activeHero.class === 'LORD') && (
-                <button
-                  onClick={() => handleSelectAction('DISPELL', undefined, selectedTargetGroupIdx)}
-                  className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center gap-1 text-xs font-bold transition"
-                >
-                  <Zap className="w-4 h-4 text-yellow-400" />
-                  <span>Exorcisme</span>
-                </button>
-              )}
-
-              <button
-                onClick={handlePartyRun}
-                className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center gap-1 text-xs font-bold transition"
-                title="Fuite collective du groupe (PROCEDURE RUNAWAY)"
-              >
-                <Footprints className="w-4 h-4 text-emerald-400" />
-                <span>Fuir (Groupe)</span>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-purple-300">Sélectionnez un sort magique :</span>
-                <button
-                  onClick={() => setSelectingSpell(false)}
-                  className="text-xs text-slate-400 hover:text-white"
-                >
-                  Annuler
-                </button>
-              </div>
-              {pendingSpell && (
-                <div className="p-2.5 bg-slate-900 border border-purple-700 rounded-lg space-y-2">
-                  <div className="text-xs font-bold text-purple-300">{pendingSpell.name} : choisissez le personnage ciblé</div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {party.map((p, idx) => (
+                    {(activeHero.class === 'PRIEST' || activeHero.class === 'BISHOP' || activeHero.class === 'LORD') && (
                       <button
-                        key={p.id}
-                        onClick={() => handleSelectAction('SPELL', pendingSpell.id, selectedTargetGroupIdx, idx)}
-                        className="p-2 bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition"
+                        onClick={() => handleSelectAction('DISPELL', undefined, selectedTargetGroupIdx)}
+                        className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
                       >
-                        <div className="font-bold text-white">{idx + 1}. {p.name}</div>
-                        <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} PV{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
+                        <Zap className="w-4 h-4 text-yellow-400" />
+                        <span>Exorcisme</span>
                       </button>
-                    ))}
+                    )}
+
+                    <button
+                      onClick={handlePartyRun}
+                      className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
+                      title="Fuite collective du groupe (PROCEDURE RUNAWAY)"
+                    >
+                      <Footprints className="w-4 h-4 text-emerald-400" />
+                      <span>Fuir (Groupe)</span>
+                    </button>
                   </div>
-                </div>
-              )}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {availableSpells.map(sp => (
-                  <button
-                    key={sp.id}
-                    onClick={() => {
-                      if (isFriendlySingleSpell(sp.name)) setPendingSpell(sp);
-                      else handleSelectAction('SPELL', sp.id, selectedTargetGroupIdx);
-                    }}
-                    className="p-2.5 bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition"
-                  >
-                    <div className="font-bold text-white flex justify-between">
-                      <span>{sp.name}</span>
-                      <span className="text-[10px] text-purple-400">T{sp.tier}</span>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-purple-300">Sélectionnez un sort magique :</span>
+                      <button
+                        onClick={() => setSelectingSpell(false)}
+                        className="text-xs text-slate-400 hover:text-white p-1"
+                      >
+                        Annuler
+                      </button>
                     </div>
-                    <div className="text-[11px] text-slate-400 line-clamp-1">{sp.description}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      );
-    })()}
-  </div>
-)}
+                    {pendingSpell && (
+                      <div className="p-2.5 bg-slate-900 border border-purple-700 rounded-lg space-y-2">
+                        <div className="text-xs font-bold text-purple-300">{pendingSpell.name} : choisissez le personnage ciblé</div>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {party.map((p, idx) => (
+                            <button
+                              key={p.id}
+                              onClick={() => handleSelectAction('SPELL', pendingSpell.id, selectedTargetGroupIdx, idx)}
+                              className="p-2 min-h-[44px] bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition active:scale-95"
+                            >
+                              <div className="font-bold text-white">{idx + 1}. {p.name}</div>
+                              <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} PV{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                      {availableSpells.map(sp => (
+                        <button
+                          key={sp.id}
+                          onClick={() => {
+                            if (isFriendlySingleSpell(sp.name)) setPendingSpell(sp);
+                            else handleSelectAction('SPELL', sp.id, selectedTargetGroupIdx);
+                          }}
+                          className="p-2.5 min-h-[44px] bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition active:scale-95"
+                        >
+                          <div className="font-bold text-white flex justify-between">
+                            <span>{sp.name}</span>
+                            <span className="text-[10px] text-purple-400">T{sp.tier}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400 line-clamp-1">{sp.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Combat Resolution Logs */}
       {roundLog.length > 0 && (

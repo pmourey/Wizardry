@@ -287,37 +287,37 @@ export const ChestView: React.FC<ChestViewProps> = ({
   }, [opened, hero, selectedDisarmTrap, chest, party, dungeonLevel, selectedHeroIdx]);
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 text-slate-100 p-6 select-none overflow-y-auto max-w-3xl mx-auto">
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-amber-950/80 border border-amber-600/40 rounded-xl text-amber-400">
-            <Package className="w-6 h-6" />
+    <div className="flex flex-col h-full bg-slate-950 text-slate-100 p-3 sm:p-6 select-none overflow-y-auto max-w-3xl mx-auto safe-top safe-bottom safe-left safe-right">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 sm:pb-4 border-b border-slate-800">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="p-2 sm:p-2.5 bg-amber-950/80 border border-amber-600/40 rounded-xl text-amber-400 shrink-0">
+            <Package className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white font-serif">Coffre aux Trésors Découvert</h2>
-            <p className="text-xs text-slate-400">Inspectez, désamorcez ou forcez le coffre avec précaution.</p>
+            <h2 className="text-base sm:text-lg font-bold text-white font-serif">Coffre aux Trésors Découvert</h2>
+            <p className="text-[11px] sm:text-xs text-slate-400">Inspectez, désamorcez ou forcez le coffre avec précaution.</p>
           </div>
         </div>
 
         {/* Dynamic trap status badge */}
-        <div className="text-right">
+        <div className="self-start sm:self-auto">
           {chest.disarmed ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-950/80 border border-emerald-600/50 rounded-full text-emerald-400 text-xs font-bold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-950/80 border border-emerald-600/50 rounded-full text-emerald-400 text-[11px] sm:text-xs font-bold">
               <ShieldCheck className="w-3.5 h-3.5" />
               Désamorcé (Inoffensif)
             </span>
           ) : chest.exploded ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-950/80 border border-amber-600/50 rounded-full text-amber-400 text-xs font-bold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-950/80 border border-amber-600/50 rounded-full text-amber-400 text-[11px] sm:text-xs font-bold">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Piège Déclenché (Neutralisé)
             </span>
           ) : chest.calfoRevealed ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-950/80 border border-purple-600/50 rounded-full text-purple-300 text-xs font-bold">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-950/80 border border-purple-600/50 rounded-full text-purple-300 text-[11px] sm:text-xs font-bold">
               <KeyRound className="w-3.5 h-3.5" />
               Calfo : {TRAP_NAMES[chest.trapType]}
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 border border-slate-700 rounded-full text-slate-400 text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-full text-slate-400 text-[11px] sm:text-xs font-medium">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
               Piège Armé (Non désamorcé)
             </span>
@@ -325,15 +325,15 @@ export const ChestView: React.FC<ChestViewProps> = ({
         </div>
       </div>
 
-      <div className="py-6 space-y-4">
+      <div className="py-3 sm:py-6 space-y-3 sm:space-y-4">
         {/* Active operator selector */}
         {!opened && (
-          <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-xl space-y-3">
+          <div className="bg-slate-900/80 border border-slate-800 p-2.5 sm:p-4 rounded-xl space-y-2 sm:space-y-3">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-300">Aventurier à l'action :</span>
-              <span className="text-amber-400 font-bold">{hero.name} ({hero.class} · Agilité {hero.attrib.AGILITY})</span>
+              <span className="font-bold text-slate-300 text-[11px] sm:text-xs">Aventurier à l'action :</span>
+              <span className="text-amber-400 font-bold text-[11px] sm:text-xs">{hero.name} ({hero.class} · AGI {hero.attrib.AGILITY})</span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2">
               {party.map((h, idx) => {
                 const isAlive = h.status === 'OK' && h.hpLeft > 0;
                 return (
@@ -341,14 +341,14 @@ export const ChestView: React.FC<ChestViewProps> = ({
                     key={h.id}
                     onClick={() => { setSelectedHeroIdx(idx); sounds.playTurn(); }}
                     disabled={!isAlive}
-                    className={`p-2 rounded-lg text-xs font-semibold border transition ${
+                    className={`p-1.5 sm:p-2 min-h-[44px] rounded-lg text-xs font-semibold border transition active:scale-95 ${
                       selectedHeroIdx === idx 
                         ? 'bg-amber-600/20 border-amber-500 text-amber-300' 
                         : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:text-white'
                     } disabled:opacity-30 disabled:border-slate-800`}
                   >
-                    <div>{h.name}</div>
-                    <div className="text-[10px] text-slate-400 font-normal">
+                    <div className="truncate text-[11px] sm:text-xs">{h.name}</div>
+                    <div className="text-[9px] sm:text-[10px] text-slate-400 font-normal">
                       {isAlive ? `${h.hpLeft} PV` : h.status}
                     </div>
                   </button>
@@ -360,12 +360,12 @@ export const ChestView: React.FC<ChestViewProps> = ({
 
         {/* Actions panel */}
         {!opened ? (
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="space-y-2.5 sm:space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
               <button
                 onClick={handleInspect}
                 disabled={chest.exploded || chest.disarmed}
-                className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition disabled:opacity-40 disabled:hover:bg-slate-800"
+                className="p-3 min-h-[44px] bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition active:scale-95 disabled:opacity-40 disabled:hover:bg-slate-800"
                 title={chest.exploded ? "Le piège a déjà explosé" : "Examiner la serrure pour identifier le piège (Touche I)"}
               >
                 <Search className="w-4 h-4 text-amber-400" />
@@ -375,7 +375,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
               <button
                 onClick={handleCalfo}
                 disabled={chest.exploded || chest.disarmed}
-                className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition disabled:opacity-40 disabled:hover:bg-slate-800"
+                className="p-3 min-h-[44px] bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition active:scale-95 disabled:opacity-40 disabled:hover:bg-slate-800"
                 title={chest.exploded ? "Le piège a déjà explosé" : "Incanter CALFO pour révéler le piège à 100% (Touche C)"}
               >
                 <KeyRound className="w-4 h-4 text-purple-400" />
@@ -385,7 +385,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
               {/* Pascal L)EAVE Option: Leave chest undisturbed */}
               <button
                 onClick={handleLeave}
-                className="p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition shadow-sm"
+                className="p-3 min-h-[44px] bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition active:scale-95 shadow-sm"
                 title="Ne pas ouvrir le coffre et reprendre la route sans déclencher de piège (Option L originelle de Wizardry)"
               >
                 <Footprints className="w-4 h-4 text-slate-400" />
@@ -400,7 +400,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
                 value={selectedDisarmTrap}
                 onChange={e => setSelectedDisarmTrap(e.target.value as TTrapType)}
                 disabled={chest.exploded || chest.disarmed}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white flex-1 min-w-0 focus:outline-none disabled:opacity-40"
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 min-h-[40px] text-xs text-white flex-1 min-w-0 focus:outline-none disabled:opacity-40"
               >
                 {Object.entries(TRAP_NAMES).map(([key, name]) => (
                   <option key={key} value={key}>{name}</option>
@@ -409,7 +409,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
               <button
                 onClick={handleDisarm}
                 disabled={chest.exploded || chest.disarmed}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 text-white rounded-lg text-xs font-bold transition shrink-0 disabled:opacity-40"
+                className="px-4 py-2 min-h-[40px] bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 text-white rounded-lg text-xs font-bold transition active:scale-95 shrink-0 disabled:opacity-40"
                 title="Tenter de désamorcer le piège (Touche D)"
               >
                 (D) Désarmer
@@ -419,7 +419,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
             {/* Open chest button - prominently styled and shows safe state when exploded/disarmed */}
             <button
               onClick={handleOpen}
-              className={`w-full p-4 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 shadow-lg ${
+              className={`w-full min-h-[48px] p-3.5 sm:p-4 rounded-xl text-xs sm:text-sm font-bold transition active:scale-95 flex items-center justify-center gap-2 shadow-lg ${
                 chest.disarmed
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40 ring-1 ring-emerald-400/50'
                   : chest.exploded
@@ -428,8 +428,8 @@ export const ChestView: React.FC<ChestViewProps> = ({
               }`}
               title="Ouvrir le coffre et piller le trésor (Touche O)"
             >
-              <Unlock className="w-4 h-4" />
-              <span>
+              <Unlock className="w-4 h-4 shrink-0" />
+              <span className="text-center">
                 {chest.disarmed
                   ? '(O) Ouvrir le coffre sécurisé et collecter le butin'
                   : chest.exploded
@@ -441,15 +441,15 @@ export const ChestView: React.FC<ChestViewProps> = ({
         ) : (
           <button
             onClick={() => onFinishChest(chest.trapType === 'ALARM', true)}
-            className="w-full p-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-lg"
+            className="w-full min-h-[48px] p-3.5 sm:p-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition active:scale-95 flex items-center justify-center gap-2 shadow-lg text-xs sm:text-sm"
           >
-            <span>Reprendre l'exploration du Labyrinthe (Entrée / Espace)</span>
+            <span>Reprendre l'exploration du Labyrinthe</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         )}
 
         {/* Chest resolution logs */}
-        <div className="bg-black/60 border border-slate-800 p-4 rounded-xl space-y-1.5 font-mono text-xs text-slate-300">
+        <div className="bg-black/60 border border-slate-800 p-3 sm:p-4 rounded-xl space-y-1.5 font-mono text-[11px] sm:text-xs text-slate-300">
           {log.map((line, idx) => (
             <div key={idx} className="leading-relaxed">{line}</div>
           ))}

@@ -216,30 +216,30 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
     hero.class === 'SAMURAI' || hero.class === 'LORD';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
-        className="w-full max-w-3xl bg-slate-900 border border-amber-600/40 rounded-2xl shadow-2xl shadow-amber-950/40 overflow-hidden flex flex-col max-h-[92vh]"
+        className="w-full h-full sm:h-auto max-w-3xl bg-slate-900 border-0 sm:border border-amber-600/40 rounded-none sm:rounded-2xl shadow-2xl shadow-amber-950/40 overflow-hidden flex flex-col max-h-screen sm:max-h-[92vh] safe-top safe-bottom safe-left safe-right"
         onClick={e => e.stopPropagation()}
       >
         {/* Header Bar */}
-        <div className="px-6 py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-950/80 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold font-serif text-lg shadow-inner">
+        <div className="px-3 sm:px-6 py-2.5 sm:py-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-950/80 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold font-serif text-base sm:text-lg shadow-inner shrink-0">
               {hero.name.charAt(0)}
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold font-serif text-white tracking-wide">{hero.name}</h2>
+                <h2 className="text-base sm:text-xl font-bold font-serif text-white tracking-wide truncate">{hero.name}</h2>
               </div>
-              <p className="text-xs text-slate-400">
-                {hero.race} · {hero.class} · Alignement {hero.align} · Âge : {ageYears} ans ({hero.age} sem.)
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+                {hero.race} · {hero.class} · {hero.align} · {ageYears} ans
               </p>
               {/* Active Status Badges */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+              <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5">
                 {activeEffects.map(eff => (
                   <span
                     key={eff.id}
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${eff.bgColor} ${eff.borderColor} ${eff.color}`}
+                    className={`text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded border flex items-center gap-1 ${eff.bgColor} ${eff.borderColor} ${eff.color}`}
                     title={eff.description}
                   >
                     {renderEffectIcon(eff.iconName, "w-3 h-3")}
@@ -247,7 +247,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                   </span>
                 ))}
                 {activeEffects.length === 0 && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-emerald-950/40 border-emerald-500/30 text-emerald-400 flex items-center gap-1">
+                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded border bg-emerald-950/40 border-emerald-500/30 text-emerald-400 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     EN FORME
                   </span>
@@ -257,9 +257,9 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
           </div>
 
           {/* Quick Roster Switching & Close */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {onSelectCharacter && party.length > 1 && (
-              <div className="flex items-center gap-1 bg-slate-900 border border-slate-700 rounded-lg p-0.5 mr-2">
+              <div className="flex items-center gap-0.5 sm:gap-1 bg-slate-900 border border-slate-700 rounded-lg p-0.5 mr-1 sm:mr-2">
                 <button
                   onClick={() => {
                     const prev = (currentIndex - 1 + party.length) % party.length;
@@ -267,11 +267,11 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                     sounds.playTurn();
                   }}
                   title="Héros précédent (Touche Gauche)"
-                  className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                  className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-95"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-[11px] font-mono px-1.5 text-amber-400">
+                <span className="text-[10px] sm:text-[11px] font-mono px-1 sm:px-1.5 text-amber-400">
                   {currentIndex + 1}/{party.length}
                 </span>
                 <button
@@ -281,7 +281,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                     sounds.playTurn();
                   }}
                   title="Héros suivant (Touche Droite)"
-                  className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition"
+                  className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-95"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -289,7 +289,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
             )}
             <button
               onClick={() => { sounds.playTurn(); onClose(); }}
-              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition"
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition active:scale-95 min-h-[36px] min-w-[36px] flex items-center justify-center"
               title="Fermer la fiche (Échap)"
             >
               <X className="w-5 h-5" />
@@ -298,15 +298,15 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
         </div>
 
         {/* Vital Quick Bar */}
-        <div className="px-6 py-3 bg-slate-950/60 border-b border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        <div className="px-3 sm:px-6 py-2 sm:py-3 bg-slate-950/60 border-b border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs">
           {/* Health */}
-          <div className="flex items-center gap-2.5 p-2 bg-slate-900/80 rounded-lg border border-slate-800">
-            <Heart className={`w-4 h-4 ${hero.hpLeft < hero.hpMax / 3 ? 'text-red-500 animate-pulse' : 'text-emerald-400'}`} />
-            <div className="flex-1">
-              <div className="flex justify-between text-[11px] font-semibold">
-                <span className="text-slate-400">Points de Vie</span>
+          <div className="flex items-center gap-2 p-1.5 sm:p-2 bg-slate-900/80 rounded-lg border border-slate-800">
+            <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${hero.hpLeft < hero.hpMax / 3 ? 'text-red-500 animate-pulse' : 'text-emerald-400'}`} />
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between text-[10px] sm:text-[11px] font-semibold">
+                <span className="text-slate-400 truncate">PV</span>
                 <span className={hero.hpLeft < hero.hpMax / 3 ? 'text-red-400 font-bold' : 'text-emerald-300'}>
-                  {hero.hpLeft} / {hero.hpMax}
+                  {hero.hpLeft}/{hero.hpMax}
                 </span>
               </div>
               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
@@ -319,13 +319,13 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
           </div>
 
           {/* Armor Class */}
-          <div className="flex items-center gap-2.5 p-2 bg-slate-900/80 rounded-lg border border-slate-800">
-            <Shield className="w-4 h-4 text-cyan-400" />
-            <div>
-              <div className="text-[11px] text-slate-400 font-semibold">Classe d'Armure (CA)</div>
-              <div className="text-sm font-bold text-white flex items-center gap-1.5">
+          <div className="flex items-center gap-2 p-1.5 sm:p-2 bg-slate-900/80 rounded-lg border border-slate-800">
+            <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 shrink-0" />
+            <div className="min-w-0">
+              <div className="text-[10px] sm:text-[11px] text-slate-400 font-semibold truncate">CA</div>
+              <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-1">
                 <span>{hero.armorClass}</span>
-                <span className="text-[10px] text-slate-500 font-normal">
+                <span className="text-[9px] text-slate-500 font-normal hidden sm:inline">
                   ({hero.armorClass <= 2 ? 'Robuste' : hero.armorClass <= 6 ? 'Moyenne' : 'Vulnérable'})
                 </span>
               </div>
@@ -333,11 +333,11 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
           </div>
 
           {/* Level & XP */}
-          <div className="flex items-center gap-2.5 p-2 bg-slate-900/80 rounded-lg border border-slate-800">
-            <Activity className="w-4 h-4 text-amber-400" />
-            <div className="flex-1">
-              <div className="flex justify-between text-[11px] font-semibold">
-                <span className="text-slate-400">Niveau {hero.charLevel}</span>
+          <div className="flex items-center gap-2 p-1.5 sm:p-2 bg-slate-900/80 rounded-lg border border-slate-800">
+            <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between text-[10px] sm:text-[11px] font-semibold">
+                <span className="text-slate-400 truncate">Niv.{hero.charLevel}</span>
                 <span className="text-amber-300">{expProgress}%</span>
               </div>
               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
@@ -350,63 +350,63 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
           </div>
 
           {/* Gold */}
-          <div className="flex items-center gap-2.5 p-2 bg-slate-900/80 rounded-lg border border-slate-800">
-            <Coins className="w-4 h-4 text-yellow-400" />
-            <div>
-              <div className="text-[11px] text-slate-400 font-semibold">Bourse Personnelle</div>
-              <div className="text-sm font-bold text-yellow-300">
-                {hero.gold.toLocaleString()} <span className="text-[10px] text-yellow-500 font-normal">PO</span>
+          <div className="flex items-center gap-2 p-1.5 sm:p-2 bg-slate-900/80 rounded-lg border border-slate-800">
+            <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400 shrink-0" />
+            <div className="min-w-0">
+              <div className="text-[10px] sm:text-[11px] text-slate-400 font-semibold truncate">Or</div>
+              <div className="text-xs sm:text-sm font-bold text-yellow-300 truncate">
+                {hero.gold.toLocaleString()} <span className="text-[9px] text-yellow-500 font-normal">PO</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Modal Navigation Tabs */}
-        <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-800 bg-slate-900/40 text-xs">
+        <div className="flex items-center gap-1 sm:gap-2 px-3 sm:px-6 pt-2 sm:pt-3 border-b border-slate-800 bg-slate-900/40 text-xs overflow-x-auto whitespace-nowrap no-scrollbar">
           <button
             onClick={() => { setActiveTab('ATTRIBUTES'); sounds.playTurn(); }}
-            className={`flex items-center gap-2 px-4 py-2 font-bold border-b-2 transition ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 font-bold border-b-2 transition shrink-0 ${
               activeTab === 'ATTRIBUTES' 
                 ? 'border-amber-500 text-amber-400 bg-amber-500/10' 
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
             <Activity className="w-3.5 h-3.5" />
-            Caractéristiques & Combat
+            <span>Caractéristiques</span>
           </button>
           <button
             onClick={() => { setActiveTab('INVENTORY'); sounds.playTurn(); }}
-            className={`flex items-center gap-2 px-4 py-2 font-bold border-b-2 transition ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 font-bold border-b-2 transition shrink-0 ${
               activeTab === 'INVENTORY' 
                 ? 'border-amber-500 text-amber-400 bg-amber-500/10' 
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
             <Package className="w-3.5 h-3.5" />
-            Inventaire & Équipement ({hero.possessions.length}/8)
+            <span>Inventaire ({hero.possessions.length}/8)</span>
           </button>
           {hasSpells && (
             <button
               onClick={() => { setActiveTab('SPELLS'); sounds.playTurn(); }}
-              className={`flex items-center gap-2 px-4 py-2 font-bold border-b-2 transition ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 font-bold border-b-2 transition shrink-0 ${
                 activeTab === 'SPELLS' 
                   ? 'border-amber-500 text-amber-400 bg-amber-500/10' 
                   : 'border-transparent text-slate-400 hover:text-white'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Grimoire de Sorts
+              <span>Grimoire</span>
             </button>
           )}
         </div>
 
         {/* Dynamic Feedback Banner */}
         {feedbackMessage && (
-          <div className="px-6 py-2 bg-amber-950/40 border-b border-amber-800/40 text-xs text-amber-300 font-medium flex items-center justify-between">
+          <div className="px-3 sm:px-6 py-2 bg-amber-950/40 border-b border-amber-800/40 text-xs text-amber-300 font-medium flex items-center justify-between">
             <span>{feedbackMessage}</span>
             <button 
               onClick={() => setFeedbackMessage(null)} 
-              className="text-slate-400 hover:text-white text-[10px]"
+              className="text-slate-400 hover:text-white text-[10px] p-1"
             >
               ✕
             </button>
@@ -414,7 +414,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
         )}
 
         {/* Tab Content Area */}
-        <div className="flex-1 p-6 overflow-y-auto space-y-6">
+        <div className="flex-1 p-3 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6">
           {/* TAB 1: ATTRIBUTES & COMBAT */}
           {activeTab === 'ATTRIBUTES' && (
             <div className="space-y-6">

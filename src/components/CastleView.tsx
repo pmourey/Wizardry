@@ -715,38 +715,39 @@ export const CastleView: React.FC<CastleViewProps> = ({
   return (
     <div className="flex flex-col h-full bg-slate-950 text-slate-100 select-none">
       {/* Top Banner Navigation */}
-      <div className="flex items-center justify-between px-6 py-3.5 bg-slate-900 border-b border-slate-800">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-amber-950/80 border border-amber-600/40 flex items-center justify-center text-amber-400 font-bold font-serif shadow-sm">
+      <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3.5 bg-slate-900 border-b border-slate-800 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-amber-950/80 border border-amber-600/40 flex items-center justify-center text-amber-400 font-bold font-serif shadow-sm shrink-0">
             {`W${scenarioMeta.number}`}
           </div>
-          <div>
-            <h1 className="text-base font-bold text-white tracking-wide">
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-base font-bold text-white tracking-wide truncate">
               {castleName}
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-[11px] sm:text-xs text-slate-400 truncate hidden sm:block">
               {castleSubtitle}
             </p>
           </div>
         </div>
 
         {/* Action Shortcuts */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             onClick={() => {
               setInspectingPartyIndex(selectedCharIndex);
               sounds.playTurn();
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 rounded-lg text-xs font-semibold transition shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 rounded-lg text-xs font-semibold transition shadow-sm active:scale-95"
             title="Inspecter les caractéristiques (FOR, INT, PIE, VIT, AGI, CHA) et l'équipement"
           >
             <User className="w-3.5 h-3.5" />
-            Fiche Personnage
+            <span className="hidden sm:inline">Fiche Personnage</span>
+            <span className="sm:hidden">Fiche</span>
           </button>
           {onOpenPySide6Export && (
             <button
               onClick={onOpenPySide6Export}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold transition"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold transition"
             >
               <FileCode className="w-3.5 h-3.5" />
               Code PySide6 (.py)
@@ -761,66 +762,68 @@ export const CastleView: React.FC<CastleViewProps> = ({
                   sounds.playFanfare();
                 }
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-semibold transition"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-semibold transition active:scale-95"
               title="Menu de triche : restaurer le groupe"
             >
-              Triche : restaurer le groupe
+              <span className="hidden sm:inline">Triche : restaurer</span>
+              <span className="sm:hidden">Triche</span>
             </button>
           )}
           <button
             onClick={onEnterMaze}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition shadow-md shadow-amber-950/30"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition shadow-md shadow-amber-950/30 active:scale-95"
           >
             <DoorOpen className="w-4 h-4" />
-            Entrer dans le Donjon
+            <span className="hidden sm:inline">Entrer dans le Donjon</span>
+            <span className="sm:hidden">Donjon</span>
           </button>
         </div>
       </div>
 
       {/* Main Town Navigation Tabs */}
-      <div className="flex items-center gap-1 px-6 py-2 bg-slate-900/60 border-b border-slate-800/80 overflow-x-auto text-xs">
+      <div className="flex items-center gap-1 px-3 sm:px-6 py-2 bg-slate-900/60 border-b border-slate-800/80 overflow-x-auto text-xs whitespace-nowrap no-scrollbar">
         <button
           onClick={() => { setCurrentTab('COURTYARD'); sounds.playTurn(); }}
-          className={`px-3 py-1.5 rounded-md font-medium transition ${currentTab === 'COURTYARD' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
+          className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'COURTYARD' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
           Grande Cour
         </button>
         <button
           onClick={() => { setCurrentTab('INN'); sounds.playTurn(); }}
-          className={`px-3 py-1.5 rounded-md font-medium transition ${currentTab === 'INN' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
+          className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'INN' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
-          Auberge de l'Aventurier
+          Auberge
         </button>
         <button
           onClick={() => { setCurrentTab('TAVERN'); sounds.playTurn(); }}
-          className={`px-3 py-1.5 rounded-md font-medium transition ${currentTab === 'TAVERN' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
+          className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'TAVERN' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
-          Taverne de Gilgamesh
+          Taverne
         </button>
         <button
           onClick={() => { setCurrentTab('BOLTAC'); sounds.playTurn(); }}
-          className={`px-3 py-1.5 rounded-md font-medium transition ${currentTab === 'BOLTAC' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
+          className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'BOLTAC' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
           Comptoir de Boltac
         </button>
         <button
           onClick={() => { setCurrentTab('TEMPLE'); sounds.playTurn(); }}
-          className={`px-3 py-1.5 rounded-md font-medium transition ${currentTab === 'TEMPLE' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
+          className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'TEMPLE' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
           Temple de Cant
         </button>
         <button
           onClick={() => { setCurrentTab('TRAINING'); sounds.playTurn(); }}
-          className={`px-3 py-1.5 rounded-md font-medium transition ${currentTab === 'TRAINING' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
+          className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'TRAINING' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
           Terrains d'Entraînement
         </button>
         <button
           onClick={() => { setCurrentTab('JOURNAL'); sounds.playTurn(); }}
-          className={`px-3 py-1.5 rounded-md font-medium transition flex items-center gap-1.5 ${currentTab === 'JOURNAL' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-400/90 hover:text-amber-300 hover:bg-slate-800/60'}`}
+          className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 flex items-center gap-1.5 ${currentTab === 'JOURNAL' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-400/90 hover:text-amber-300 hover:bg-slate-800/60'}`}
         >
           <BookOpen className="w-3.5 h-3.5" />
-          <span>Journal d'Aventures</span>
+          <span>Journal</span>
           {adventureEvents.length > 0 && (
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold font-mono ${currentTab === 'JOURNAL' ? 'bg-amber-950 text-amber-300' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}`}>
               {Math.min(10, adventureEvents.length)}
@@ -830,19 +833,19 @@ export const CastleView: React.FC<CastleViewProps> = ({
       </div>
 
       {/* Information Banner & Universal Party Selector / Gold Actions */}
-      <div className="px-6 py-2.5 bg-slate-900/70 border-b border-slate-800 text-xs flex flex-wrap items-center justify-between gap-3 shadow-inner">
+      <div className="px-3 sm:px-6 py-2 bg-slate-900/70 border-b border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-inner">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-amber-300 font-medium">{message}</span>
+          <span className="text-amber-300 font-medium truncate">{message}</span>
         </div>
 
         {/* Global Party Switcher & Gold Actions in Castle */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Party Hero Dropdown Selector */}
           {party.length > 0 && (
-            <div className="flex items-center gap-2 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-700/80 shadow-sm">
-              <label htmlFor="active-hero-select" className="text-[11px] font-bold text-amber-400 whitespace-nowrap flex items-center gap-1.5 cursor-pointer">
+            <div className="flex items-center gap-1.5 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-700/80 shadow-sm max-w-full">
+              <label htmlFor="active-hero-select" className="text-[11px] font-bold text-amber-400 whitespace-nowrap flex items-center gap-1 cursor-pointer shrink-0">
                 <User className="w-3.5 h-3.5 text-amber-400" />
-                <span>Héros actif :</span>
+                <span className="hidden sm:inline">Héros :</span>
               </label>
               <select
                 id="active-hero-select"
@@ -852,7 +855,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                   setSelectedCharIndex(idx);
                   sounds.playTurn();
                 }}
-                className="bg-slate-900 border border-slate-700 hover:border-amber-500/60 text-white font-semibold text-xs rounded-md px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer transition shadow-inner"
+                className="bg-slate-900 border border-slate-700 hover:border-amber-500/60 text-white font-semibold text-xs rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer transition shadow-inner truncate max-w-[200px] sm:max-w-none"
               >
                 {party.map((hero, idx) => (
                   <option key={hero.id} value={idx}>
@@ -865,23 +868,25 @@ export const CastleView: React.FC<CastleViewProps> = ({
 
           {/* Gold Actions: Pool & Share */}
           {party.length > 1 && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <button
                 onClick={handlePoolGold}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm active:scale-95"
                 title={`Rassembler tout l'or du groupe (${party.reduce((sum, h) => sum + h.gold, 0)} PO) sur ${selectedHero?.name}`}
               >
                 <Coins className="w-3.5 h-3.5 text-amber-400" />
-                <span>Mettre l'or en commun</span>
+                <span className="hidden sm:inline">Mettre l'or en commun</span>
+                <span className="sm:hidden">Grouper l'or</span>
               </button>
 
               <button
                 onClick={handleShareGold}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm active:scale-95"
                 title="Diviser équitablement la fortune du groupe entre tous les héros"
               >
                 <Coins className="w-3.5 h-3.5 text-amber-400" />
-                <span>Diviser l'or</span>
+                <span className="hidden sm:inline">Diviser l'or</span>
+                <span className="sm:hidden">Partager</span>
               </button>
             </div>
           )}
@@ -891,112 +896,112 @@ export const CastleView: React.FC<CastleViewProps> = ({
               setInspectingPartyIndex(selectedCharIndex);
               sounds.playTurn();
             }}
-            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-cyan-500/30 rounded-lg text-xs font-semibold transition flex items-center gap-1"
+            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-cyan-500/30 rounded-lg text-xs font-semibold transition flex items-center gap-1 active:scale-95"
           >
             <User className="w-3 h-3" />
-            Voir Fiche
+            <span>Fiche</span>
           </button>
         </div>
       </div>
 
       {/* Town Views Content Area */}
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-3 sm:p-6 overflow-y-auto safe-left safe-right safe-bottom">
         {currentTab === 'COURTYARD' && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-xl space-y-4">
-              <h2 className="text-xl font-serif font-bold text-white tracking-wide">
+          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+            <div className="bg-slate-900/60 border border-slate-800 p-4 sm:p-6 rounded-xl space-y-3 sm:space-y-4">
+              <h2 className="text-lg sm:text-xl font-serif font-bold text-white tracking-wide">
                 {castleWelcome}
               </h2>
-              <p className="text-sm text-slate-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                 {castleDescription}
               </p>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 pt-2 sm:pt-4">
                 <button
                   onClick={() => setCurrentTab('INN')}
-                  className="p-4 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-left transition space-y-1.5"
+                  className="p-3 sm:p-4 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-left transition space-y-1 active:scale-95"
                 >
-                  <div className="text-amber-400 font-bold flex items-center gap-2">
+                  <div className="text-amber-400 font-bold flex items-center gap-2 text-xs sm:text-sm">
                     <Sparkles className="w-4 h-4" />
                     Auberge
                   </div>
-                  <p className="text-xs text-slate-400">Soignez les blessures et gagnez des niveaux.</p>
+                  <p className="text-[11px] sm:text-xs text-slate-400">Soins et montées de niveau.</p>
                 </button>
 
                 <button
                   onClick={() => setCurrentTab('BOLTAC')}
-                  className="p-4 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-left transition space-y-1.5"
+                  className="p-3 sm:p-4 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-left transition space-y-1 active:scale-95"
                 >
-                  <div className="text-amber-400 font-bold flex items-center gap-2">
+                  <div className="text-amber-400 font-bold flex items-center gap-2 text-xs sm:text-sm">
                     <Store className="w-4 h-4" />
                     Comptoir
                   </div>
-                  <p className="text-xs text-slate-400">Achetez armes, armures et potions.</p>
+                  <p className="text-[11px] sm:text-xs text-slate-400">Armes, armures et potions.</p>
                 </button>
 
                 <button
                   onClick={() => setCurrentTab('TEMPLE')}
-                  className="p-4 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-left transition space-y-1.5"
+                  className="p-3 sm:p-4 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-left transition space-y-1 active:scale-95"
                 >
-                  <div className="text-amber-400 font-bold flex items-center gap-2">
+                  <div className="text-amber-400 font-bold flex items-center gap-2 text-xs sm:text-sm">
                     <HeartHandshake className="w-4 h-4" />
                     Temple
                   </div>
-                  <p className="text-xs text-slate-400">Ressuscitez les défunts et soignez pétrifications et paralysies.</p>
+                  <p className="text-[11px] sm:text-xs text-slate-400">Résurrection et guérisons.</p>
                 </button>
 
                 <button
                   onClick={() => setCurrentTab('JOURNAL')}
-                  className="p-4 bg-amber-950/40 hover:bg-amber-950/60 border border-amber-600/40 rounded-xl text-left transition space-y-1.5"
+                  className="p-3 sm:p-4 bg-amber-950/40 hover:bg-amber-950/60 border border-amber-600/40 rounded-xl text-left transition space-y-1 active:scale-95"
                 >
-                  <div className="text-amber-300 font-bold flex items-center gap-2">
+                  <div className="text-amber-300 font-bold flex items-center gap-2 text-xs sm:text-sm">
                     <BookOpen className="w-4 h-4 text-amber-400" />
-                    Journal d'Aventures
+                    Journal
                   </div>
-                  <p className="text-xs text-amber-200/70">Consultez les 10 derniers événements du dédale.</p>
+                  <p className="text-[11px] sm:text-xs text-amber-200/70">10 derniers événements.</p>
                 </button>
               </div>
             </div>
 
             {/* Ready Party Summary Strip */}
-            <div className="bg-slate-900/60 border border-slate-800 p-5 rounded-xl space-y-3">
+            <div className="bg-slate-900/60 border border-slate-800 p-3 sm:p-5 rounded-xl space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-200">
-                  Composition Actuelle de l'Escouade ({party.length}/6)
+                <h3 className="text-xs sm:text-sm font-bold text-slate-200">
+                  Composition de l'Escouade ({party.length}/6)
                 </h3>
-                <span className="text-xs text-slate-400">Cliquez sur un héros pour interagir dans les boutiques</span>
+                <span className="text-[10px] sm:text-xs text-slate-400 hidden sm:inline">Cliquez sur un héros pour interagir dans les boutiques</span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-6 gap-2.5">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2.5">
                 {party.map((hero, idx) => (
                   <div
                     key={hero.id}
                     onClick={() => { setSelectedCharIndex(idx); sounds.playTurn(); }}
-                    className={`p-3 rounded-lg border text-xs cursor-pointer transition flex flex-col justify-between ${selectedCharIndex === idx ? 'bg-amber-950/40 border-amber-500/60 shadow-sm' : 'bg-slate-800/60 border-slate-700/40 hover:border-slate-600'}`}
+                    className={`p-2 sm:p-3 rounded-lg border text-xs cursor-pointer transition flex flex-col justify-between ${selectedCharIndex === idx ? 'bg-amber-950/40 border-amber-500/60 shadow-sm' : 'bg-slate-800/60 border-slate-700/40 hover:border-slate-600'}`}
                   >
                     <div>
-                      <div className="font-bold text-white flex items-center justify-between">
-                        <span>{hero.name}</span>
-                        <span className="text-[10px] text-amber-400">Niv.{hero.charLevel}</span>
+                      <div className="font-bold text-white flex items-center justify-between text-[11px] sm:text-xs">
+                        <span className="truncate">{hero.name}</span>
+                        <span className="text-[9px] sm:text-[10px] text-amber-400">N.{hero.charLevel}</span>
                       </div>
-                      <div className="text-[11px] text-slate-400">{hero.class}</div>
+                      <div className="text-[10px] sm:text-[11px] text-slate-400 truncate">{hero.class}</div>
                     </div>
-                    <div className="pt-2">
-                      <div className="flex justify-between text-[11px]">
+                    <div className="pt-1.5 sm:pt-2">
+                      <div className="flex justify-between text-[10px] sm:text-[11px]">
                         <span className="text-slate-400">PV:</span>
                         <span className={hero.hpLeft < hero.hpMax / 2 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
                           {hero.hpLeft}/{hero.hpMax}
                         </span>
                       </div>
-                      <div className="flex justify-between text-[10px] text-slate-400">
+                      <div className="flex justify-between text-[9px] sm:text-[10px] text-slate-400">
                         <span>CA: {hero.armorClass}</span>
                         <span className="text-amber-400">{hero.gold} PO</span>
                       </div>
                       {/* Active Status Badges */}
-                      <div className="flex flex-wrap gap-1 pt-1 min-h-[18px]">
+                      <div className="flex flex-wrap gap-0.5 sm:gap-1 pt-1 min-h-[16px] sm:min-h-[18px]">
                         {getActiveStatusEffects(hero).map(eff => (
                           <span 
                             key={eff.id}
-                            className={`text-[9px] font-bold px-1 py-0.2 rounded border ${eff.bgColor} ${eff.borderColor} ${eff.color}`}
+                            className={`text-[8px] sm:text-[9px] font-bold px-1 py-0.2 rounded border ${eff.bgColor} ${eff.borderColor} ${eff.color}`}
                           >
                             {eff.badge}
                           </span>
@@ -1009,11 +1014,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           setInspectingPartyIndex(idx);
                           sounds.playTurn();
                         }}
-                        className="mt-2 w-full py-1 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 rounded text-[10px] font-bold transition flex items-center justify-center gap-1"
+                        className="mt-1.5 sm:mt-2 w-full py-1 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 rounded text-[9px] sm:text-[10px] font-bold transition flex items-center justify-center gap-1 active:scale-95"
                         title="Voir les caractéristiques FOR, INT, PIE, VIT, AGI, CHA"
                       >
                         <User className="w-3 h-3" />
-                        Fiche de stats
+                        Fiche
                       </button>
                     </div>
                   </div>
@@ -1058,37 +1063,37 @@ export const CastleView: React.FC<CastleViewProps> = ({
 
         {/* BOLTAC SHOP */}
         {currentTab === 'BOLTAC' && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between bg-slate-900/80 border border-slate-800 p-4 rounded-xl">
+          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900/80 border border-slate-800 p-3 sm:p-4 rounded-xl">
               <div>
-                <h2 className="text-lg font-serif font-bold text-white">Comptoir de Boltac</h2>
-                <p className="text-xs text-slate-400">Armes, protections et artefacts magiques.</p>
+                <h2 className="text-base sm:text-lg font-serif font-bold text-white">Comptoir de Boltac</h2>
+                <p className="text-[11px] sm:text-xs text-slate-400">Armes, protections et artefacts magiques.</p>
               </div>
               <button
                 onClick={handlePoolGold}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1.5"
+                className="px-3 py-1.5 min-h-[36px] bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <Coins className="w-3.5 h-3.5" />
-                Mettre tout l'or en commun sur {selectedHero?.name}
+                <span>Mettre tout l'or sur {selectedHero?.name}</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Buy catalog */}
-              <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-3">
+              <div className="bg-slate-900/60 border border-slate-800 p-3 sm:p-4 rounded-xl space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">Articles en vente</h3>
-                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[340px] sm:max-h-[380px] overflow-y-auto pr-1">
                   {ITEMS_DATABASE.filter(it => it.price > 0 && it.boltacStock !== 0 && !it.cursed).map(item => (
-                    <div key={item.id} className="p-2.5 bg-slate-800/50 border border-slate-700/40 rounded-lg flex items-center justify-between text-xs">
-                      <div>
-                        <div className="font-semibold text-white">{item.name}</div>
-                        <div className="text-[11px] text-slate-400">
+                    <div key={item.id} className="p-2 sm:p-2.5 bg-slate-800/50 border border-slate-700/40 rounded-lg flex items-center justify-between gap-2 text-xs">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-white truncate">{item.name}</div>
+                        <div className="text-[10px] sm:text-[11px] text-slate-400 truncate">
                           {item.objType} {item.objType === 'WEAPON' && item.wepHpDam?.level ? `· Dégâts ${formatDamageDice(item.wepHpDam)}` : ''} {item.armorMod ? `· CA -${item.armorMod}` : ''} · {item.price} PO
                         </div>
                       </div>
                       <button
                         onClick={() => handleBuyItem(item)}
-                        className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-bold transition"
+                        className="px-3 py-1.5 min-h-[32px] bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-bold transition shrink-0 active:scale-95"
                       >
                         Acheter
                       </button>
@@ -1098,11 +1103,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
               </div>
 
               {/* Player Inventory (Sell) */}
-              <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-3">
+              <div className="bg-slate-900/60 border border-slate-800 p-3 sm:p-4 rounded-xl space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
                   Inventaire de {selectedHero?.name} (Vendre)
                 </h3>
-                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[340px] sm:max-h-[380px] overflow-y-auto pr-1">
                   {selectedHero?.possessions.length === 0 && (
                     <p className="text-xs text-slate-500 italic py-6 text-center">Aucun objet dans l'inventaire.</p>
                   )}
@@ -1110,18 +1115,18 @@ export const CastleView: React.FC<CastleViewProps> = ({
                     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
                     if (!itm) return null;
                     return (
-                      <div key={sIdx} className="p-2.5 bg-slate-800/50 border border-slate-700/40 rounded-lg flex items-center justify-between text-xs">
-                        <div>
-                          <div className="font-semibold text-white flex items-center gap-1.5">
-                            <span>{itm.name}</span>
-                            {slot.equipped && <span className="text-[10px] text-emerald-400 font-bold">[Équipé]</span>}
-                            {slot.cursed && <span className="text-[10px] text-red-400 font-bold">[Maudit]</span>}
+                      <div key={sIdx} className="p-2 sm:p-2.5 bg-slate-800/50 border border-slate-700/40 rounded-lg flex items-center justify-between gap-2 text-xs">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-white flex items-center gap-1.5 truncate">
+                            <span className="truncate">{itm.name}</span>
+                            {slot.equipped && <span className="text-[9px] sm:text-[10px] text-emerald-400 font-bold shrink-0">[Équipé]</span>}
+                            {slot.cursed && <span className="text-[9px] sm:text-[10px] text-red-400 font-bold shrink-0">[Maudit]</span>}
                           </div>
-                          <div className="text-[11px] text-slate-400">Valeur de vente : {Math.floor(itm.price / 2)} PO</div>
+                          <div className="text-[10px] sm:text-[11px] text-slate-400">Revente : {Math.floor(itm.price / 2)} PO</div>
                         </div>
                         <button
                           onClick={() => handleSellItem(sIdx)}
-                          className="px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-semibold transition"
+                          className="px-3 py-1.5 min-h-[32px] bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-semibold transition shrink-0 active:scale-95"
                         >
                           Vendre
                         </button>
@@ -1410,7 +1415,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                                 type="button"
                                 onClick={() => handleRemoveStat(st as any)}
                                 disabled={val <= baseVal}
-                                className="py-1 px-2 bg-slate-700/70 hover:bg-slate-600 text-slate-200 rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-slate-600/50 flex items-center justify-center"
+                                className="py-1.5 px-2 min-h-[36px] bg-slate-700/70 hover:bg-slate-600 active:scale-95 text-slate-200 rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-slate-600/50 flex items-center justify-center"
                                 title={`Diminuer ${info.label} (-1) et récupérer 1 point bonus`}
                               >
                                 <Minus className="w-3.5 h-3.5" />
@@ -1419,7 +1424,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                                 type="button"
                                 onClick={() => handleAddStat(st as any)}
                                 disabled={bonusPoints <= 0 || val >= 18}
-                                className="py-1 px-2 bg-amber-600/80 hover:bg-amber-500 text-white rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-amber-500/50 flex items-center justify-center shadow-sm"
+                                className="py-1.5 px-2 min-h-[36px] bg-amber-600/80 hover:bg-amber-500 active:scale-95 text-white rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-amber-500/50 flex items-center justify-center shadow-sm"
                                 title={`Augmenter ${info.label} (+1) en dépensant 1 point bonus`}
                               >
                                 <Plus className="w-3.5 h-3.5" />
@@ -1596,7 +1601,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                                 type="button"
                                 onClick={() => handleRespecRemoveStat(st)}
                                 disabled={val <= raceBase}
-                                className="py-1 px-2 bg-slate-700/70 hover:bg-slate-600 text-slate-200 rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-slate-600/50 flex items-center justify-center"
+                                className="py-1.5 px-2 min-h-[36px] bg-slate-700/70 hover:bg-slate-600 active:scale-95 text-slate-200 rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-slate-600/50 flex items-center justify-center"
                                 title={`Diminuer ${info.label} (-1) et récupérer 1 point`}
                               >
                                 <Minus className="w-3.5 h-3.5" />
@@ -1605,7 +1610,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                                 type="button"
                                 onClick={() => handleRespecAddStat(st)}
                                 disabled={respecBonusAvailable <= 0 || val >= 18}
-                                className="py-1 px-2 bg-amber-600/80 hover:bg-amber-500 text-white rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-amber-500/50 flex items-center justify-center shadow-sm"
+                                className="py-1.5 px-2 min-h-[36px] bg-amber-600/80 hover:bg-amber-500 active:scale-95 text-white rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-amber-500/50 flex items-center justify-center shadow-sm"
                                 title={`Augmenter ${info.label} (+1) en dépensant 1 point`}
                               >
                                 <Plus className="w-3.5 h-3.5" />
