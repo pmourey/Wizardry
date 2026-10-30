@@ -772,7 +772,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
           {/* Persistent On-Screen Mini-Map HUD Overlay */}
           {hudMinimapVisible && (
-            <div className="absolute top-4 right-4 z-20 pointer-events-auto max-w-[280px] drop-shadow-2xl">
+            <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 pointer-events-auto max-w-[calc(100vw-1rem)] sm:max-w-[280px] drop-shadow-2xl">
               <MiniMap
                 maze={maze}
                 x={x}
@@ -792,16 +792,17 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           {!hudMinimapVisible && (
             <button
               onClick={() => { setHudMinimapVisible(true); sounds.playTurn(); }}
-              className="absolute top-4 right-4 z-20 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-amber-400 text-xs font-bold flex items-center gap-1.5 shadow-xl backdrop-blur-md transition hover:scale-105"
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-amber-400 text-xs font-bold flex items-center gap-1.5 shadow-xl backdrop-blur-md transition active:scale-95"
               title="Ouvrir la minicarte (M)"
             >
               <Map className="w-3.5 h-3.5" />
-              <span>Ouvrir Minicarte</span>
+              <span className="hidden sm:inline">Ouvrir Minicarte</span>
+              <span className="sm:hidden">Carte</span>
             </button>
           )}
           {/* Stairs Detected Floating Banner */}
           {isStairs && currentSqrDef && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-slate-900/90 border border-amber-500/80 px-4 py-2 rounded-full shadow-2xl backdrop-blur-md">
+            <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 border border-amber-500/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-2xl backdrop-blur-md max-w-[calc(100vw-1rem)]">
               <Layers className="w-4 h-4 text-amber-400 animate-bounce" />
               <span className="text-xs font-bold text-amber-300">
                 {currentSqrDef.aux0 === 0 
@@ -1672,7 +1673,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
       {/* FULL TACTICAL CARTOGRAPHY MODAL */}
       {showMinimap && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 overflow-y-auto safe-top safe-bottom safe-left safe-right animate-fadeIn">
           <MiniMap
             maze={maze}
             x={x}

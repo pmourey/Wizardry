@@ -110,7 +110,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
   // Determine size & dimensions based on variant & mode
   const { cellSize, svgWidth, svgHeight, startX, endX, startY, endY, cols, rows } = useMemo(() => {
     if (viewMode === 'radar') {
-      const size = variant === 'modal' ? 44 : 26;
+      const size = variant === 'modal' ? 36 : 22;
       const count = radarRadius * 2 + 1; // 7
       return {
         cellSize: size,
@@ -125,7 +125,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       };
     } else {
       // Full 20x20
-      const size = variant === 'modal' ? 24 : 11;
+      const size = variant === 'modal' ? 18 : 10;
       return {
         cellSize: size,
         svgWidth: 20 * size,
@@ -219,36 +219,33 @@ export const MiniMap: React.FC<MiniMapProps> = ({
   return (
     <div className={`select-none transition-all flex flex-col ${
       variant === 'modal' 
-        ? 'bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-5 max-w-4xl w-full' 
+        ? 'bg-slate-900 border border-slate-700 rounded-xl sm:rounded-2xl shadow-2xl p-2.5 sm:p-5 max-w-lg w-full max-h-[92vh] overflow-y-auto safe-top safe-bottom' 
         : variant === 'sidebar'
-        ? 'bg-slate-950/80 border border-slate-800 rounded-xl p-3'
-        : 'bg-slate-950/90 backdrop-blur-md border border-slate-800/90 rounded-xl shadow-2xl p-3'
+        ? 'bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-3'
+        : 'bg-slate-950/90 backdrop-blur-md border border-slate-800/90 rounded-xl shadow-2xl p-2 sm:p-3 w-auto'
     }`}>
       {/* Header bar */}
-      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80 gap-2">
-        <div className="flex items-center gap-2">
-          <div className="p-1 bg-amber-500/10 border border-amber-500/30 rounded text-amber-400">
-            <Compass className="w-4 h-4" />
+      <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800/80 gap-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <div className="p-1 bg-amber-500/10 border border-amber-500/30 rounded text-amber-400 shrink-0">
+            <Compass className="w-3.5 h-3.5" />
           </div>
-          <div>
-            <div className="text-xs font-bold text-white flex items-center gap-1.5">
-              <span>{viewMode === 'radar' ? 'Radar Tactique (7×7)' : 'Carte du Donjon (20×20)'}</span>
-              <span className="text-[10px] text-amber-400 bg-amber-950/50 px-1.5 py-0.2 rounded border border-amber-600/30">
-                Niv. {maze.level}
-              </span>
-            </div>
-            <div className="text-[10px] text-slate-400">
-              Pos: <strong className="text-amber-300">({x}, {y})</strong> · Cap: <strong className="text-white">{dirNames[direction]}</strong>
-            </div>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-white min-w-0">
+            <span className="text-[10px] text-amber-400 bg-amber-950/50 px-1.5 py-0.2 rounded border border-amber-600/30 font-mono shrink-0">
+              Niv. {maze.level}
+            </span>
+            <span className="text-[11px] text-slate-300 font-mono truncate">
+              ({x},{y}) <strong className="text-amber-300">{dirNames[direction]}</strong>
+            </span>
           </div>
         </div>
 
         {/* Toolbar Buttons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           {/* Radar / Full Floor Mode Toggle */}
           <button
             onClick={() => setViewMode(prev => prev === 'radar' ? 'full' : 'radar')}
-            className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[11px] font-semibold border border-slate-700 transition"
+            className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-mono font-bold border border-slate-700 transition active:scale-95"
             title={viewMode === 'radar' ? 'Passer en vue globale (20×20)' : 'Passer en zoom radar (7×7)'}
           >
             {viewMode === 'radar' ? '20×20' : '7×7'}
@@ -257,7 +254,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           {/* DUMAPIC clairvoyance reveal toggle */}
           <button
             onClick={() => setRevealAll(prev => !prev)}
-            className={`p-1 rounded text-xs border transition ${
+            className={`p-1 rounded text-xs border transition active:scale-95 ${
               revealAll 
                 ? 'bg-purple-900/60 text-purple-300 border-purple-500' 
                 : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
@@ -270,7 +267,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           {/* Legend Toggle */}
           <button
             onClick={() => setShowLegend(prev => !prev)}
-            className={`p-1 rounded text-xs border transition ${
+            className={`p-1 rounded text-xs border transition active:scale-95 ${
               showLegend 
                 ? 'bg-amber-950/60 text-amber-400 border-amber-600/40' 
                 : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
@@ -284,7 +281,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           {variant === 'hud' && onExpand && (
             <button
               onClick={onExpand}
-              className="p-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 transition"
+              className="p-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 transition active:scale-95"
               title="Agrandir en plein écran (M)"
             >
               <Maximize2 className="w-3.5 h-3.5" />
@@ -295,21 +292,22 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           {onClose && (
             <button
               onClick={onClose}
-              className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition"
+              className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition active:scale-95"
               title="Fermer la minicarte"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
       </div>
 
       {/* Map Viewport Area */}
-      <div className="flex flex-col items-center justify-center overflow-auto bg-slate-950 rounded-lg p-2 border border-slate-800/80 relative">
+      <div className="flex flex-col items-center justify-center overflow-hidden bg-slate-950 rounded-lg p-1.5 sm:p-2 border border-slate-800/80 relative w-full">
         <svg
+          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
           width={svgWidth}
           height={svgHeight}
-          className="overflow-visible"
+          className="max-w-full h-auto aspect-square overflow-visible"
           style={{ imageRendering: 'pixelated' }}
         >
           {/* Defs: gradients & patterns */}
@@ -640,18 +638,18 @@ export const MiniMap: React.FC<MiniMapProps> = ({
 
       {/* Legend Drawer / Strip */}
       {showLegend && (
-        <div className="mt-3 pt-2.5 border-t border-slate-800 text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-300">
+        <div className="mt-2 sm:mt-3 pt-2 border-t border-slate-800 text-[10px] sm:text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-slate-300">
           <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-1 bg-slate-400 rounded-sm inline-block" />
-            <span>Mur de pierre</span>
+            <span className="w-3 h-1 bg-slate-400 rounded-sm inline-block" />
+            <span>Mur</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-1 bg-amber-500 rounded-sm inline-block" />
-            <span>Porte en bois</span>
+            <span className="w-3 h-1 bg-amber-500 rounded-sm inline-block" />
+            <span>Porte</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-amber-400 font-bold">▲/▼</span>
-            <span>Escaliers (Château/Niv. 2)</span>
+            <span>Escalier</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-red-400 font-bold">☠</span>
@@ -659,23 +657,24 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-cyan-400 font-bold">↻</span>
-            <span>Tournoiement (Spinner)</span>
+            <span>Spinner</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-purple-400 font-bold">●</span>
-            <span>Zone Sombre (Dark)</span>
+            <span>Ténèbres</span>
           </div>
           <div className="flex items-center gap-1.5 text-red-300 font-bold col-span-2 sm:col-span-1">
             <span>💀</span>
-            <span>Corps d'aventurier</span>
+            <span>Dépouille</span>
           </div>
         </div>
       )}
 
       {/* Footer Details */}
-      <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Touches ({keyboardLayout}) : <strong>{keyboardLayout === 'AZERTY' ? 'Z/Q/D' : 'W/A/D'}</strong> ou <strong>Flèches</strong></span>
-        <span>Raccourci Carte : <kbd className="px-1 py-0.2 bg-slate-800 border border-slate-700 rounded text-amber-300 font-mono text-[10px]">M</kbd></span>
+      <div className="mt-2 pt-1.5 sm:pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400">
+        <span className="hidden sm:inline">Touches ({keyboardLayout}) : <strong>{keyboardLayout === 'AZERTY' ? 'Z/Q/D' : 'W/A/D'}</strong></span>
+        <span className="sm:hidden text-slate-400">Niv. {maze.level}</span>
+        <span>Carte : <kbd className="px-1 py-0.2 bg-slate-800 border border-slate-700 rounded text-amber-300 font-mono text-[9px] sm:text-[10px]">M</kbd></span>
       </div>
     </div>
   );
