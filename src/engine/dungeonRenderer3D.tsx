@@ -354,9 +354,18 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       // Authentic 1981 Apple II Vector Wireframe:
       // PURE JET BLACK background and fog (no blue floor, no blue ceiling, no colored haze)
       sceneRef.current.background = new THREE.Color(0x000000);
-      sceneRef.current.fog = new THREE.Fog(0x000000, 16, 26); // Authentic 5-tile visibility horizon
 
-      ambientLightRef.current.intensity = 1.0;
+      if (isDarkZone) {
+        // Authentic Apple II: In darkness, viewport is 100% pitch black
+        if (mazeObjectsRef.current) mazeObjectsRef.current.visible = false;
+        sceneRef.current.fog = new THREE.Fog(0x000000, 0.1, 1);
+        ambientLightRef.current.intensity = 0;
+      } else {
+        if (mazeObjectsRef.current) mazeObjectsRef.current.visible = true;
+        sceneRef.current.fog = new THREE.Fog(0x000000, 16, 26); // Authentic 5-tile visibility horizon
+        ambientLightRef.current.intensity = 1.0;
+      }
+
       torchLightRef.current.intensity = 0;
       if (forwardLightRef.current) forwardLightRef.current.intensity = 0;
       if (rendererRef.current) rendererRef.current.toneMappingExposure = 1.0;
@@ -364,6 +373,7 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     }
 
     // 3D Donjon Pierre Réaliste
+    if (mazeObjectsRef.current) mazeObjectsRef.current.visible = true;
     sceneRef.current.background = new THREE.Color(isDarkZone ? 0x000000 : 0x070b14);
 
     if (isDarkZone) {
@@ -570,13 +580,26 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     }
 
     // =========================================================================
-    // 3. Special Square 3D Features (e.g. Staircases)
+    // 3. Special Square 3D Features (e.g. Staircases and Darkness Volumes)
     // =========================================================================
     for (let cx = 0; cx < 20; cx++) {
       for (let cy = 0; cy < 20; cy++) {
         const sqrCode = maze.sqrExtra[cx]?.[cy];
         const sqrDef = maze.extraDefs?.[sqrCode];
-        if (sqrDef?.type === 'STAIRS') {
+        if (sqrDef?.type === 'DARK') {
+          // Authentic Wizardry: Darkness blocks all line of sight into or through it
+          // Solid pure black cube that occludes all geometry inside or behind it in both wireframe & stone modes
+          const darkBoxGeo = new THREE.BoxGeometry(3.98, 3.18, 3.98);
+          const darkBoxMat = new THREE.MeshBasicMaterial({
+            color: 0x000000,
+            side: THREE.DoubleSide,
+            depthWrite: true,
+            depthTest: true
+          });
+          const darkMesh = new THREE.Mesh(darkBoxGeo, darkBoxMat);
+          darkMesh.position.set(cx * 4, 1.6, -cy * 4);
+          group.add(darkMesh);
+        } else if (sqrDef?.type === 'STAIRS') {
           const isDown = sqrDef.aux0 > maze.level;
           const stairsGroup = new THREE.Group();
           stairsGroup.position.set(cx * 4, 0.05, -cy * 4);

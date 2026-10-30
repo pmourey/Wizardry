@@ -724,7 +724,12 @@ export default function App() {
     }
 
     if (sqrDef) {
-      if (sqrDef.type === 'CHUTE') {
+      if (sqrDef.type === 'DARK') {
+        // Authentic Wizardry (P010E15 VERYDARK): entering darkness instantly extinguishes light spells and torches
+        if (lightLevel > 0) {
+          setLightLevel(0);
+        }
+      } else if (sqrDef.type === 'CHUTE') {
         sounds.playBump();
         addAdventureEvent('LOSS', 'Chute dans un puits !', `Le sol cède : l'escouade tombe au niveau ${sqrDef.aux0}.`, undefined, dungeonLevel, { x: newX, y: newY });
         handleTakeStairs(sqrDef.aux0, newX, newY);
