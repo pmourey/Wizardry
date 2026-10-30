@@ -236,8 +236,8 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     const height = containerRef.current.clientHeight || 400;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0e1628);
-    scene.fog = new THREE.FogExp2(0x0e1628, 0.018);
+    scene.background = new THREE.Color(wireframeMode ? 0x000000 : 0x070b14);
+    scene.fog = wireframeMode ? null : new THREE.FogExp2(0x070b14, 0.018);
 
     const camera = new THREE.PerspectiveCamera(65, width / height, 0.1, 100);
     camera.position.set(x * 4, 1.6, -y * 4);
@@ -339,9 +339,25 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     targetRotYRef.current = -direction * (Math.PI / 2);
   }, [x, y, direction]);
 
-  // Dynamically adapt lights and fog according to lightLevel degradation
+  // Dynamically adapt lights, background and fog according to lightLevel degradation and wireframeMode
   useEffect(() => {
     if (!sceneRef.current || !torchLightRef.current || !ambientLightRef.current) return;
+
+    if (wireframeMode) {
+      // Authentic 1981 Apple II Vector Wireframe:
+      // PURE JET BLACK background and fog (no blue floor, no blue ceiling, no colored haze)
+      sceneRef.current.background = new THREE.Color(0x000000);
+      sceneRef.current.fog = null;
+
+      ambientLightRef.current.intensity = 1.0;
+      torchLightRef.current.intensity = 0;
+      if (forwardLightRef.current) forwardLightRef.current.intensity = 0;
+      if (rendererRef.current) rendererRef.current.toneMappingExposure = 1.0;
+      return;
+    }
+
+    // 3D Donjon Pierre Réaliste
+    sceneRef.current.background = new THREE.Color(isDarkZone ? 0x000000 : 0x070b14);
 
     if (isDarkZone) {
       sceneRef.current.fog = new THREE.FogExp2(0x000000, 0.32);
@@ -351,22 +367,8 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       if (forwardLightRef.current) forwardLightRef.current.intensity = 0.1;
       if (rendererRef.current) rendererRef.current.toneMappingExposure = 0.95;
     } else {
-      // Degradation curves:
-      // At degradation 0.0 (high lightLevel >= 30, eg LOMILWA):
-      // - ultra-clear distance fog (0.012)
-      // - ambient: 1.65, torch: 5.8 (reach 58), forward spot: 2.6
-      // - toneMappingExposure: 2.05 (brilliant clarity)
-      // At degradation 1.0 (lightLevel 0, standard handheld torch):
-      // - fog density: 0.038 (shadows obscure distance beyond 4 tiles)
-      // - ambient: 1.15 (bright and crisp, far superior to legacy 0.8)
-      // - torch: 4.4 (reach 38), forward spot: 1.6
-      // - toneMappingExposure: 1.75
-      const fogDensity = wireframeMode 
-        ? 0.02 
-        : 0.012 + degradation * 0.026;
-      
-      const fogColor = wireframeMode ? 0x001100 : 0x0e1628;
-      sceneRef.current.fog = new THREE.FogExp2(fogColor, fogDensity);
+      const fogDensity = 0.012 + degradation * 0.026;
+      sceneRef.current.fog = new THREE.FogExp2(0x070b14, fogDensity);
 
       const ambientInt = 1.65 - degradation * 0.50;
       const torchInt = 5.8 - degradation * 1.4;
@@ -396,11 +398,10 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       group.remove(obj);
     }
 
-    // Solid 3D Box geometries with realistic thickness (35cm stone masonry)
+    // 1. Materials for 3D Pierre Réaliste mode:
     const wallBoxGeo = new THREE.BoxGeometry(4.0, 3.2, 0.35);
     const doorBoxGeo = new THREE.BoxGeometry(3.9, 3.15, 0.35);
 
-    // Stone wall material (double-sided, 100% opaque, authentic dark medieval masonry)
     const stoneWallMat = new THREE.MeshStandardMaterial({ 
       map: texturesRef.current.stone, 
       roughness: 0.88, 
@@ -415,28 +416,79 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       side: THREE.DoubleSide
     });
 
-    const secretDoorMat = stoneWallMat; // secret doors look identical to regular walls
+    const secretDoorMat = stoneWallMat;
 
-    // Authentic 1981 Apple II Vector Wireframe:
-    // Solid black box (acts as occluder so you NEVER see through walls!) + glowing green/gold line edges
-    const retroSolidMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const wallEdgeGeo = new THREE.EdgesGeometry(wallBoxGeo);
-    const doorEdgeGeo = new THREE.EdgesGeometry(doorBoxGeo);
+    // 2. Materials & Geometries for Authentic Apple II (1981) Vector Wireframe:
+    // Solid jet black plane (occludes walls behind it) with polygonOffset to completely prevent Z-fighting flickering!
+    const retroOcclusionPlaneGeo = new THREE.PlaneGeometry(4.0, 3.2);
+    const retroBlackMat = new THREE.MeshBasicMaterial({ 
+      color: 0x000000, 
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: 2.0,
+      polygonOffsetUnits: 4.0
+    });
 
-    const retroWallEdgeMat = new THREE.LineBasicMaterial({ color: 0x22c55e, linewidth: 2 });
-    const retroDoorEdgeMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, linewidth: 2 });
-    const retroSecretEdgeMat = new THREE.LineBasicMaterial({ color: 0x22c55e, linewidth: 2 });
+    // Outer wall 4 outline lines: top, right, bottom, left (Apple II DRAWLINE authentic coordinates)
+    // Rendered on both front (+0.005) and back (-0.005) faces with polygonOffset to completely prevent Z-fighting
+    const wallLinePoints = [
+      // Front side (+0.005)
+      new THREE.Vector3(-2.0, 1.6, 0.005), new THREE.Vector3(2.0, 1.6, 0.005),
+      new THREE.Vector3(2.0, 1.6, 0.005), new THREE.Vector3(2.0, -1.6, 0.005),
+      new THREE.Vector3(2.0, -1.6, 0.005), new THREE.Vector3(-2.0, -1.6, 0.005),
+      new THREE.Vector3(-2.0, -1.6, 0.005), new THREE.Vector3(-2.0, 1.6, 0.005),
+      // Back side (-0.005)
+      new THREE.Vector3(-2.0, 1.6, -0.005), new THREE.Vector3(2.0, 1.6, -0.005),
+      new THREE.Vector3(2.0, 1.6, -0.005), new THREE.Vector3(2.0, -1.6, -0.005),
+      new THREE.Vector3(2.0, -1.6, -0.005), new THREE.Vector3(-2.0, -1.6, -0.005),
+      new THREE.Vector3(-2.0, -1.6, -0.005), new THREE.Vector3(-2.0, 1.6, -0.005),
+    ];
+    const wallLineGeo = new THREE.BufferGeometry().setFromPoints(wallLinePoints);
+
+    // Door outline: outer wall frame + inner door frame & brass ring (Apple II DRAWLEFT/DRAWFRNT authentic)
+    const doorLinePoints = [
+      ...wallLinePoints,
+      // Front Inner door frame (+0.005):
+      new THREE.Vector3(-0.9, -1.6, 0.005), new THREE.Vector3(-0.9, 0.65, 0.005),
+      new THREE.Vector3(-0.9, 0.65, 0.005), new THREE.Vector3(0.9, 0.65, 0.005),
+      new THREE.Vector3(0.9, 0.65, 0.005), new THREE.Vector3(0.9, -1.6, 0.005),
+      // Front Door handle / ring (+0.005):
+      new THREE.Vector3(0.45, -0.4, 0.005), new THREE.Vector3(0.65, -0.4, 0.005),
+      new THREE.Vector3(0.55, -0.3, 0.005), new THREE.Vector3(0.55, -0.5, 0.005),
+      // Back Inner door frame (-0.005):
+      new THREE.Vector3(-0.9, -1.6, -0.005), new THREE.Vector3(-0.9, 0.65, -0.005),
+      new THREE.Vector3(-0.9, 0.65, -0.005), new THREE.Vector3(0.9, 0.65, -0.005),
+      new THREE.Vector3(0.9, 0.65, -0.005), new THREE.Vector3(0.9, -1.6, -0.005),
+      // Back Door handle / ring (-0.005):
+      new THREE.Vector3(-0.45, -0.4, -0.005), new THREE.Vector3(-0.65, -0.4, -0.005),
+      new THREE.Vector3(-0.55, -0.3, -0.005), new THREE.Vector3(-0.55, -0.5, -0.005),
+    ];
+    const doorLineGeo = new THREE.BufferGeometry().setFromPoints(doorLinePoints);
+
+    // High-contrast, bright, authentic Apple II lines (Pure Crisp White for walls, Warm Amber for doors)
+    const retroWallLineMat = new THREE.LineBasicMaterial({ 
+      color: 0xffffff, // Pure bright white (Apple II HGR White 1-bit)
+      linewidth: 2,
+      depthTest: true
+    });
+    const retroDoorLineMat = new THREE.LineBasicMaterial({ 
+      color: 0xfbbf24, // Bright Amber/Gold for doors
+      linewidth: 2,
+      depthTest: true
+    });
+    const retroSecretLineMat = retroWallLineMat; // secret doors look identical to regular walls
 
     const createWallMesh = (isDoor: boolean, isSecret: boolean) => {
       if (wireframeMode) {
-        // Authentic Apple II: Solid black occlusion + neon vector lines
-        const mesh = new THREE.Mesh(isDoor ? doorBoxGeo : wallBoxGeo, retroSolidMat);
-        const edgeMat = isDoor ? retroDoorEdgeMat : (isSecret ? retroSecretEdgeMat : retroWallEdgeMat);
-        const lines = new THREE.LineSegments(isDoor ? doorEdgeGeo : wallEdgeGeo, edgeMat);
+        // Authentic Apple II: 100% solid black occlusion plane (no seeing through) + crisp bright vector lines (no z-fighting)
+        const mesh = new THREE.Mesh(retroOcclusionPlaneGeo, retroBlackMat);
+        const lineGeo = isDoor ? doorLineGeo : wallLineGeo;
+        const lineMat = isDoor ? retroDoorLineMat : (isSecret ? retroSecretLineMat : retroWallLineMat);
+        const lines = new THREE.LineSegments(lineGeo, lineMat);
         mesh.add(lines);
         return mesh;
       } else {
-        // Authentic 3D Pierre Réaliste: 100% opaque, heavy solid stone block
+        // 3D Pierre Réaliste: 100% opaque, heavy solid stone block
         const mat = isDoor ? doorMat : (isSecret ? secretDoorMat : stoneWallMat);
         return new THREE.Mesh(isDoor ? doorBoxGeo : wallBoxGeo, mat);
       }
@@ -592,34 +644,38 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     <div className="relative w-full h-full min-h-[360px] bg-black overflow-hidden select-none">
       <div ref={containerRef} className="w-full h-full" />
 
-      {/* Dynamic Vignette & Visual Degradation Overlay based on lightLevel */}
-      <div 
-        className="pointer-events-none absolute inset-0 transition-all duration-700 ease-out"
-        style={{
-          background: isDarkZone
-            ? 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.65) 20%, rgba(0,0,0,0.98) 75%)'
-            : `radial-gradient(ellipse at 50% 50%, transparent ${
-                85 - degradation * 45
-              }%, rgba(8, 12, 22, ${
-                0.08 + degradation * 0.62
-              }) ${
-                110 - degradation * 25
-              }%, rgba(3, 5, 10, ${
-                0.15 + degradation * 0.78
-              }) 100%)`,
-        }}
-      />
+      {/* Dynamic Vignette & Visual Degradation Overlay based on lightLevel (3D Pierre mode only) */}
+      {!wireframeMode && (
+        <>
+          <div 
+            className="pointer-events-none absolute inset-0 transition-all duration-700 ease-out"
+            style={{
+              background: isDarkZone
+                ? 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.65) 20%, rgba(0,0,0,0.98) 75%)'
+                : `radial-gradient(ellipse at 50% 50%, transparent ${
+                    85 - degradation * 45
+                  }%, rgba(8, 12, 22, ${
+                    0.08 + degradation * 0.62
+                  }) ${
+                    110 - degradation * 25
+                  }%, rgba(3, 5, 10, ${
+                    0.15 + degradation * 0.78
+                  }) 100%)`,
+            }}
+          />
 
-      {/* Atmospheric Dust Motes & Film Grain accentuating gloom as lightLevel drops */}
-      {degradation > 0.35 && (
-        <div 
-          className="pointer-events-none absolute inset-0 transition-opacity duration-1000 mix-blend-screen"
-          style={{
-            opacity: Math.min(0.25, (degradation - 0.35) * 0.38),
-            backgroundImage: `radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 140px 170px, #ffdfa0, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 260px 80px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 320px 240px, #f59e0b, rgba(0,0,0,0))`,
-            backgroundSize: '360px 360px',
-          }}
-        />
+          {/* Atmospheric Dust Motes & Film Grain accentuating gloom as lightLevel drops */}
+          {degradation > 0.35 && (
+            <div 
+              className="pointer-events-none absolute inset-0 transition-opacity duration-1000 mix-blend-screen"
+              style={{
+                opacity: Math.min(0.25, (degradation - 0.35) * 0.38),
+                backgroundImage: `radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 140px 170px, #ffdfa0, rgba(0,0,0,0)), radial-gradient(1.5px 1.5px at 260px 80px, #ffffff, rgba(0,0,0,0)), radial-gradient(2px 2px at 320px 240px, #f59e0b, rgba(0,0,0,0))`,
+                backgroundSize: '360px 360px',
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* Subtle CRT screen scanline overlay */}
