@@ -1,43 +1,49 @@
-## ⚔️ Wizardry: Proving Grounds & The 10 Classic Apple II Scenarios (3D Remaster)
+## ⚔️ The Ultimate Wizardry Trilogy (I, II, III) & The 9 Classic Apple II Scenarios (3D Remaster)
 
 **Short description / Tagline:**
-> Faithful 3D & Wireframe remaster of the 1981 Apple II Dungeon Crawler RPG, featuring 10 complete playable scenarios.
+> Faithful 3D & Wireframe remaster of the legendary Apple II Wizardry Trilogy (I, II, III) & 9 classic expansions, featuring 12 complete playable scenarios, authentic NTSC color monsters, and original ambient audio.
 
 ---
 
-**A faithful modern 3D & Wireframe tribute to the legendary 1981 Apple II Dungeon Crawler RPG**, engineered directly from the original UCSD Pascal data structures and binary disk images (`SCENARIO.DATA`).
+**A faithful modern 3D & Wireframe tribute to the legendary Apple II Dungeon Crawler RPG Trilogy**, engineered directly from the original UCSD Pascal data structures and binary disk images (`SCENARIO.DATA`).
 
-*Une reconstitution moderne et fidèle du chef-d'œuvre du RPG Dungeon Crawler de 1981 sur Apple II, incluant le moteur authentique UCSD Pascal et une collection complète de **10 scénarios jouables** directement dans votre navigateur.*
+*Une reconstitution moderne et fidèle de la légendaire Trilogie Wizardry (I, II, III) et des extensions Apple II, incluant le moteur authentique UCSD Pascal, les musiques d'ambiance et une collection complète de **12 scénarios jouables** directement dans votre navigateur.*
 
 ---
 
-### 🏰 10 Complete Playable Scenarios Included / 10 Scénarios Complets Inclus
+### 🏰 12 Complete Playable Scenarios Included / 12 Scénarios Complets Inclus
 
-Switch seamlessly between 10 complete 10-floor dungeons (each with its own independent save slot, items, spells, monsters, and 20×20×10 maps):
+Switch seamlessly between all 12 complete dungeons (each with its own independent save slot, items, spells, monsters, and maps):
 
-- **#1 — Proving Grounds of the Mad Overlord (1981)**: Defeat the evil archmage Werdna on Floor 10 and recover the sacred Amulet for Overlord Trebor.
-- **#2 — The Comprehensible Dungeon**: A balanced remake of Scenario #1 with newly forged artifacts and restructured mazes.
-- **#3 — O'Connor's Mine**: Venture into a perilous mineral-rich dwarven mine teeming with elementals and undead.
-- **#4 — Look Lookingstone**: Search the subterranean caverns for the legendary scrying artifact.
-- **#5 — Gold Keyboard**: Descend into the forgotten techno-magical vaults of the ancients.
-- **#6 — Shadow of Gala**: Confront the dark matriarch Gala and her demonic legions.
-- **#7 — The Black Stone**: Destroy the corrupted monolith poisoning the realm from the 10th floor.
-- **#8 — Rhialto the Marvellous**: Inspired by Jack Vance's *Dying Earth*, survive an archmage's treacherous stronghold.
-- **#9 — Scarlet Brotherhood**: Infiltrate the secret citadel of a ruthless monastic order of assassins and mages.
-- **#10 — The Catacombs of Vlad**: Brave ten levels of vampiric crypts and undead horrors.
+#### 👑 The Official Classic Trilogy (Sir-Tech)
+- **#1 — Proving Grounds of the Mad Overlord (1981)**: Defeat the evil archmage Werdna on Floor 10 and recover the sacred Amulet for Overlord Trebor. (10 floors, 101 monsters, 101 items).
+- **#11 — Wizardry II: The Knight of Diamonds (1982)**: Restore the sacred city of Llylgamyn by retrieving the 5 pieces of the legendary Diamond Armor and the Staff of Gnilda. (10 floors, 78 monsters, 130 items, starter party level 9+).
+- **#12 — Wizardry III: The Legacy of Llylgamyn (1983)**: Natural cataclysms threaten the kingdom! Ascend the 6 vertical mountain tiers to reclaim the sacred Orb protected by the celestial dragon L'Kbreth. (6 floors, 78 monsters, 104 items, alignment-restricted sanctums).
+
+#### 📜 The 9 Retro Apple II Community Expansions
+- **#2 — The Black Stone (Steve Evans, 1985)**: 8 intense floors with witty riddles, traps, and unique items.
+- **#3 — The Catacombs of Vlad (1984)**: 10 levels of gothic crypts, vampires, and undead fiends.
+- **#4 — DragonQuest (Dan Gartung, 1984)**: High-fantasy expedition featuring 8 dungeon tiers.
+- **#5 — Knight of the Grave (1987)**: Defeat necromancer warlords in a labyrinth of tombs and crypts.
+- **#6 — Scarlet Brotherhood of Hsi-So (1985)**: Infiltrate the fortress of a deadly monastic order of assassins and mages.
+- **#7 — Nihonbashi (1986)**: Oriental-themed campaign with samurai masters, ronins, and ancient shrines.
+- **#8 — O'Connor's Mine (1985)**: Dangerous mineral caverns crawling with elemental horrors and dwarf spirits.
+- **#9 — The Emperor's Seal (1986)**: Recover the lost imperial crest through intricate multi-level traps.
+- **#10 — Atomic Wasteland 2098 (Dan Gartung, 1987)**: Total sci-fi conversion with irradiated bunkers, cyber-mutants, and laser technology.
 
 ---
 
 ### ✨ Key Features / Fonctionnalités Clés
 
 - **Dual 3D Rendering (Three.js)**: Switch instantly between **Textured 3D Stone Corridors** with dynamic torch lighting and classic **1981 Apple II Green/White Wireframe** mode.
-- **200 Authentic Apple II Monster Portraits**: Bit-accurate hi-res graphics decoded directly from the original 280×192 Apple II disk sectors.
+- **Authentic NTSC Color Monster Sprites**: Full collection of authentic color Apple II monster bitmaps (including the 30 specific portraits for Wizardry II and Wizardry III).
 - **Authentic UCSD Pascal Mechanics**:
   - **8 Classes**: Fighter, Mage, Priest, Thief, Bishop (identifies unknown & cursed items), Samurai, Lord, and Ninja.
   - **5 Races & 3 Alignments**: Human, Elf, Dwarf, Gnome, Hobbit (Good, Neutral, Evil).
   - **50 Iconic Spells**: 21 Mage spells (*HALITO, MAHALITO, TILTOWAIT, DUMAPIC, MALOR...*) and 29 Priest spells (*DIOS, MADI, KADORTO, LOKTOFEIT...*).
   - **True 1981 Mortality & Corpse Recovery**: Dead heroes leave their remains at their exact `(X, Y, Floor)` coordinates in the maze—send a rescue expedition to bring them back to the Temple of Cant!
   - **Trapped Chests**: Inspect and disarm Poison Needles, Gas Bombs, Crossbolts, Exploding Boxes, Stunners, Teleporters, and Alarm traps.
+- **Original Ambient Audio & Fanfares**: Atmospheric background dungeon tracks and retro fanfares.
 - **Interactive Tactical Mini-Map**: Live `7×7` radar and full `20×20` floor cartography with stairs, elevators, pits, chutes, spinners, dark zones, and teleporters.
 
 ---
@@ -56,7 +62,7 @@ Supports both **AZERTY** and **QWERTY** keyboards (toggleable directly in the to
 | **Tactical Map / Carte** | `M` | `M` | On-screen button |
 | **Inspect Area / Inspecter** | `I` | `I` | On-screen button |
 
-> **💾 Auto-Save**: Your progress, roster, and explored maps are automatically saved in your browser's local storage independently for each of the 10 scenarios.
+> **💾 Auto-Save**: Your progress, roster, and explored maps are automatically saved in your browser's local storage independently for each of the 12 scenarios. Data export/import in JSON is also supported.
 
 ---
 

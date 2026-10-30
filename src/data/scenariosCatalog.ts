@@ -263,5 +263,29 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
     ],
     sequelTo: 'proving-grounds',
     dataExtracted: true
+  },
+  {
+    id: 'legacy-of-llylgamyn',
+    number: 12,
+    title: 'The Legacy of Llylgamyn',
+    subtitle: 'Wizardry Scenario #3 officiel (Sir-Tech, 1983)',
+    author: 'Andrew Greenberg & Robert Woodhead',
+    year: '1983',
+    engineVersion: 'v3.0 / Apple II',
+    recommendedLevel: 'Niveau 1+ (Descendants de Llylgamyn)',
+    minLevel: 1,
+    floors: 6,
+    theme: 'FANTASY',
+    difficulty: 'EXPERT',
+    diskFileName: 'Wizardry3-Scenario.dsk',
+    description:
+      "Le troisième volet de la trilogie classique ! Des séismes et des éruptions volcaniques menacent Llylgamyn. Les descendants des héros doivent gravir les 6 niveaux de la montagne sacrée pour reconquérir l'Orbe magique gardé par le grand dragon céleste L'Kbreth.",
+    tips: [
+      "Scénario officiel Sir-Tech d'origine (104 objets, 78 monstres, 30 portraits originaux Apple II, 6 niveaux de montagne sacrée).",
+      "Donjon vertical ascendant avec énigmes sacrées et zones scellées par l'alignement (Bien / Mal).",
+      "Fourni avec une escouade de descendants préparée pour l'ascension de la montagne sacrée."
+    ],
+    sequelTo: 'knight-of-diamonds',
+    dataExtracted: true
   }
 ];

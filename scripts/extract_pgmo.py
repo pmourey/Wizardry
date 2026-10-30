@@ -289,7 +289,8 @@ class Scenario:
 
     def mazes(self, items, monsters, msgs):
         out = []
-        for lv in range(10):
+        num_floors = self.rdk[1] if hasattr(self, 'rdk') and self.rdk[1] > 0 else 10
+        for lv in range(num_floors):
             o = (self.bloff[1] + 2 * lv) * 512
             b = self.d[o:o + 1024]
 
@@ -308,13 +309,14 @@ class Scenario:
             for x in range(20):
                 for y in range(20):
                     s = extra[x][y]
-                    if types[s] != 0:
-                        events.append(self.event(lv + 1, x, y, SQ[types[s]], a0[s], a1[s], a2[s], items, monsters, msgs))
+                    t_idx = types[s]
+                    if 0 < t_idx < len(SQ):
+                        events.append(self.event(lv + 1, x, y, SQ[t_idx], a0[s], a1[s], a2[s], items, monsters, msgs))
             out.append({
                 'level': lv + 1,
                 'w': walls(0), 's': walls(120), 'e': walls(240), 'n': walls(360), 'fights': fights,
                 'sqrExtra': [''.join('%x' % v for v in row) for row in extra],
-                'extraDefs': [{'type': SQ[types[i]], 'aux0': a0[i], 'aux1': a1[i], 'aux2': a2[i]} for i in range(16)],
+                'extraDefs': [{'type': SQ[types[i]] if types[i] < len(SQ) else 'NORMAL', 'aux0': a0[i], 'aux1': a1[i], 'aux2': a2[i]} for i in range(16)],
                 'enemyCalc': calc, 'events': events})
         return out
 
@@ -442,17 +444,73 @@ def decode_apple2_monster_bitmap(raw500: bytes, scale: int = 2):
     return rows_rgba
 
 
+def decode_wiz3_monster_bitmap(raw, scale=2):
+    """Wizardry III Apple II V2 bitmap layout: 6 vertical blocks x 10 horizontal byte columns x 8 line slices."""
+    bits_grid = [[0 for _ in range(70)] for _ in range(50)]
+    hi_grid = [[0 for _ in range(70)] for _ in range(50)]
+    offset = 0
+    for i in range(6):
+        for j in range(10):
+            for k in range(7, -1, -1):
+                element = i * 560 + j * 7 + k * 70
+                x = element % 70
+                y = element // 70
+                byte = raw[offset] & 0xFF
+                offset += 1
+                hi = (byte >> 7) & 1
+                b = byte
+                for m in range(7):
+                    if y < 50 and (x + m) < 70:
+                        bits_grid[y][x + m] = b & 1
+                        hi_grid[y][x + m] = hi
+                    b >>= 1
+
+    rows_rgba = []
+    for y in range(50):
+        row_colors = []
+        for x in range(70):
+            c = bits_grid[y][x]
+            l = bits_grid[y][x - 1] if x > 0 else 0
+            r = bits_grid[y][x + 1] if x < 69 else 0
+            l2 = bits_grid[y][x - 2] if x > 1 else 0
+            r2 = bits_grid[y][x + 2] if x < 68 else 0
+            hi = hi_grid[y][x]
+            if hi == 0:
+                base_color = APPLE2_PURPLE if (x % 2 == 0) else APPLE2_GREEN
+            else:
+                base_color = APPLE2_BLUE if (x % 2 == 0) else APPLE2_ORANGE
+
+            if c:
+                if l or r:
+                    col = APPLE2_WHITE
+                else:
+                    col = base_color
+            else:
+                if (l and r) or (l and r2 and not r) or (r and l2 and not l):
+                    col = base_color
+                else:
+                    col = APPLE2_BLACK
+            for _ in range(scale):
+                row_colors.append(col)
+        for _ in range(scale):
+            rows_rgba.append(row_colors)
+    return rows_rgba
+
+
 def write_monster_pictures(sc, out_dir='src/assets/monsters/proving-grounds'):
     """SPCCHRS records (type 6): 512 bytes each, 2 per 1024-byte pair; 500 bytes = 70x50 Apple II HGR bitmap."""
-    data = sc.d
-    bloff = sc.bloff[6]
+    is_wiz3 = 'LEGACY OF LLYLGAMYN' in sc.name.upper()
+    pic_cnt = sc.rdk[6] if is_wiz3 else 20
     os.makedirs(out_dir, exist_ok=True)
-    for i in range(20):
-        o = (bloff + 2 * (i // 2)) * 512 + 512 * (i % 2)
-        rows_rgba = decode_apple2_monster_bitmap(data[o:o + 500], scale=2)
+    for i in range(pic_cnt):
+        raw = sc.rec(6, i, 500)
+        if is_wiz3:
+            rows_rgba = decode_wiz3_monster_bitmap(raw, scale=2)
+        else:
+            rows_rgba = decode_apple2_monster_bitmap(raw, scale=2)
         with open(os.path.join(out_dir, 'pic%d.png' % i), 'wb') as f:
             f.write(png_rgba_color(rows_rgba))
-    print('wrote 20 Apple II color monster pictures (140x100) to', out_dir)
+    print(f'wrote {pic_cnt} Apple II color monster pictures (140x100) to {out_dir}')
 
 
 def recolor_existing_80x50_pngs(monsters_root='src/assets/monsters'):
@@ -617,16 +675,18 @@ def extract_pascal_source(disks_dir: str, out_dir: str = 'pascal_source'):
 
 
 SCENARIO_DISKS = [
-    ('proving-grounds', 'Wizardry-Proving-Grounds-v3.2-Scenario-18-Mar-2026.dsk', 'PROVING_GROUNDS'),
-    ('black-stone', 'Wizardry-Black-Stone-v3.2-Scenario.dsk', 'BLACK_STONE'),
-    ('catacombs-of-vlad', 'Wizardry-Catacombs-of-Vlad-v3.2-Scenario.dsk', 'CATACOMBS_OF_VLAD'),
-    ('dragonquest', 'Wizardry-DragonQuest-v1.4-v3.2engine-Scenario.dsk', 'DRAGONQUEST'),
-    ('knight-of-the-grave', 'Wizardry-Knight-of-the-Grave-v3.2-Scenario.dsk', 'KNIGHT_OF_THE_GRAVE'),
-    ('scarlet-brotherhood', 'Wizardry-Scarlet-Brotherhood-of-Hsi-So-v3.2-Scenario.dsk', 'SCARLET_BROTHERHOOD'),
-    ('nihonbashi', 'Wizardry-Nihonbashi-v3.2-Scenario.dsk', 'NIHONBASHI'),
-    ('oconnors-mine', 'Wizardry-OConnors-Mine-v3.2-Scenario.dsk', 'OCONNORS_MINE'),
-    ('emperors-seal', 'Wizardry-The-Emperors-Seal-v3.2-Scenario.dsk', 'EMPERORS_SEAL'),
-    ('atomic-wasteland-2098', 'Wizardry-Atomic-Wasteland-2098-v1.2-with-Engine-v3.2-Scenario.dsk', 'ATOMIC_WASTELAND_2098'),
+    ('proving-grounds', 'proving-grounds.dsk', 'PROVING_GROUNDS'),
+    ('black-stone', 'black-stone.dsk', 'BLACK_STONE'),
+    ('catacombs-of-vlad', 'catacombs-of-vlad.dsk', 'CATACOMBS_OF_VLAD'),
+    ('dragonquest', 'dragonquest.dsk', 'DRAGONQUEST'),
+    ('knight-of-the-grave', 'knight-of-the-grave.dsk', 'KNIGHT_OF_THE_GRAVE'),
+    ('scarlet-brotherhood', 'scarlet-brotherhood.dsk', 'SCARLET_BROTHERHOOD'),
+    ('nihonbashi', 'nihonbashi.dsk', 'NIHONBASHI'),
+    ('oconnors-mine', 'oconnors-mine.dsk', 'OCONNORS_MINE'),
+    ('emperors-seal', 'emperors-seal.dsk', 'EMPERORS_SEAL'),
+    ('atomic-wasteland-2098', 'atomic-wasteland-2098.dsk', 'ATOMIC_WASTELAND_2098'),
+    ('knight-of-diamonds', 'knight-of-diamonds.dsk', 'KNIGHT_OF_DIAMONDS'),
+    ('legacy-of-llylgamyn', 'legacy-of-llylgamyn.dsk', 'LEGACY_OF_LLYLGAMYN'),
 ]
 
 

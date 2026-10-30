@@ -6,7 +6,7 @@ import {
   AdventureLogCategory
 } from '../types/wizardry';
 import { DungeonRenderer3D } from '../engine/dungeonRenderer3D';
-import { ITEMS_DATABASE, SPELLS, formatDamageDice, recalculateCharacterCombatStats } from '../data/provingGroundsData';
+import { ITEMS_DATABASE, SPELLS, formatDamageDice, recalculateCharacterCombatStats, getActiveMaxFloors } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { music } from '../utils/musicManager';
 import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
@@ -512,7 +512,8 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       const ty = y + dn;
       const tl = maze.level + dl;
       setParty([...party]);
-      if (tl < 0 || tl > 10 || tx < 0 || tx > 19 || ty < 0 || ty > 19) {
+      const maxL = getActiveMaxFloors();
+      if (tl < 0 || tl > maxL || tx < 0 || tx > 19 || ty < 0 || ty > 19) {
         setCampMessage('MALOR : le sort échoue.');
         return;
       }
