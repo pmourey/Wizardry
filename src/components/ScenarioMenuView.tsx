@@ -231,13 +231,13 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-semibold">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>ANTHOLOGIE WIZARDRY ENGINE v3.2 — 10 SCÉNARIOS</span>
+                <span>ANTHOLOGIE WIZARDRY ENGINE v3.3 — {WIZARDRY_SCENARIOS.length} SCÉNARIOS</span>
               </div>
               <h1 className="text-2xl md:text-3xl font-serif font-black tracking-wider text-white">
                 CHOISISSEZ VOTRE SCÉNARIO D’AVENTURE
               </h1>
               <p className="text-xs md:text-sm text-slate-300 max-w-3xl">
-                Sélectionnez le scénario officiel <strong className="text-amber-300">Proving Grounds of the Mad Overlord</strong> ou l’une des 9 campagnes alternatives de la collection <span className="text-amber-200">Zimlab / Snafaru v3.2</span>. Chaque scénario dispose de sa propre sauvegarde isolée dans le stockage local de votre navigateur (<code className="text-amber-300">localStorage</code>).
+                Explorez la trilogie classique officielle (<strong className="text-amber-300">#1 Proving Grounds of the Mad Overlord</strong>, <strong className="text-amber-300">#2 Knight of Diamonds</strong>, <strong className="text-amber-300">#3 The Legacy of Llylgamyn</strong>) ou l’une des 9 campagnes alternatives de la collection <span className="text-amber-200">Zimlab / Snafaru</span>. Chaque scénario dispose de sa propre sauvegarde isolée dans le stockage local de votre navigateur (<code className="text-amber-300">localStorage</code>).
               </p>
             </div>
 
