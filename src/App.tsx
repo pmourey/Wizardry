@@ -1102,29 +1102,30 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
       {/* Top Application Bar */}
-      <header className="flex items-center justify-between gap-4 px-6 py-3 border-b border-slate-800 bg-slate-900/90 z-20 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="text-amber-400 font-serif font-black text-lg tracking-wider whitespace-nowrap shrink-0">
-            WIZARDRY #{activeScenario.number}
+      <header className="safe-top flex items-center justify-between gap-2 md:gap-4 px-3 md:px-6 py-2 md:py-3 border-b border-slate-800 bg-slate-900/90 z-20 shrink-0">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <div className="text-amber-400 font-serif font-black text-base md:text-lg tracking-wider whitespace-nowrap shrink-0">
+            <span className="sm:hidden font-mono text-sm bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-600/40 text-amber-300">W#{activeScenario.number}</span>
+            <span className="hidden sm:inline">WIZARDRY #{activeScenario.number}</span>
           </div>
-          <span className="text-xs text-slate-300 font-medium hidden sm:inline">
+          <span className="text-xs text-slate-300 font-medium truncate hidden md:inline">
             {activeScenario.title}
           </span>
         </div>
 
         {/* Center Zone: Status tags */}
-        <div className="hidden md:flex items-center gap-6 text-xs text-slate-400">
+        <div className="hidden lg:flex items-center gap-6 text-xs text-slate-400">
           <span>Lieu : <strong className="text-white">{showScenarioMenu ? 'Menu Principal' : location === 'MAZE' ? `Donjon N.${dungeonLevel}` : location}</strong></span>
           <span>Aventuriers : <strong className="text-emerald-400">{party.filter(p => p.status === 'OK').length}/{party.length}</strong></span>
         </div>
 
         {/* Right Zone: Controls */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-1.5 md:gap-2.5 shrink-0">
           {/* Language Selector FR | EN */}
           <div className="flex items-center rounded-lg bg-slate-800 border border-amber-600/30 p-0.5 text-xs font-bold text-amber-300">
             <button
               onClick={() => { setLang('fr'); sounds.playTurn(); }}
-              className={`px-2 py-1 rounded transition ${
+              className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[11px] md:text-xs transition ${
                 lang === 'fr'
                   ? 'bg-amber-600 text-white shadow'
                   : 'text-slate-400 hover:text-white'
@@ -1133,10 +1134,10 @@ export default function App() {
             >
               FR
             </button>
-            <span className="text-slate-600 px-0.5">|</span>
+            <span className="text-slate-600 px-0.5 text-[10px]">|</span>
             <button
               onClick={() => { setLang('en'); sounds.playTurn(); }}
-              className={`px-2 py-1 rounded transition ${
+              className={`px-1.5 md:px-2 py-0.5 md:py-1 rounded text-[11px] md:text-xs transition ${
                 lang === 'en'
                   ? 'bg-amber-600 text-white shadow'
                   : 'text-slate-400 hover:text-white'
@@ -1149,7 +1150,7 @@ export default function App() {
 
           <button
             onClick={() => setShowScenarioMenu(prev => !prev)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition border ${
+            className={`flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition border ${
               showScenarioMenu
                 ? 'bg-amber-600 text-white border-amber-400'
                 : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-600/30'
@@ -1157,21 +1158,22 @@ export default function App() {
             title="Ouvrir le menu principal de sélection des scénarios"
           >
             <Library className="w-3.5 h-3.5" />
-            <span>{showScenarioMenu ? t.backToGame : `${t.scenarios} (${WIZARDRY_SCENARIOS.length})`}</span>
+            <span className="hidden sm:inline">{showScenarioMenu ? t.backToGame : `${t.scenarios} (${WIZARDRY_SCENARIOS.length})`}</span>
+            <span className="sm:hidden">{showScenarioMenu ? 'Jeu' : t.scenarios}</span>
           </button>
 
           <button
             onClick={() => { toggleKeyboardLayout(); sounds.playTurn(); }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-mono font-bold whitespace-nowrap shrink-0 transition"
+            className="flex items-center gap-1 px-2 md:px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-mono font-bold whitespace-nowrap shrink-0 transition"
             title={t.keyboardLayoutTitle(keyboardLayout)}
           >
             <Keyboard className="w-3.5 h-3.5" />
-            <span>{keyboardLayout}</span>
+            <span className="hidden sm:inline">{keyboardLayout}</span>
           </button>
 
           <button
             onClick={toggleMusic}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition border ${
+            className={`flex items-center gap-1 p-1.5 md:px-2.5 md:py-1.5 rounded-lg text-xs font-semibold transition border ${
               musicOn
                 ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-600/30'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-500 border-slate-800'
@@ -1179,7 +1181,7 @@ export default function App() {
             title={musicOn ? t.musicActive(music.getCurrentTrackTitle() || 'We Love Wizardry') : t.musicInactive}
           >
             <Music className={`w-3.5 h-3.5 ${musicOn ? 'text-amber-400' : 'text-slate-500'}`} />
-            <span className="hidden lg:inline">{musicOn ? t.music : t.mute}</span>
+            <span className="hidden xl:inline">{musicOn ? t.music : t.mute}</span>
           </button>
 
           <button
@@ -1193,7 +1195,7 @@ export default function App() {
           {!isItchioBuild && (
             <button
               onClick={() => setShowPySide6Export(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition"
             >
               <FileCode className="w-3.5 h-3.5" />
               <span>Export PySide6</span>

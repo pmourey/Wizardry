@@ -260,6 +260,59 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     }
   };
 
+  // Mobile Touch & Swipe Gesture Handling on the 3D Canvas
+  const touchStartRef = React.useRef<{ x: number; y: number; time: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || e.changedTouches.length !== 1) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+    const dt = Date.now() - touchStartRef.current.time;
+    touchStartRef.current = null;
+
+    if (dt > 600) return;
+
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    const minSwipe = 35;
+
+    if (absX < minSwipe && absY < minSwipe) {
+      // Short tap: kick door if in front of door, otherwise move forward
+      const currentWall = [maze.n, maze.e, maze.s, maze.w][direction][x][y];
+      if (currentWall === 'DOOR') {
+        onKickDoor();
+      } else {
+        tryMoveForward(false);
+      }
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try { navigator.vibrate(12); } catch { /* ignore */ }
+    }
+
+    if (absX > absY) {
+      if (dx > 0) {
+        onRotate(1); // Swipe right -> turn right 90°
+      } else {
+        onRotate(3); // Swipe left -> turn left 90°
+      }
+    } else {
+      if (dy < 0) {
+        tryMoveForward(false); // Swipe up -> forward
+      } else {
+        onRotate(2); // Swipe down -> turn around 180°
+      }
+    }
+  };
+
   const activeCampHero = party[campCharIdx] || party[0];
 
   // ==========================================
@@ -599,69 +652,74 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   return (
     <div className="flex flex-col h-full bg-slate-950 text-slate-100 select-none overflow-hidden">
       {/* Top HUD Strip */}
-      <div className="flex items-center justify-between px-6 py-2.5 bg-slate-900 border-b border-slate-800 text-xs">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-bold text-amber-400">
-            <Compass className="w-4 h-4" />
-            <span>Niveau {maze.level}</span>
+      <div className="flex items-center justify-between px-3 md:px-6 py-1.5 md:py-2.5 bg-slate-900 border-b border-slate-800 text-xs shrink-0">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
+          <div className="flex items-center gap-1 font-bold text-amber-400 whitespace-nowrap">
+            <Compass className="w-3.5 h-3.5 md:w-4 md:h-4" />
+            <span>Niv. {maze.level}</span>
           </div>
-          <span className="text-slate-600">·</span>
-          <span className="text-slate-300">
-            Coord : ({x}, {y}) · Direction : <strong className="text-white">{['NORD', 'EST', 'SUD', 'OUEST'][direction]}</strong>
+          <span className="text-slate-600 hidden sm:inline">·</span>
+          <span className="text-slate-300 text-[11px] md:text-xs truncate">
+            ({x},{y}) · <strong className="text-white">{['NORD', 'EST', 'SUD', 'OUEST'][direction]}</strong>
           </span>
           {sqrType === 'STAIRS' && (
-            <span className="bg-amber-950/70 text-amber-300 border border-amber-600/40 px-2 py-0.5 rounded text-[11px] font-bold">
-              Escalier Détecté
+            <span className="bg-amber-950/70 text-amber-300 border border-amber-600/40 px-1.5 md:px-2 py-0.5 rounded text-[10px] md:text-[11px] font-bold shrink-0">
+              Escalier
             </span>
           )}
         </div>
 
         {/* Buffs and View toggles */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
           {lightLevel > 0 && (
-            <div className="flex items-center gap-1 text-amber-400 font-bold" title="Lumière magique Milwa/Lomilwa active">
-              <Flame className="w-3.5 h-3.5 animate-pulse" />
-              <span>Lumière ({lightLevel > 999 ? '∞' : lightLevel})</span>
+            <div className="flex items-center gap-1 text-amber-400 font-bold text-[11px] md:text-xs" title="Lumière magique Milwa/Lomilwa active">
+              <Flame className="w-3 h-3 md:w-3.5 md:h-3.5 animate-pulse" />
+              <span className="hidden sm:inline">Lumière</span> <span>({lightLevel > 999 ? '∞' : lightLevel})</span>
             </div>
           )}
           {acModifier > 0 && (
-            <div className="flex items-center gap-1 text-blue-400 font-bold" title="Protection Maporfic">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Bouclier Divin</span>
+            <div className="flex items-center gap-1 text-blue-400 font-bold text-[11px] md:text-xs" title="Protection Maporfic">
+              <ShieldCheck className="w-3 h-3 md:w-3.5 md:h-3.5" />
+              <span className="hidden sm:inline">Bouclier</span>
             </div>
           )}
 
           <button
             onClick={() => { setHudMinimapVisible(prev => !prev); sounds.playTurn(); }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-[11px] font-bold transition ${
+            className={`flex items-center gap-1 px-2 md:px-2.5 py-1 rounded border text-[11px] font-bold transition ${
               hudMinimapVisible 
                 ? 'bg-amber-950 text-amber-300 border-amber-600/50' 
                 : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
             }`}
             title="Afficher/masquer la minicarte HUD (M)"
           >
-            <Map className="w-3.5 h-3.5" />
-            <span>Minicarte {hudMinimapVisible ? 'Active' : ''}</span>
+            <Map className="w-3 h-3 md:w-3.5 md:h-3.5" />
+            <span className="hidden sm:inline">Carte {hudMinimapVisible ? 'Active' : ''}</span>
           </button>
 
           <button
             onClick={() => { setWireframeMode(!wireframeMode); sounds.playTurn(); }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-[11px] font-bold transition shadow-sm ${
+            className={`flex items-center gap-1 px-2 md:px-2.5 py-1 rounded border text-[11px] font-bold transition shadow-sm ${
               wireframeMode 
                 ? 'bg-emerald-950/90 text-emerald-400 border-emerald-500/60 hover:bg-emerald-900/80' 
                 : 'bg-amber-950/90 text-amber-300 border-amber-600/60 hover:bg-amber-900/80'
             }`}
             title="Basculer entre le rendu 3D Donjon Pierre et le Rétro Vectoriel Apple II"
           >
-            <span>Rendu : <strong>{wireframeMode ? 'Rétro Vectoriel (1981)' : '3D Donjon Pierre'}</strong></span>
+            <span className="sm:hidden text-[10px]">{wireframeMode ? 'Fil de Fer' : 'Pierre 3D'}</span>
+            <span className="hidden sm:inline">Rendu : <strong>{wireframeMode ? 'Rétro Vectoriel (1981)' : '3D Donjon Pierre'}</strong></span>
           </button>
         </div>
       </div>
 
       {/* Center Zone: 3D Viewport & Side Control Pad */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* 3D First Person Dungeon Viewport */}
-        <div className="flex-1 relative bg-black overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+        {/* 3D First Person Dungeon Viewport with Touch/Swipe Gestures */}
+        <div 
+          className="flex-1 relative bg-black overflow-hidden min-h-[220px] md:min-h-0 touch-none select-none"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <DungeonRenderer3D
             maze={maze}
             x={x}
@@ -808,8 +866,101 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           )}
         </div>
 
-        {/* Tactical Control Pad */}
-        <div className="w-64 bg-slate-900/90 border-l border-slate-800 p-4 flex flex-col justify-between shrink-0 space-y-4">
+        {/* Mobile Tactical Control Bar (< md) */}
+        <div className="md:hidden bg-slate-900/95 border-t border-slate-800 px-3 py-2 flex items-center justify-between gap-3 shrink-0">
+          {/* Mobile D-Pad */}
+          <div className="grid grid-cols-3 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800/80 shrink-0">
+            <div />
+            <button
+              onClick={() => { tryMoveForward(false); if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10); }}
+              className="w-11 h-11 bg-slate-800 active:bg-amber-600 text-white rounded-lg flex flex-col items-center justify-center transition shadow active:scale-95 touch-manipulation"
+              title={`Avancer (${forwardKeyLabel})`}
+            >
+              <ArrowUp className="w-5 h-5 text-amber-400" />
+            </button>
+            <div />
+
+            <button
+              onClick={() => { onRotate(3); if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10); }}
+              className="w-11 h-11 bg-slate-800 active:bg-slate-700 text-white rounded-lg flex flex-col items-center justify-center transition shadow active:scale-95 touch-manipulation"
+              title={`Gauche (${leftKeyLabel})`}
+            >
+              <ArrowLeft className="w-5 h-5 text-slate-200" />
+            </button>
+            <button
+              onClick={() => { onKickDoor(); if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(15); }}
+              className="w-11 h-11 bg-amber-950/60 active:bg-amber-800 border border-amber-600/40 text-amber-300 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold transition active:scale-95 touch-manipulation"
+              title="Porte (K)"
+            >
+              <DoorClosed className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { onRotate(1); if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10); }}
+              className="w-11 h-11 bg-slate-800 active:bg-slate-700 text-white rounded-lg flex flex-col items-center justify-center transition shadow active:scale-95 touch-manipulation"
+              title={`Droite (${rightKeyLabel})`}
+            >
+              <ArrowRight className="w-5 h-5 text-slate-200" />
+            </button>
+          </div>
+
+          {/* Mobile Quick Action Buttons & Stairs */}
+          <div className="flex-1 flex flex-col justify-between gap-1.5 min-w-0">
+            <div className="grid grid-cols-3 gap-1">
+              <button
+                onClick={() => { setShowCamp(true); sounds.playTurn(); }}
+                className="py-2 px-1 bg-slate-800 active:bg-slate-700 border border-slate-700/60 rounded-lg flex flex-col items-center justify-center text-slate-200 font-semibold transition active:scale-95"
+              >
+                <Tent className="w-4 h-4 text-emerald-400" />
+                <span className="text-[10px] truncate mt-0.5">Camp (C)</span>
+              </button>
+
+              <button
+                onClick={() => { setShowMinimap(true); sounds.playTurn(); }}
+                className="py-2 px-1 bg-slate-800 active:bg-slate-700 border border-slate-700/60 rounded-lg flex flex-col items-center justify-center text-slate-200 font-semibold transition active:scale-95"
+              >
+                <Map className="w-4 h-4 text-blue-400" />
+                <span className="text-[10px] truncate mt-0.5">Carte (M)</span>
+              </button>
+
+              <button
+                onClick={onInspectArea}
+                className="py-2 px-1 bg-slate-800 active:bg-slate-700 border border-slate-700/60 rounded-lg flex flex-col items-center justify-center text-slate-200 font-semibold transition active:scale-95"
+              >
+                <Eye className="w-4 h-4 text-amber-400" />
+                <span className="text-[10px] truncate mt-0.5">Chercher</span>
+              </button>
+            </div>
+
+            {/* Dynamic Stairs or 180 Turnaround button */}
+            {isStairs && currentSqrDef ? (
+              <button
+                onClick={handleExecuteTakeStairs}
+                className="w-full py-2 px-2 bg-gradient-to-r from-amber-600 to-amber-500 active:from-amber-500 active:to-amber-400 text-white rounded-lg text-xs font-black transition shadow flex items-center justify-center gap-1.5 border border-amber-300/40 active:scale-95"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span className="truncate">
+                  {currentSqrDef.aux0 === 0 
+                    ? 'Château (Y)' 
+                    : currentSqrDef.aux0 > maze.level 
+                      ? `Niveau ${currentSqrDef.aux0} ↓` 
+                      : `Niveau ${currentSqrDef.aux0} ↑`}
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={() => { onRotate(2); if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10); }}
+                className="w-full py-1.5 px-2 bg-slate-800/80 active:bg-slate-700 border border-slate-700/50 rounded-lg text-slate-300 text-[11px] font-medium flex items-center justify-center gap-1 transition"
+                title="Faire demi-tour (180°)"
+              >
+                <RotateCcw className="w-3 h-3 text-amber-400" />
+                <span>Demi-tour 180°</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop Tactical Control Pad (>= md) */}
+        <div className="hidden md:flex w-64 md:w-72 bg-slate-900/90 border-l border-slate-800 p-4 flex-col justify-between shrink-0 space-y-4">
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -913,9 +1064,9 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         </div>
       </div>
 
-      {/* Bottom Party Status Cards */}
-      <div className="bg-slate-900 border-t border-slate-800 p-3">
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+      {/* Bottom Party Status Cards (Responsive: 3 cols on mobile = Front/Back row, 6 cols on tablet/desktop) */}
+      <div className="bg-slate-900 border-t border-slate-800 p-1.5 md:p-3 safe-bottom shrink-0">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 md:gap-2">
           {party.map((hero, idx) => (
             <div
               key={hero.id}
@@ -924,32 +1075,32 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 setShowCamp(true);
                 sounds.playTurn();
               }}
-              className="p-2.5 bg-slate-950/60 border border-slate-800 rounded-lg text-xs hover:border-slate-700 cursor-pointer transition flex flex-col justify-between"
+              className="p-1.5 md:p-2.5 bg-slate-950/60 border border-slate-800 rounded-lg text-xs hover:border-slate-700 active:border-amber-500 cursor-pointer transition flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between font-bold text-white">
-                  <span>{hero.name}</span>
-                  <span className="text-[10px] text-amber-400">N.{hero.charLevel}</span>
+                  <span className="truncate text-[11px] md:text-xs">{hero.name}</span>
+                  <span className="text-[9px] md:text-[10px] text-amber-400 font-mono">N.{hero.charLevel}</span>
                 </div>
-                <div className="text-[11px] text-slate-400">{hero.race} {hero.class}</div>
+                <div className="text-[9px] md:text-[11px] text-slate-400 truncate">{hero.race} {hero.class}</div>
               </div>
 
-              <div className="pt-2 space-y-1">
+              <div className="pt-1 md:pt-2 space-y-0.5 md:space-y-1">
                 {/* HP bar */}
-                <div className="flex items-center justify-between text-[11px]">
+                <div className="flex items-center justify-between text-[9px] md:text-[11px]">
                   <span className="text-slate-400">PV:</span>
                   <span className={hero.hpLeft < hero.hpMax / 2 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
                     {hero.hpLeft}/{hero.hpMax}
                   </span>
                 </div>
-                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-800 h-1 md:h-1.5 rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all duration-300 ${hero.hpLeft < hero.hpMax / 3 ? 'bg-red-500' : 'bg-emerald-500'}`}
                     style={{ width: `${Math.max(0, Math.min(100, (hero.hpLeft / hero.hpMax) * 100))}%` }}
                   />
                 </div>
 
-                <div className="flex justify-between text-[10px] text-slate-400 pt-0.5">
+                <div className="flex justify-between text-[9px] md:text-[10px] text-slate-400 pt-0.5">
                   <span>CA: {hero.armorClass}</span>
                   <span className={hero.status === 'OK' ? 'text-slate-400' : 'text-red-400 font-bold'}>
                     {hero.status}
@@ -957,11 +1108,11 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 </div>
 
                 {/* Active Status Badges */}
-                <div className="flex flex-wrap gap-1 pt-1 min-h-[16px]">
+                <div className="flex flex-wrap gap-0.5 md:gap-1 pt-0.5 min-h-[14px]">
                   {getActiveStatusEffects(hero).map(eff => (
                     <span 
                       key={eff.id}
-                      className={`text-[9px] font-bold px-1 py-0.2 rounded border ${eff.bgColor} ${eff.borderColor} ${eff.color}`}
+                      className={`text-[8px] md:text-[9px] font-bold px-1 py-0.2 rounded border ${eff.bgColor} ${eff.borderColor} ${eff.color}`}
                       title={eff.description}
                     >
                       {eff.badge}
