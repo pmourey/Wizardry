@@ -51,19 +51,19 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
   } | null>(null);
 
   useEffect(() => {
-    // Generate high quality, bright and readable procedural textures
+    // Generate high quality, authentic dark medieval dungeon procedural textures
     if (!texturesRef.current && typeof document !== 'undefined') {
-      // 1. Stone Wall Texture (Bright, warm sandstone and chiseled medieval masonry)
+      // 1. Dark Medieval Dungeon Stone Blocks (Weathered ashlar granite with deep dark mortar)
       const wallCanvas = document.createElement('canvas');
       wallCanvas.width = 512;
       wallCanvas.height = 512;
       const wCtx = wallCanvas.getContext('2d')!;
       
-      // Base warm mortar
-      wCtx.fillStyle = '#475569';
+      // Deep dark mortar background
+      wCtx.fillStyle = '#0f141c';
       wCtx.fillRect(0, 0, 512, 512);
       
-      // Brick pattern with distinct warm stones
+      // Chiseled ashlar blocks
       const rows = 8;
       const rowHeight = 512 / rows;
       for (let r = 0; r < rows; r++) {
@@ -74,112 +74,142 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
           const bw = 124;
           const bh = rowHeight - 4;
           
-          // Brick gradient - warm sandstone highlights
+          // Realistic dark granite/stone gradient with top bevel highlight and bottom shadow
           const grad = wCtx.createLinearGradient(bx, by, bx, by + bh);
-          const tone = 115 + Math.floor(Math.random() * 35);
-          grad.addColorStop(0, `rgb(${tone + 45}, ${tone + 42}, ${tone + 36})`);
-          grad.addColorStop(0.5, `rgb(${tone + 22}, ${tone + 20}, ${tone + 14})`);
-          grad.addColorStop(1, `rgb(${tone - 8}, ${tone - 12}, ${tone - 16})`);
+          const baseTone = 55 + Math.floor(Math.random() * 25); // [55..80]
+          grad.addColorStop(0, `rgb(${baseTone + 30}, ${baseTone + 32}, ${baseTone + 35})`);
+          grad.addColorStop(0.5, `rgb(${baseTone + 8}, ${baseTone + 10}, ${baseTone + 12})`);
+          grad.addColorStop(1, `rgb(${baseTone - 15}, ${baseTone - 12}, ${baseTone - 10})`);
           wCtx.fillStyle = grad;
           wCtx.fillRect(bx, by, bw, bh);
 
-          // Top edge bevel highlight
-          wCtx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+          // Top edge chiseled bevel highlight
+          wCtx.fillStyle = 'rgba(255, 255, 255, 0.18)';
           wCtx.fillRect(bx, by, bw, 2);
 
-          // Subtle stone grain specs
-          wCtx.fillStyle = 'rgba(255, 255, 255, 0.09)';
-          for (let p = 0; p < 45; p++) {
+          // Left edge subtle highlight
+          wCtx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+          wCtx.fillRect(bx, by, 2, bh);
+
+          // Bottom edge deep shadow
+          wCtx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+          wCtx.fillRect(bx, by + bh - 2, bw, 2);
+
+          // Subtle weathered stone grain noise
+          wCtx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+          for (let p = 0; p < 40; p++) {
             wCtx.fillRect(bx + Math.random() * bw, by + Math.random() * bh, 2, 2);
           }
-          wCtx.fillStyle = 'rgba(0, 0, 0, 0.12)';
-          for (let p = 0; p < 45; p++) {
+          wCtx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+          for (let p = 0; p < 50; p++) {
             wCtx.fillRect(bx + Math.random() * bw, by + Math.random() * bh, 2, 2);
           }
         }
       }
 
-      // 2. Heavy Medieval Wood & Iron Door (Rich warm chestnut planks & shiny brass ring)
+      // 2. Heavy Medieval Dungeon Oak Door with Wrought Iron Reinforcements
       const doorCanvas = document.createElement('canvas');
       doorCanvas.width = 512;
       doorCanvas.height = 512;
       const dCtx = doorCanvas.getContext('2d')!;
       
-      dCtx.fillStyle = '#29170e';
+      // Deep dark stone doorframe
+      dCtx.fillStyle = '#11151c';
       dCtx.fillRect(0, 0, 512, 512);
 
-      // Wooden planks
+      // Dark aged bog-oak vertical timber planks
       for (let p = 0; p < 6; p++) {
         const px = 40 + p * 72;
         const pGrad = dCtx.createLinearGradient(px, 30, px + 68, 512);
-        pGrad.addColorStop(0, '#9a5323');
-        pGrad.addColorStop(0.5, '#783e18');
-        pGrad.addColorStop(1, '#562b10');
+        pGrad.addColorStop(0, '#3e271a');
+        pGrad.addColorStop(0.5, '#281810');
+        pGrad.addColorStop(1, '#1b100b');
         dCtx.fillStyle = pGrad;
         dCtx.fillRect(px, 30, 68, 482);
 
         // Wood grain streaks
-        dCtx.fillStyle = 'rgba(255,255,255,0.06)';
-        dCtx.fillRect(px + 10, 30, 4, 482);
-        dCtx.fillRect(px + 40, 30, 6, 482);
+        dCtx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+        dCtx.fillRect(px + 12, 30, 3, 482);
+        dCtx.fillRect(px + 45, 30, 4, 482);
+        dCtx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        dCtx.fillRect(px + 66, 30, 2, 482); // plank shadow gap
       }
 
-      // Iron frame & rivets
-      dCtx.strokeStyle = '#cbd5e1';
+      // Heavy forged iron arch / border
+      dCtx.strokeStyle = '#2d3748';
       dCtx.lineWidth = 14;
       dCtx.strokeRect(30, 25, 452, 487);
       
-      // Iron crossbands
-      dCtx.fillStyle = '#64748b';
-      dCtx.fillRect(30, 140, 452, 30);
-      dCtx.fillRect(30, 360, 452, 30);
+      // Horizontal wrought-iron reinforcement bands
+      dCtx.fillStyle = '#1e293b';
+      dCtx.fillRect(30, 130, 452, 34);
+      dCtx.fillRect(30, 350, 452, 34);
 
-      // Rivets
-      dCtx.fillStyle = '#f1f5f9';
-      [60, 160, 260, 360, 460].forEach(rx => {
+      // Iron band bevel highlight
+      dCtx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      dCtx.fillRect(30, 130, 452, 3);
+      dCtx.fillRect(30, 350, 452, 3);
+
+      // Iron rivets / studs
+      [55, 145, 240, 335, 425].forEach(rx => {
+        dCtx.fillStyle = '#475569';
         dCtx.beginPath();
-        dCtx.arc(rx, 155, 6, 0, Math.PI * 2);
-        dCtx.arc(rx, 375, 6, 0, Math.PI * 2);
+        dCtx.arc(rx, 147, 7, 0, Math.PI * 2);
+        dCtx.arc(rx, 367, 7, 0, Math.PI * 2);
+        dCtx.fill();
+        dCtx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        dCtx.beginPath();
+        dCtx.arc(rx - 2, 145, 3, 0, Math.PI * 2);
+        dCtx.arc(rx - 2, 365, 3, 0, Math.PI * 2);
         dCtx.fill();
       });
 
-      // Golden Bronze ring handle
-      dCtx.strokeStyle = '#fbbf24';
-      dCtx.lineWidth = 15;
+      // Heavy forged iron ring handle
+      dCtx.strokeStyle = '#64748b';
+      dCtx.lineWidth = 14;
       dCtx.beginPath();
-      dCtx.arc(380, 260, 30, 0, Math.PI * 2);
+      dCtx.arc(380, 250, 28, 0, Math.PI * 2);
       dCtx.stroke();
+      dCtx.fillStyle = '#1e293b';
+      dCtx.fillRect(366, 210, 28, 14);
 
-      // 3. Flagstone Floor (Clean, bright stone pavers)
+      // 3. Flagstone Dungeon Floor (Aged slate slabs with dark moss crevices)
       const floorCanvas = document.createElement('canvas');
       floorCanvas.width = 512;
       floorCanvas.height = 512;
       const fCtx = floorCanvas.getContext('2d')!;
-      fCtx.fillStyle = '#334155';
+      fCtx.fillStyle = '#0a0d13';
       fCtx.fillRect(0, 0, 512, 512);
 
       for (let fx = 0; fx < 512; fx += 128) {
         for (let fy = 0; fy < 512; fy += 128) {
-          const fTone = 95 + Math.floor(Math.random() * 30);
-          fCtx.fillStyle = `rgb(${fTone + 25}, ${fTone + 22}, ${fTone + 20})`;
+          const fTone = 45 + Math.floor(Math.random() * 20); // [45..65]
+          fCtx.fillStyle = `rgb(${fTone}, ${fTone + 2}, ${fTone + 4})`;
           fCtx.fillRect(fx + 3, fy + 3, 122, 122);
 
           // Top highlight
-          fCtx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-          fCtx.fillRect(fx + 3, fy + 3, 122, 12);
+          fCtx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+          fCtx.fillRect(fx + 3, fy + 3, 122, 6);
+
+          // Subtle stone grain
+          fCtx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+          fCtx.fillRect(fx + 40, fy + 40, 40, 40);
         }
       }
 
-      // 4. Vaulted Ceiling
+      // 4. Dungeon Vaulted Ceiling (Dark stone masonry & timber rafters)
       const ceilCanvas = document.createElement('canvas');
       ceilCanvas.width = 256;
       ceilCanvas.height = 256;
       const cCtx = ceilCanvas.getContext('2d')!;
-      cCtx.fillStyle = '#334155';
+      cCtx.fillStyle = '#0e1218';
       cCtx.fillRect(0, 0, 256, 256);
-      cCtx.fillStyle = '#1e293b';
-      cCtx.fillRect(0, 0, 256, 22);
-      cCtx.fillRect(0, 120, 256, 22);
+      cCtx.fillStyle = '#171c26';
+      cCtx.fillRect(0, 0, 256, 30);
+      cCtx.fillRect(0, 128, 256, 30);
+      cCtx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      cCtx.fillRect(0, 28, 256, 6);
+      cCtx.fillRect(0, 156, 256, 6);
 
       texturesRef.current = {
         stone: new THREE.CanvasTexture(wallCanvas),
@@ -366,37 +396,59 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       group.remove(obj);
     }
 
-    const wallGeo = new THREE.PlaneGeometry(4, 3.2);
-    const wallMat = wireframeMode 
-      ? new THREE.MeshBasicMaterial({ color: 0x22c55e, wireframe: true })
-      : new THREE.MeshStandardMaterial({ 
-          map: texturesRef.current.stone, 
-          roughness: 0.80, 
-          metalness: 0.08 
-        });
+    // Solid 3D Box geometries with realistic thickness (35cm stone masonry)
+    const wallBoxGeo = new THREE.BoxGeometry(4.0, 3.2, 0.35);
+    const doorBoxGeo = new THREE.BoxGeometry(3.9, 3.15, 0.35);
 
-    const doorMat = wireframeMode 
-      ? new THREE.MeshBasicMaterial({ color: 0xeab308, wireframe: true })
-      : new THREE.MeshStandardMaterial({ 
-          map: texturesRef.current.door, 
-          roughness: 0.65, 
-          metalness: 0.25 
-        });
+    // Stone wall material (double-sided, 100% opaque, authentic dark medieval masonry)
+    const stoneWallMat = new THREE.MeshStandardMaterial({ 
+      map: texturesRef.current.stone, 
+      roughness: 0.88, 
+      metalness: 0.05,
+      side: THREE.DoubleSide
+    });
 
-    const secretDoorMat = wireframeMode 
-      ? new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true })
-      : new THREE.MeshStandardMaterial({ 
-          map: texturesRef.current.stone, 
-          roughness: 0.85, 
-          metalness: 0.08 
-        });
+    const doorMat = new THREE.MeshStandardMaterial({ 
+      map: texturesRef.current.door, 
+      roughness: 0.70, 
+      metalness: 0.18,
+      side: THREE.DoubleSide
+    });
+
+    const secretDoorMat = stoneWallMat; // secret doors look identical to regular walls
+
+    // Authentic 1981 Apple II Vector Wireframe:
+    // Solid black box (acts as occluder so you NEVER see through walls!) + glowing green/gold line edges
+    const retroSolidMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const wallEdgeGeo = new THREE.EdgesGeometry(wallBoxGeo);
+    const doorEdgeGeo = new THREE.EdgesGeometry(doorBoxGeo);
+
+    const retroWallEdgeMat = new THREE.LineBasicMaterial({ color: 0x22c55e, linewidth: 2 });
+    const retroDoorEdgeMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, linewidth: 2 });
+    const retroSecretEdgeMat = new THREE.LineBasicMaterial({ color: 0x22c55e, linewidth: 2 });
+
+    const createWallMesh = (isDoor: boolean, isSecret: boolean) => {
+      if (wireframeMode) {
+        // Authentic Apple II: Solid black occlusion + neon vector lines
+        const mesh = new THREE.Mesh(isDoor ? doorBoxGeo : wallBoxGeo, retroSolidMat);
+        const edgeMat = isDoor ? retroDoorEdgeMat : (isSecret ? retroSecretEdgeMat : retroWallEdgeMat);
+        const lines = new THREE.LineSegments(isDoor ? doorEdgeGeo : wallEdgeGeo, edgeMat);
+        mesh.add(lines);
+        return mesh;
+      } else {
+        // Authentic 3D Pierre Réaliste: 100% opaque, heavy solid stone block
+        const mat = isDoor ? doorMat : (isSecret ? secretDoorMat : stoneWallMat);
+        return new THREE.Mesh(isDoor ? doorBoxGeo : wallBoxGeo, mat);
+      }
+    };
 
     // Floor and Ceiling - Expansive coverage ensuring no black empty strips on map edges
     if (!wireframeMode) {
       const floorGeo = new THREE.PlaneGeometry(300, 300);
       const floorMat = new THREE.MeshStandardMaterial({ 
         map: texturesRef.current.floor, 
-        roughness: 0.90 
+        roughness: 0.92,
+        side: THREE.FrontSide
       });
       const floor = new THREE.Mesh(floorGeo, floorMat);
       floor.rotation.x = -Math.PI / 2;
@@ -406,7 +458,8 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       const ceilGeo = new THREE.PlaneGeometry(300, 300);
       const ceilMat = new THREE.MeshStandardMaterial({ 
         map: texturesRef.current.ceiling, 
-        roughness: 0.85 
+        roughness: 0.88,
+        side: THREE.FrontSide
       });
       const ceiling = new THREE.Mesh(ceilGeo, ceilMat);
       ceiling.rotation.x = Math.PI / 2;
@@ -414,77 +467,74 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       group.add(ceiling);
     }
 
-    // Build nearby walls (render distance 6 around player)
+    // Build nearby walls (render distance 6 around player) with deduplication
     const minX = Math.max(0, x - 5);
     const maxX = Math.min(19, x + 5);
     const minY = Math.max(0, y - 5);
     const maxY = Math.min(19, y + 5);
+    const seenWalls = new Set<string>();
 
     for (let cx = minX; cx <= maxX; cx++) {
       for (let cy = minY; cy <= maxY; cy++) {
         const wx = cx * 4;
         const wy = -cy * 4;
 
-        // North Wall
+        // North Wall of (cx, cy) -> position (wx, 1.6, wy - 2)
         const nWall = maze.n[cx][cy];
-        if (nWall !== 'OPEN') {
-          const mat = nWall === 'DOOR' ? doorMat : nWall === 'HIDEDOOR' ? secretDoorMat : wallMat;
-          const mesh = new THREE.Mesh(wallGeo, mat);
-          mesh.position.set(wx, 1.6, wy - 2);
-          group.add(mesh);
-        } else if (cy === 0) {
-          // Perimeter solid stone wall closure on north boundary
-          const mesh = new THREE.Mesh(wallGeo, wallMat);
-          mesh.position.set(wx, 1.6, wy - 2);
-          group.add(mesh);
+        const nKey = `H_${cx}_${cy}`;
+        if (nWall !== 'OPEN' || cy === 0) {
+          if (!seenWalls.has(nKey)) {
+            seenWalls.add(nKey);
+            const isDoor = nWall === 'DOOR';
+            const isSecret = nWall === 'HIDEDOOR';
+            const mesh = createWallMesh(isDoor, isSecret);
+            mesh.position.set(wx, 1.6, wy - 2);
+            group.add(mesh);
+          }
         }
 
-        // South Wall
+        // South Wall of (cx, cy) -> position (wx, 1.6, wy + 2)
         const sWall = maze.s[cx][cy];
-        if (sWall !== 'OPEN') {
-          const mat = sWall === 'DOOR' ? doorMat : sWall === 'HIDEDOOR' ? secretDoorMat : wallMat;
-          const mesh = new THREE.Mesh(wallGeo, mat);
-          mesh.rotation.y = Math.PI;
-          mesh.position.set(wx, 1.6, wy + 2);
-          group.add(mesh);
-        } else if (cy === 19) {
-          // Perimeter solid stone wall closure on south boundary
-          const mesh = new THREE.Mesh(wallGeo, wallMat);
-          mesh.rotation.y = Math.PI;
-          mesh.position.set(wx, 1.6, wy + 2);
-          group.add(mesh);
+        const sKey = `H_${cx}_${cy + 1}`;
+        if (sWall !== 'OPEN' || cy === 19) {
+          if (!seenWalls.has(sKey)) {
+            seenWalls.add(sKey);
+            const isDoor = sWall === 'DOOR';
+            const isSecret = sWall === 'HIDEDOOR';
+            const mesh = createWallMesh(isDoor, isSecret);
+            mesh.position.set(wx, 1.6, wy + 2);
+            group.add(mesh);
+          }
         }
 
-        // East Wall
+        // East Wall of (cx, cy) -> position (wx + 2, 1.6, wy)
         const eWall = maze.e[cx][cy];
-        if (eWall !== 'OPEN') {
-          const mat = eWall === 'DOOR' ? doorMat : eWall === 'HIDEDOOR' ? secretDoorMat : wallMat;
-          const mesh = new THREE.Mesh(wallGeo, mat);
-          mesh.rotation.y = -Math.PI / 2;
-          mesh.position.set(wx + 2, 1.6, wy);
-          group.add(mesh);
-        } else if (cx === 19) {
-          // Perimeter solid stone wall closure on east boundary
-          const mesh = new THREE.Mesh(wallGeo, wallMat);
-          mesh.rotation.y = -Math.PI / 2;
-          mesh.position.set(wx + 2, 1.6, wy);
-          group.add(mesh);
+        const eKey = `V_${cx + 1}_${cy}`;
+        if (eWall !== 'OPEN' || cx === 19) {
+          if (!seenWalls.has(eKey)) {
+            seenWalls.add(eKey);
+            const isDoor = eWall === 'DOOR';
+            const isSecret = eWall === 'HIDEDOOR';
+            const mesh = createWallMesh(isDoor, isSecret);
+            mesh.rotation.y = Math.PI / 2;
+            mesh.position.set(wx + 2, 1.6, wy);
+            group.add(mesh);
+          }
         }
 
-        // West Wall
+        // West Wall of (cx, cy) -> position (wx - 2, 1.6, wy)
         const wWall = maze.w[cx][cy];
-        if (wWall !== 'OPEN') {
-          const mat = wWall === 'DOOR' ? doorMat : wWall === 'HIDEDOOR' ? secretDoorMat : wallMat;
-          const mesh = new THREE.Mesh(wallGeo, mat);
-          mesh.rotation.y = Math.PI / 2;
-          mesh.position.set(wx - 2, 1.6, wy);
-          group.add(mesh);
-        } else if (cx === 0) {
-          // Perimeter solid stone wall closure on west boundary
-          const mesh = new THREE.Mesh(wallGeo, wallMat);
-          mesh.rotation.y = Math.PI / 2;
-          mesh.position.set(wx - 2, 1.6, wy);
-          group.add(mesh);
+        const wKey = `V_${cx}_${cy}`;
+        if (wWall !== 'OPEN' || cx === 0) {
+          if (!seenWalls.has(wKey)) {
+            seenWalls.add(wKey);
+            const isDoor = wWall === 'DOOR';
+            const isSecret = wWall === 'HIDEDOOR';
+            const mesh = createWallMesh(isDoor, isSecret);
+            mesh.rotation.y = Math.PI / 2;
+            mesh.position.set(wx - 2, 1.6, wy);
+            group.add(mesh);
+          }
         }
 
         // Special Square 3D Features (e.g. Staircase)

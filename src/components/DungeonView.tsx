@@ -646,9 +646,14 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
           <button
             onClick={() => { setWireframeMode(!wireframeMode); sounds.playTurn(); }}
-            className={`px-2.5 py-1 rounded border text-[11px] font-bold transition ${wireframeMode ? 'bg-emerald-950 text-emerald-400 border-emerald-500' : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'}`}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-[11px] font-bold transition shadow-sm ${
+              wireframeMode 
+                ? 'bg-emerald-950/90 text-emerald-400 border-emerald-500/60 hover:bg-emerald-900/80' 
+                : 'bg-amber-950/90 text-amber-300 border-amber-600/60 hover:bg-amber-900/80'
+            }`}
+            title="Basculer entre le rendu 3D Donjon Pierre et le Rétro Vectoriel Apple II"
           >
-            {wireframeMode ? 'Mode Rétro Fil de Fer' : 'Mode 3D Pierre'}
+            <span>Rendu : <strong>{wireframeMode ? 'Rétro Vectoriel (1981)' : '3D Donjon Pierre'}</strong></span>
           </button>
         </div>
       </div>
