@@ -434,7 +434,8 @@ export default function App() {
       }
     }
 
-    const lvl = nextSession?.dungeonLevel || 1;
+    const defaultStartLvl = scenarioId === 'return-of-werdna' ? 10 : 1;
+    const lvl = nextSession?.dungeonLevel || defaultStartLvl;
     const px = nextSession?.posX ?? 0;
     const py = nextSession?.posY ?? 0;
     if (!nextVisited[lvl]) {
@@ -1072,7 +1073,8 @@ export default function App() {
     });
     setParty(survivingParty);
     setLocation('CASTLE');
-    setDungeonLevel(1);
+    const castleLevel = activeScenarioId === 'return-of-werdna' ? 10 : 1;
+    setDungeonLevel(castleLevel);
     setPosX(0);
     setPosY(0);
     setDirection(0);
@@ -1080,9 +1082,13 @@ export default function App() {
     setAcModifier(0);
     setFightMapsByLevel({});
 
+    const castleTitle = activeScenarioId === 'return-of-werdna' 
+      ? "Retour au Tombeau de Werdna" 
+      : "Retour au Château de Trebor";
+
     addAdventureEvent(
       'CASTLE',
-      "Retour au Château de Trebor",
+      castleTitle,
       fallenHeroes.length > 0
         ? `L'escouade regagne le château. Les dépouilles de ${fallenHeroes.map(f => f.name).join(', ')} ont été retirées du groupe et confiées au Temple de Cant.`
         : "L'escouade a gravi les marches pour regagner la sécurité du château.",
@@ -1341,15 +1347,16 @@ export default function App() {
             onClearAdventureEvents={() => setAdventureEvents([])}
             onAddAdventureEvent={addAdventureEvent}
             onEnterMaze={() => {
-              // Original gameplay: the party always starts at the stairs of level 1
-              const mazeL1 = getMazeForFloor(1);
-              setMaze(mazeL1);
-              setDungeonLevel(1);
+              // Wizardry IV starts at level 10 (the Tomb of Werdna), while scenarios 1-3 start at level 1
+              const startLevel = activeScenarioId === 'return-of-werdna' ? 10 : 1;
+              const startMaze = getMazeForFloor(startLevel);
+              setMaze(startMaze);
+              setDungeonLevel(startLevel);
               setPosX(0);
               setPosY(0);
               setDirection(0);
               setFightMapsByLevel({
-                1: generateFightMap(mazeL1)
+                [startLevel]: generateFightMap(startMaze)
               });
               setLocation('MAZE');
               sounds.playDoor();

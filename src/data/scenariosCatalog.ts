@@ -183,8 +183,54 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
     dataExtracted: true
   },
   {
-    id: 'black-stone',
+    id: 'return-of-werdna',
     number: 4,
+    title: 'The Return of Werdna',
+    subtitle: 'Wizardry IV officiel (Sir-Tech, 1987) - La Revanche de Werdna',
+    subtitleEn: 'Official Wizardry IV (Sir-Tech, 1987) - The Revenge of Werdna',
+    author: 'Roe R. Adams III, Robert Woodhead & Andrew Greenberg',
+    year: '1987',
+    engineVersion: 'v4.0 (Inverted Engine)',
+    recommendedLevel: 'Werdna Niv. 1 (Gravir du B10 au B1)',
+    recommendedLevelEn: 'Werdna Lvl 1 (Climb from B10 to B1)',
+    minLevel: 1,
+    floors: 10,
+    theme: 'GOTHIC',
+    difficulty: 'EXPERT',
+    difficultyEn: 'EXPERT',
+    diskFileName: 'return-of-werdna.dsk',
+    description:
+      "Le chef-d'œuvre le plus retors de la saga ! L'Overlord Trebor vous a terrassé et scellé au sous-sol 10 de votre propre dédale. Dépouillé de vos pouvoirs et de l'Amulette, vous incarnez le mage Werdna. Invoquez des légions de monstres aux pentagrammes, triomphez des groupes d'aventuriers do-gooders à vos trousses, défiez le spectre vengeur de Trebor et remontez les 10 niveaux jusqu'à la surface !",
+    descriptionEn:
+      "The most devious masterpiece of the series! The Mad Overlord Trebor has defeated and sealed you in Basement 10 of your own maze. Stripped of your powers and the Amulet, you play as the evil wizard Werdna. Summon monster legions at mystical pentagrams, crush invading do-gooder adventurer parties, elude the vengeful Ghost of Trebor, and ascend all 10 levels back to the surface!",
+    tips: [
+      'Gameplay inversé mythique : vous contrôlez le grand sorcier Werdna et invoquez des serviteurs monstrueux.',
+      'Les ennemis sont des escouades de héros complets équipés de sorts dévastateurs.',
+      'Ne flânez pas trop longtemps sur un étage sous peine de réveiller le spectre mortel de Trebor.',
+      'Résolvez le légendaire Cube Cosmique et récupérez la Bloodstone pour reconquérir votre domaine.'
+    ],
+    tipsEn: [
+      'Legendary inverted gameplay: control the arch-mage Werdna and summon monstrous minions.',
+      'Enemies are full parties of do-gooder adventurers wielding lethal spells.',
+      'Do not linger too long on any floor or the deadly Ghost of Trebor will hunt you down.',
+      'Navigate the infamous Cosmic Cube and harness the Bloodstone to reclaim your empire.'
+    ],
+    sequelTo: 'proving-grounds',
+    castleName: "Tombeau de Werdna (Sous-sol 10)",
+    castleNameEn: "Werdna's Tomb (Basement 10)",
+    castleSubtitle: "L'Antre de pierre scellé par l'Overlord Trebor",
+    castleSubtitleEn: "Stone lair sealed by the Mad Overlord Trebor",
+    castleWelcome: "Éveil de Werdna dans les ténèbres du tombeau",
+    castleWelcomeEn: "Awakening of Werdna in the dark tomb",
+    castleDescription: "Trahi et dépouillé de votre Amulette sacrée, vous sortez d'un millénaire de sommeil au plus profond du dédale. Les groupes d'aventuriers de Trebor ont envahi vos couloirs. Invoquez vos serviteurs ténébreux aux pentagrammes, gravissez les 10 niveaux et punissez les intrus jusqu'à la surface !",
+    castleDescriptionEn: "Betrayed and stripped of your sacred Amulet, you awaken from a millennium of slumber at the lowest depths of the labyrinth. Trebor's adventurer parties have invaded your halls. Summon your dark minions at pentagrams, ascend the 10 levels, and exact vengeance upon the surface!",
+    trainingGroundsName: "Cercle d'Invocation de Werdna",
+    trainingGroundsNameEn: "Werdna's Summoning Circle",
+    dataExtracted: true
+  },
+  {
+    id: 'black-stone',
+    number: 5,
     title: 'The Black Stone',
     subtitle: 'La Pierre Noire aux 8 niveaux de pièges et d’énigmes',
     subtitleEn: 'The Black Stone: 8 levels of traps and puzzles',
@@ -225,7 +271,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
   },
   {
     id: 'catacombs-of-vlad',
-    number: 5,
+    number: 6,
     title: 'Catacombs of Vlad',
     subtitle: 'Les Catacombes vampiriques du Comte Vlad',
     subtitleEn: "Count Vlad's Vampiric Catacombs",
@@ -266,7 +312,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
   },
   {
     id: 'dragonquest',
-    number: 6,
+    number: 7,
     title: 'DragonQuest',
     subtitle: 'La Quête draconique d’Eric Labelle',
     subtitleEn: "Eric Labelle's Draconic Quest",
@@ -307,7 +353,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
   },
   {
     id: 'knight-of-the-grave',
-    number: 7,
+    number: 8,
     title: 'Knight of the Grave',
     subtitle: 'Le Chevalier de la Tombe & les Rois Squelettes',
     subtitleEn: 'The Knight of the Grave & the Skeleton Kings',
@@ -348,7 +394,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
   },
   {
     id: 'scarlet-brotherhood',
-    number: 8,
+    number: 9,
     title: 'Scarlet Brotherhood of Hsi-So',
     subtitle: 'La Confrérie Écarlate et ses Moines Assassins',
     subtitleEn: 'The Scarlet Brotherhood & its Assassin Monks',
@@ -389,7 +435,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
   },
   {
     id: 'nihonbashi',
-    number: 9,
+    number: 10,
     title: 'Nihonbashi (日本橋)',
     subtitle: 'Le Pont du Levant et les Ombres d’Edo',
     subtitleEn: 'Bridge of the Rising Sun & Shadows of Edo',
@@ -430,7 +476,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
   },
   {
     id: 'oconnors-mine',
-    number: 10,
+    number: 11,
     title: "O'Connor's Mine",
     subtitle: 'Les Galeries Minières Oubliées',
     subtitleEn: 'The Forgotten Mining Galleries',
@@ -471,7 +517,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
   },
   {
     id: 'emperors-seal',
-    number: 11,
+    number: 12,
     title: "The Emperor's Seal",
     subtitle: 'La Quête du Sceau Impérial Dérobé',
     subtitleEn: 'Quest for the Stolen Imperial Seal',
@@ -512,7 +558,7 @@ export const WIZARDRY_SCENARIOS: WizardryScenarioMeta[] = [
   },
   {
     id: 'atomic-wasteland-2098',
-    number: 12,
+    number: 13,
     title: 'Atomic Wasteland 2098',
     subtitle: 'Post-apocalyptique & Science-Fiction sur moteur Wizardry',
     subtitleEn: 'Post-Apocalyptic & Sci-Fi on Wizardry Engine',
