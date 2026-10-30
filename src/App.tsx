@@ -203,6 +203,10 @@ export default function App() {
   const [chestReward, setChestReward] = useState<ChestReward | null>(() => savedSession?.chestReward || null);
 
   // Modals & Sound
+  const isItchioBuild =
+    import.meta.env.VITE_ITCHIO === 'true' ||
+    (typeof window !== 'undefined' &&
+      (window.location.hostname.includes('itch.zone') || window.location.hostname.includes('itch.io')));
   const [showPySide6Export, setShowPySide6Export] = useState<boolean>(false);
   const [soundOn, setSoundOn] = useState<boolean>(true);
   const [lastWipeoutInfo, setLastWipeoutInfo] = useState<{ x: number; y: number; level: number; heroes: string[] } | null>(
@@ -1108,13 +1112,15 @@ export default function App() {
             {soundOn ? <Volume2 className="w-4 h-4 text-amber-400" /> : <VolumeX className="w-4 h-4" />}
           </button>
 
-          <button
-            onClick={() => setShowPySide6Export(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition"
-          >
-            <FileCode className="w-3.5 h-3.5" />
-            <span>Export PySide6</span>
-          </button>
+          {!isItchioBuild && (
+            <button
+              onClick={() => setShowPySide6Export(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition"
+            >
+              <FileCode className="w-3.5 h-3.5" />
+              <span>Export PySide6</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -1147,8 +1153,8 @@ export default function App() {
               setLocation('MAZE');
               sounds.playDoor();
             }}
-            onOpenPySide6Export={() => setShowPySide6Export(true)}
-            onCheatRestoreParty={handleCheatRestoreParty}
+            onOpenPySide6Export={isItchioBuild ? undefined : () => setShowPySide6Export(true)}
+            onCheatRestoreParty={isItchioBuild ? undefined : handleCheatRestoreParty}
           />
         )}
 
@@ -1312,7 +1318,7 @@ export default function App() {
       </main>
 
       {/* Standalone PySide6 Python Exporter Modal */}
-      {showPySide6Export && (
+      {!isItchioBuild && showPySide6Export && (
         <PySide6Exporter onClose={() => setShowPySide6Export(false)} />
       )}
     </div>

@@ -11,7 +11,8 @@
     "lint": "tsc --noEmit",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist -t true",
-    "build:docs": "vite build && rm -rf docs && cp -r dist docs"
+    "build:docs": "vite build && rm -rf docs && cp -r dist docs",
+    "build:itchio": "VITE_ITCHIO=true vite build && rm -f wizardry-itchio.zip && (cd dist && zip -r ../wizardry-itchio.zip index.html assets/)"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

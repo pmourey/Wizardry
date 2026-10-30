@@ -70,7 +70,7 @@ interface CastleViewProps {
     coordinates?: { x: number; y: number }
   ) => void;
   onEnterMaze: () => void;
-  onOpenPySide6Export: () => void;
+  onOpenPySide6Export?: () => void;
   onCheatRestoreParty?: () => void;
 }
 
@@ -674,13 +674,15 @@ export const CastleView: React.FC<CastleViewProps> = ({
             <User className="w-3.5 h-3.5" />
             Fiche Personnage
           </button>
-          <button
-            onClick={onOpenPySide6Export}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold transition"
-          >
-            <FileCode className="w-3.5 h-3.5" />
-            Code PySide6 (.py)
-          </button>
+          {onOpenPySide6Export && (
+            <button
+              onClick={onOpenPySide6Export}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-semibold transition"
+            >
+              <FileCode className="w-3.5 h-3.5" />
+              Code PySide6 (.py)
+            </button>
+          )}
           {onCheatRestoreParty && (
             <button
               onClick={() => {
