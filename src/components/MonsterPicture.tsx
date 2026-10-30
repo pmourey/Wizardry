@@ -21,8 +21,8 @@ export const MonsterPicture: React.FC<MonsterPictureProps> = ({ picId, alt, clas
     <img
       src={url}
       alt={alt}
-      width={80}
-      height={50}
+      width={140}
+      height={100}
       className={className}
       style={{ imageRendering: 'pixelated' }}
     />

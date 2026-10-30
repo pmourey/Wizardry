@@ -299,9 +299,9 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   </span>
                 </div>
                 <div className="py-3 text-center">
-                  <div className="mx-auto mb-2 w-[160px] h-[100px] bg-black border border-slate-700 rounded shadow-inner flex items-center justify-center overflow-hidden">
+                  <div className="mx-auto mb-2 w-[140px] h-[100px] bg-black border border-slate-700 rounded shadow-inner flex items-center justify-center overflow-hidden">
                     {getMonsterPictureUrl(grp.monster.picId) ? (
-                      <MonsterPicture picId={grp.monster.picId} alt={grp.identified ? grp.monster.name : grp.monster.nameUnknown} className="w-[160px] h-[100px]" />
+                      <MonsterPicture picId={grp.monster.picId} alt={grp.identified ? grp.monster.name : grp.monster.nameUnknown} className="w-[140px] h-[100px]" />
                     ) : (
                       <span className="text-amber-400 text-2xl font-serif font-bold">{grp.monster.name[0]}</span>
                     )}

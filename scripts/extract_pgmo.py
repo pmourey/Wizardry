@@ -371,9 +371,19 @@ class Scenario:
         return ev
 
 
-def png_rgba(rows, fg=(252, 211, 77)):
-    h, w = len(rows), len(rows[0])
-    raw = b''.join(b'\x00' + b''.join(bytes(fg) + b'\xff' if v else b'\x00\x00\x00\x00' for v in r) for r in rows)
+# Apple II High-Resolution NTSC Artifact Color Palette (ENEMYPIC at screen column 1, X=7..76)
+APPLE2_GREEN  = (67, 200, 0, 255)
+APPLE2_PURPLE = (187, 54, 255, 255)
+APPLE2_ORANGE = (249, 86, 29, 255)
+APPLE2_BLUE   = (7, 168, 224, 255)
+APPLE2_WHITE  = (255, 255, 255, 255)
+APPLE2_BLACK  = (0, 0, 0, 255)
+
+
+def png_rgba_color(rows_rgba):
+    """Encode a 2D array of (R, G, B, A) tuples into a compressed PNG byte string."""
+    h, w = len(rows_rgba), len(rows_rgba[0])
+    raw = b''.join(b'\x00' + b''.join(bytes(px) for px in r) for r in rows_rgba)
 
     def chunk(t, d):
         return struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
@@ -381,18 +391,111 @@ def png_rgba(rows, fg=(252, 211, 77)):
             chunk(b'IDAT', zlib.compress(raw, 9)) + chunk(b'IEND', b''))
 
 
-def write_monster_pictures(sc, out_dir='src/assets/monsters'):
-    """SPCCHRS records (type 6): 512 bytes each, 2 per 1024-byte pair; 500 bytes = 80x50 bitmap."""
+def decode_apple2_monster_bitmap(raw500: bytes, scale: int = 2):
+    """Decode a 500-byte Apple II SPCCHRS record (50 rows x 10 bytes/row).
+    Per ENEMYPIC (COMBAT.TEXT.pas) and WizardryApp (ImageGraphic.java):
+    - Each byte encodes 7 horizontal pixels in bits 0..6 (LSB first) -> 10 * 7 = 70x50 pixels.
+    - Bit 7 (MSB, 0x80) selects the NTSC color palette:
+        hi=0 -> Green / Purple palette
+        hi=1 -> Orange / Blue palette
+    - Because ENEMYPIC draws starting at $2001 (byte offset 1, screen X = 7, which is odd):
+        - Two or more adjacent 1 bits (C=1 and (L=1 or R=1)) render as WHITE.
+        - An isolated 1 bit (L=0, C=1, R=0) renders as Green/Orange (even x) or Purple/Blue (odd x).
+        - A 0 bit between two 1 bits (L=1, C=0, R=1) fills with the NTSC carrier color of its neighbors
+          so solid color fills do not have vertical black stripes.
+    """
+    rows_rgba = []
+    for y in range(50):
+        row_bytes = raw500[y * 10:(y + 1) * 10]
+        bits = []
+        hibits = []
+        for byte in row_bytes:
+            hi = (byte >> 7) & 1
+            for m in range(7):
+                bits.append((byte >> m) & 1)
+                hibits.append(hi)
+        row_colors = []
+        for x in range(70):
+            L = bits[x - 1] if x > 0 else 0
+            C = bits[x]
+            R = bits[x + 1] if x < 69 else 0
+            hi = hibits[x]
+            if C == 1:
+                if L == 1 or R == 1:
+                    col = APPLE2_WHITE
+                elif hi == 0:
+                    col = APPLE2_GREEN if (x % 2 == 0) else APPLE2_PURPLE
+                else:
+                    col = APPLE2_ORANGE if (x % 2 == 0) else APPLE2_BLUE
+            else:
+                if L == 1 and R == 1:
+                    if hi == 0:
+                        col = APPLE2_PURPLE if (x % 2 == 0) else APPLE2_GREEN
+                    else:
+                        col = APPLE2_BLUE if (x % 2 == 0) else APPLE2_ORANGE
+                else:
+                    col = APPLE2_BLACK
+            for _ in range(scale):
+                row_colors.append(col)
+        for _ in range(scale):
+            rows_rgba.append(row_colors)
+    return rows_rgba
+
+
+def write_monster_pictures(sc, out_dir='src/assets/monsters/proving-grounds'):
+    """SPCCHRS records (type 6): 512 bytes each, 2 per 1024-byte pair; 500 bytes = 70x50 Apple II HGR bitmap."""
     data = sc.d
     bloff = sc.bloff[6]
     os.makedirs(out_dir, exist_ok=True)
     for i in range(20):
         o = (bloff + 2 * (i // 2)) * 512 + 512 * (i % 2)
-        bits = [(byte >> m) & 1 for byte in data[o:o + 500] for m in range(8)]
-        rows = [bits[r * 80:(r + 1) * 80] for r in range(50)]
+        rows_rgba = decode_apple2_monster_bitmap(data[o:o + 500], scale=2)
         with open(os.path.join(out_dir, 'pic%d.png' % i), 'wb') as f:
-            f.write(png_rgba(rows))
-    print('wrote 20 monster pictures to', out_dir)
+            f.write(png_rgba_color(rows_rgba))
+    print('wrote 20 Apple II color monster pictures (140x100) to', out_dir)
+
+
+def recolor_existing_80x50_pngs(monsters_root='src/assets/monsters'):
+    """Losslessly recover the 500 raw SPCCHRS bytes from any 80x50 8-bit/byte PNGs
+    and re-render them as authentic 140x100 Apple II NTSC color PNGs."""
+    total = 0
+    for scen_id in sorted(os.listdir(monsters_root)):
+        scen_dir = os.path.join(monsters_root, scen_id)
+        if not os.path.isdir(scen_dir):
+            continue
+        for i in range(20):
+            p = os.path.join(scen_dir, f'pic{i}.png')
+            if not os.path.exists(p):
+                continue
+            with open(p, 'rb') as f:
+                png_bytes = f.read()
+            w, h = struct.unpack('>II', png_bytes[16:24])
+            if (w, h) != (80, 50):
+                continue
+            pos = 8
+            idat = b''
+            while pos < len(png_bytes):
+                length = struct.unpack('>I', png_bytes[pos:pos + 4])[0]
+                ctype = png_bytes[pos + 4:pos + 8]
+                if ctype == b'IDAT':
+                    idat += png_bytes[pos + 8:pos + 8 + length]
+                pos += 12 + length
+            raw = zlib.decompress(idat)
+            stride = w * 4 + 1
+            raw500 = bytearray()
+            for y in range(50):
+                row_raw = raw[y * stride + 1:(y + 1) * stride]
+                for bx in range(10):
+                    b = 0
+                    for m in range(8):
+                        if row_raw[(bx * 8 + m) * 4 + 3] > 0:
+                            b |= (1 << m)
+                    raw500.append(b)
+            rows_rgba = decode_apple2_monster_bitmap(bytes(raw500), scale=2)
+            with open(p, 'wb') as f:
+                f.write(png_rgba_color(rows_rgba))
+            total += 1
+    print(f're-rendered {total} monster pictures in Apple II NTSC color (140x100)')
 
 
 def decode_ucsd_text(raw: bytes) -> str:
@@ -541,7 +644,6 @@ def extract_all_scenarios(dsk_dir: str, out_dir: str = 'src/data/scenarios'):
         # Write 20 monster pictures into src/assets/monsters/<scen_id>/pic0..19.png
         write_monster_pictures(sc, os.path.join('src/assets/monsters', scen_id))
         if scen_id == 'proving-grounds':
-            write_monster_pictures(sc, 'src/assets/monsters')
             continue
 
         items, monsters, msgs = sc.items(), sc.monsters(), sc.messages()
@@ -577,6 +679,9 @@ def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     args = sys.argv[1:]
+    if '--recolor-pngs' in args:
+        recolor_existing_80x50_pngs('src/assets/monsters')
+        return
     if '--all-scenarios' in args:
         idx = args.index('--all-scenarios')
         dsk_dir = args[idx + 1]
