@@ -273,9 +273,38 @@ class Scenario:
 
     def messages(self):
         out = []
-        for i in range(len(self.m) // 512 * 12):
+        total = len(self.m) // 512 * 12
+
+        # Detect if scenario uses the Wizardry II/III DECRYPTM algorithm
+        sample_plain = 0
+        sample_enc = 0
+        samples = 0
+        for i in range(min(10, total)):
             r = self.m[(i // 12) * 512 + 42 * (i % 12):(i // 12) * 512 + 42 * (i % 12) + 42]
-            out.append({'text': pstr(r, 0), 'end': bool(r[40] or r[41])})
+            length = r[0]
+            if 0 < length <= 40:
+                payload = r[1:1+length]
+                samples += 1
+                sample_plain += sum(1 for x in payload if 32 <= x <= 126) / length
+                enc_dec = [((b + 69 + i + 3 * (k + 1)) % 256) for k, b in enumerate(payload)]
+                sample_enc += sum(1 for x in enc_dec if 32 <= (x if x < 128 else x - 128) <= 126) / length
+
+        is_encrypted = (samples > 0 and (sample_plain / samples) < 0.5 and (sample_enc / samples) > 0.8)
+
+        for i in range(total):
+            r = self.m[(i // 12) * 512 + 42 * (i % 12):(i // 12) * 512 + 42 * (i % 12) + 42]
+            length = r[0]
+            if is_encrypted and 0 < length <= 40:
+                chars = []
+                for k, b in enumerate(r[1:1+length]):
+                    val = (b + 69 + i + 3 * (k + 1)) % 256
+                    if val >= 128:
+                        val -= 128
+                    chars.append(chr(val))
+                text = ''.join(chars)
+            else:
+                text = pstr(r, 0)
+            out.append({'text': text, 'end': bool(r[40] or r[41])})
         return out
 
     def message_text(self, msgs, idx):
