@@ -308,6 +308,58 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setMessage(`Achat réussi : ${item.name} pour ${item.price} PO.`);
   };
 
+  const handleBoltacIdentify = (slotIdx: number) => {
+    const slot = selectedHero.possessions[slotIdx];
+    if (!slot) return;
+    const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+    if (!itm) return;
+
+    if (slot.identified) {
+      setMessage(`L'objet ${itm.name} est déjà identifié.`);
+      return;
+    }
+
+    const fee = Math.max(10, Math.floor(itm.price / 2));
+    if (selectedHero.gold < fee) {
+      sounds.playBump();
+      setMessage(`Fonds insuffisants : l'expertise de Boltac coûte ${fee} PO (vous avez ${selectedHero.gold} PO).`);
+      return;
+    }
+
+    sounds.playFanfare();
+    selectedHero.gold -= fee;
+    slot.identified = true;
+    setParty([...party]);
+    setMessage(`🔍 Boltac examine minutieusement l'objet : il s'agit d'un(e) ${itm.name} ! (-${fee} PO).`);
+  };
+
+  const handleBoltacUncurse = (slotIdx: number) => {
+    const slot = selectedHero.possessions[slotIdx];
+    if (!slot) return;
+    const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+    if (!itm) return;
+
+    if (!slot.cursed || !slot.equipped) {
+      setMessage(`Cet objet n'est pas un équipement maudit verrouillé.`);
+      return;
+    }
+
+    const fee = Math.max(20, itm.price);
+    if (selectedHero.gold < fee) {
+      sounds.playBump();
+      setMessage(`Fonds insuffisants : le désenvoûtement par Boltac coûte ${fee} PO (vous avez ${selectedHero.gold} PO).`);
+      return;
+    }
+
+    sounds.playSpellCast();
+    selectedHero.gold -= fee;
+    slot.cursed = false;
+    slot.equipped = false;
+    recalculateCharacterCombatStats(selectedHero);
+    setParty([...party]);
+    setMessage(`✨ Boltac brise la malédiction de ${itm.name} et le retire de votre équipement ! (-${fee} PO).`);
+  };
+
   const handleSellItem = (slotIdx: number) => {
     const slot = selectedHero.possessions[slotIdx];
     if (!slot) return;
@@ -320,11 +372,13 @@ export const CastleView: React.FC<CastleViewProps> = ({
     }
 
     sounds.playGold();
-    const sellPrice = Math.max(1, Math.floor(itm.price / 2));
+    // Authentic Pascal Wizardry (SHOPS.TEXT l. 435-441): Unidentified items sell for 1 GP
+    const sellPrice = slot.identified ? Math.max(1, Math.floor(itm.price / 2)) : 1;
     selectedHero.gold += sellPrice;
     selectedHero.possessions.splice(slotIdx, 1);
     setParty([...party]);
-    setMessage(`Objet vendu : ${itm.name} pour ${sellPrice} PO.`);
+    const soldName = slot.identified ? itm.name : (itm.nameUnknown || 'Objet inconnu');
+    setMessage(`Objet vendu : ${soldName} pour ${sellPrice} PO.`);
   };
 
   const handlePoolGold = () => {
@@ -1169,23 +1223,57 @@ export const CastleView: React.FC<CastleViewProps> = ({
                     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
                     if (!itm) return null;
                     const isProficient = canClassUseItem(selectedHero.class, itm);
+                    const displayName = slot.identified ? itm.name : (itm.nameUnknown || 'OBJET INCONNU');
+                    const sellPrice = slot.identified ? Math.max(1, Math.floor(itm.price / 2)) : 1;
+                    const identifyFee = Math.max(10, Math.floor(itm.price / 2));
+                    const uncurseFee = Math.max(20, itm.price);
+
                     return (
                       <div key={sIdx} className="p-2 sm:p-2.5 bg-slate-800/50 border border-slate-700/40 rounded-lg flex items-center justify-between gap-2 text-xs">
                         <div className="min-w-0">
                           <div className="font-semibold text-white flex items-center gap-1.5 flex-wrap">
-                            <span className="truncate">{itm.name}</span>
+                            <span className="truncate">{displayName}</span>
+                            {!slot.identified && (
+                              <span className="text-[9px] sm:text-[10px] text-amber-300 bg-amber-950/80 px-1.5 py-0.2 rounded border border-amber-600/40 font-bold shrink-0">
+                                [Non identifié]
+                              </span>
+                            )}
                             {slot.equipped && <span className="text-[9px] sm:text-[10px] text-emerald-400 font-bold shrink-0">[Équipé]</span>}
                             {slot.cursed && <span className="text-[9px] sm:text-[10px] text-red-400 font-bold shrink-0">[Maudit]</span>}
-                            {!isProficient && <span className="text-[9px] sm:text-[10px] text-rose-400 font-bold shrink-0">[Incompatible]</span>}
+                            {slot.identified && !isProficient && <span className="text-[9px] sm:text-[10px] text-rose-400 font-bold shrink-0">[Incompatible]</span>}
                           </div>
-                          <div className="text-[10px] sm:text-[11px] text-slate-400">Revente : {Math.floor(itm.price / 2)} PO</div>
+                          <div className="text-[10px] sm:text-[11px] text-slate-400">
+                            Revente : {sellPrice} PO {!slot.identified && '(tarif non identifié : 1 PO)'}
+                          </div>
                         </div>
-                        <button
-                          onClick={() => handleSellItem(sIdx)}
-                          className="px-3 py-1.5 min-h-[32px] bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-semibold transition shrink-0 active:scale-95"
-                        >
-                          Vendre
-                        </button>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {!slot.identified && (
+                            <button
+                              onClick={() => handleBoltacIdentify(sIdx)}
+                              className="px-2.5 py-1.5 min-h-[32px] bg-purple-700 hover:bg-purple-600 text-white rounded text-xs font-semibold transition active:scale-95 flex items-center gap-1 shadow-sm"
+                              title={`Faire expertiser et identifier cet objet par Boltac pour ${identifyFee} PO`}
+                            >
+                              <span>Identifier</span>
+                              <span className="text-[10px] text-purple-200 font-mono">({identifyFee} PO)</span>
+                            </button>
+                          )}
+                          {slot.cursed && slot.equipped && (
+                            <button
+                              onClick={() => handleBoltacUncurse(sIdx)}
+                              className="px-2.5 py-1.5 min-h-[32px] bg-red-800 hover:bg-red-700 text-white rounded text-xs font-semibold transition active:scale-95 flex items-center gap-1 shadow-sm"
+                              title={`Faire briser la malédiction par Boltac pour ${uncurseFee} PO`}
+                            >
+                              <span>Désenvoûter</span>
+                              <span className="text-[10px] text-red-200 font-mono">({uncurseFee} PO)</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleSellItem(sIdx)}
+                            className="px-3 py-1.5 min-h-[32px] bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-semibold transition shrink-0 active:scale-95"
+                          >
+                            Vendre
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

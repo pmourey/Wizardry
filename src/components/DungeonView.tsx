@@ -719,20 +719,31 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
     if (!itm) return;
 
-    // Bishop identification check
-    const chance = 10 + activeCampHero.charLevel * 5;
+    // Bishop performing the ritual: active hero if Bishop, or first living Bishop in party
+    const bishop = activeCampHero.class === 'BISHOP'
+      ? activeCampHero
+      : party.find(h => h.class === 'BISHOP' && h.status === 'OK') || activeCampHero;
+
+    // Authentic Pascal Bishop identification check (Wizardry1_UCSD_Pascal.pas l. 698):
+    // (RANDOM MOD 100) < (10 + 5 * bishopLevel)
+    const chance = Math.min(95, 10 + (bishop.charLevel || 1) * 5);
     if (Math.random() * 100 < chance) {
       slot.identified = true;
-      setCampMessage(`Succès ! ${activeCampHero.name} identifie : ${itm.name} !`);
+      sounds.playFanfare();
+      setCampMessage(`Succès ! ${bishop.name} identifie l'objet : il s'agit de "${itm.name}" !`);
     } else {
-      // Risk of cursing oneself
-      if (Math.random() * 100 < 25 && itm.cursed) {
-        slot.equipped = true;
+      // Authentic Pascal curse fumble: (RANDOM MOD 100) < (35 - 3 * bishopLevel)
+      const curseChance = Math.max(5, 35 - 3 * (bishop.charLevel || 1));
+      if (itm.cursed && Math.random() * 100 < curseChance) {
+        slot.identified = true;
         slot.cursed = true;
+        slot.equipped = true;
         recalculateCharacterCombatStats(activeCampHero);
-        setCampMessage(`ÉCHEC ! ${activeCampHero.name} échoue et l'objet maudit se fixe sur lui !`);
+        sounds.playBump();
+        setCampMessage(`MALÉDICTION ! ${bishop.name} commet une erreur d'analyse et l'objet maudit (${itm.name}) se verrouille sur son porteur !`);
       } else {
-        setCampMessage(`Échec de l'identification.`);
+        sounds.playBump();
+        setCampMessage(`Échec de l'identification : ${bishop.name} n'arrive pas à percer le secret de cet objet.`);
       }
     }
     setParty([...party]);
@@ -1512,14 +1523,22 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                 <span>Utiliser</span>
                               </button>
                             )}
-                            {activeCampHero.class === 'BISHOP' && !slot.identified && (
-                              <button
-                                onClick={() => handleBishopIdentify(sIdx)}
-                                className="px-2.5 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-xs font-semibold transition"
-                              >
-                                Identifier
-                              </button>
-                            )}
+                            {(() => {
+                              const bishopInParty = party.find(h => h.class === 'BISHOP' && h.status === 'OK');
+                              if (!slot.identified && bishopInParty) {
+                                return (
+                                  <button
+                                    onClick={() => handleBishopIdentify(sIdx)}
+                                    className="px-2.5 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-xs font-semibold transition flex items-center gap-1 shadow-sm active:scale-95"
+                                    title={`Faire expertiser et identifier par ${bishopInParty.name} (${bishopInParty.class} Niv. ${bishopInParty.charLevel})`}
+                                  >
+                                    <Sparkles className="w-3 h-3 text-purple-200" />
+                                    <span>Identifier {activeCampHero.id !== bishopInParty.id ? `(${bishopInParty.name})` : ''}</span>
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
                             {party.length > 1 && (
                               <button
                                 onClick={() => setTransferringSlotIdx(isTransferringThis ? null : sIdx)}

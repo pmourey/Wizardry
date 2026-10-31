@@ -205,6 +205,45 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
     if (onUpdateCharacter) onUpdateCharacter(updated);
   };
 
+  const handleBishopIdentify = (slotIdx: number) => {
+    sounds.playSpellCast();
+    const slot = hero.possessions[slotIdx];
+    if (!slot) return;
+    const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+    if (!itm) return;
+
+    // Bishop performing the identification ritual: active hero if Bishop, or first living Bishop in party
+    const bishop = hero.class === 'BISHOP' 
+      ? hero 
+      : party.find(h => h.class === 'BISHOP' && h.status === 'OK') || hero;
+
+    // Authentic Pascal Bishop identification check (Wizardry1_UCSD_Pascal.pas l. 698):
+    // (RANDOM MOD 100) < (10 + 5 * bishopLevel)
+    const chance = Math.min(95, 10 + (bishop.charLevel || 1) * 5);
+    if (Math.random() * 100 < chance) {
+      slot.identified = true;
+      sounds.playFanfare();
+      setFeedbackMessage(`✨ Succès ! ${bishop.name} identifie l'objet : il s'agit de "${itm.name}" !`);
+    } else {
+      // Authentic Pascal curse fumble: (RANDOM MOD 100) < (35 - 3 * bishopLevel)
+      const curseChance = Math.max(5, 35 - 3 * (bishop.charLevel || 1));
+      if (itm.cursed && Math.random() * 100 < curseChance) {
+        slot.identified = true;
+        slot.cursed = true;
+        slot.equipped = true;
+        recalculateCharacterCombatStats(hero);
+        sounds.playBump();
+        setFeedbackMessage(`💀 MALÉDICTION ! ${bishop.name} commet une erreur d'analyse et l'objet maudit (${itm.name}) se verrouille sur son porteur !`);
+      } else {
+        sounds.playBump();
+        setFeedbackMessage(`❌ Échec de l'identification : ${bishop.name} n'arrive pas à percer le secret de cet objet.`);
+      }
+    }
+    const updated = { ...hero };
+    setHero(updated);
+    if (onUpdateCharacter) onUpdateCharacter(updated);
+  };
+
   const handleUseItem = (slotIdx: number) => {
     const slot = hero.possessions[slotIdx];
     if (!slot) return;
@@ -706,6 +745,12 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
 
                     const isProficient = canClassUseItem(hero.class, itm);
                     const equippable = isItemEquippable(itm);
+                    const displayName = slot.identified ? itm.name : (itm.nameUnknown || 'OBJET INCONNU');
+                    const bishopInParty = hero.class === 'BISHOP' 
+                      ? hero 
+                      : party.find(h => h.class === 'BISHOP' && h.status === 'OK');
+                    const sellPrice = slot.identified ? Math.max(1, Math.floor(itm.price / 2)) : 1;
+
                     return (
                       <div
                         key={idx}
@@ -719,7 +764,12 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                           <div className="flex items-start justify-between gap-2 mb-1.5">
                             <div>
                               <div className="font-bold text-xs text-white flex items-center gap-1.5 flex-wrap">
-                                <span>{itm.name}</span>
+                                <span>{displayName}</span>
+                                {!slot.identified && (
+                                  <span className="text-[10px] px-1.5 py-0.2 bg-amber-950/80 text-amber-300 border border-amber-600/40 rounded font-bold">
+                                    [Non identifié]
+                                  </span>
+                                )}
                                 {slot.equipped && (
                                   <span className="text-[10px] px-1.5 py-0.2 bg-emerald-950 text-emerald-300 border border-emerald-500/30 rounded font-bold">
                                     Équipé
@@ -730,7 +780,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                                     Maudit
                                   </span>
                                 )}
-                                {equippable && !isProficient && (
+                                {slot.identified && equippable && !isProficient && (
                                   <span className="text-[10px] px-1.5 py-0.2 bg-rose-950/80 text-rose-300 border border-rose-800/60 rounded font-bold" title={`Incompatible avec ${hero.class}`}>
                                     Incompatible
                                   </span>
@@ -738,40 +788,58 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                               </div>
                               <span className="text-[10px] text-slate-400 uppercase tracking-wider">{itm.objType}</span>
                             </div>
-                            <span className="text-xs font-mono font-bold text-yellow-400">{itm.price} PO</span>
+                            <span className="text-xs font-mono font-bold text-yellow-400">
+                              {slot.identified ? `${itm.price} PO` : '? PO'}
+                            </span>
                           </div>
 
-                          <div className="space-y-1 text-[11px] text-slate-300 py-1">
-                            {itm.armorMod !== 0 && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Protection Armure (CA) :</span>
-                                <strong className="text-cyan-400 font-mono">
-                                  {itm.armorMod > 0 ? `-${itm.armorMod} CA (Améliore)` : `+${Math.abs(itm.armorMod)} CA`}
-                                </strong>
-                              </div>
-                            )}
-                            {itm.objType === 'WEAPON' && itm.wepHpDam && (
-                              <div className="flex justify-between">
-                                <span className="text-slate-400">Dégâts de l'arme :</span>
-                                <strong className="text-amber-300 font-mono">
-                                  {formatDamageDice(itm.wepHpDam)}
-                                  {itm.wepHitMod > 0 ? ` (+${itm.wepHitMod} touch)` : ''}
-                                </strong>
-                              </div>
-                            )}
-                            {equippable && (
-                              <div className="flex justify-between text-[10px] pt-0.5">
-                                <span className="text-slate-400">Classes autorisées :</span>
-                                <span className={isProficient ? "text-slate-300 font-mono" : "text-rose-400 font-bold font-mono"}>
-                                  {getUsableClassesList(itm, true).join(', ') || 'Aucune'}
-                                </span>
-                              </div>
-                            )}
-                          </div>
+                          {slot.identified ? (
+                            <div className="space-y-1 text-[11px] text-slate-300 py-1">
+                              {itm.armorMod !== 0 && (
+                                <div className="flex justify-between">
+                                  <span className="text-slate-400">Protection Armure (CA) :</span>
+                                  <strong className="text-cyan-400 font-mono">
+                                    {itm.armorMod > 0 ? `-${itm.armorMod} CA (Améliore)` : `+${Math.abs(itm.armorMod)} CA`}
+                                  </strong>
+                                </div>
+                              )}
+                              {itm.objType === 'WEAPON' && itm.wepHpDam && (
+                                <div className="flex justify-between">
+                                  <span className="text-slate-400">Dégâts de l'arme :</span>
+                                  <strong className="text-amber-300 font-mono">
+                                    {formatDamageDice(itm.wepHpDam)}
+                                    {itm.wepHitMod > 0 ? ` (+${itm.wepHitMod} touch)` : ''}
+                                  </strong>
+                                </div>
+                              )}
+                              {equippable && (
+                                <div className="flex justify-between text-[10px] pt-0.5">
+                                  <span className="text-slate-400">Classes autorisées :</span>
+                                  <span className={isProficient ? "text-slate-300 font-mono" : "text-rose-400 font-bold font-mono"}>
+                                    {getUsableClassesList(itm, true).join(', ') || 'Aucune'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="py-2 text-[11px] text-slate-400 italic">
+                              Propriétés et modificateurs cachés avant identification.
+                            </div>
+                          )}
                         </div>
 
                         <div className="pt-2 mt-2 border-t border-slate-800/80 flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {!slot.identified && bishopInParty && (
+                              <button
+                                onClick={() => handleBishopIdentify(idx)}
+                                className="px-2.5 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-xs font-bold transition flex items-center gap-1 shadow-sm active:scale-95"
+                                title={`Faire expertiser et identifier par ${bishopInParty.name} (${bishopInParty.class} Niv. ${bishopInParty.charLevel})`}
+                              >
+                                <Sparkles className="w-3.5 h-3.5 text-purple-200" />
+                                <span>Identifier {hero.id !== bishopInParty.id ? `(${bishopInParty.name})` : ''}</span>
+                              </button>
+                            )}
                             {(equippable || slot.equipped) && (
                               <button
                                 onClick={() => handleToggleEquip(idx)}
@@ -799,7 +867,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                             )}
                           </div>
                           <span className="text-[10px] text-slate-500">
-                            Revente : {Math.max(1, Math.floor(itm.price / 2))} PO
+                            Revente : {sellPrice} PO
                           </span>
                         </div>
                       </div>
