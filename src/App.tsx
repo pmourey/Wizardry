@@ -312,7 +312,13 @@ export default function App() {
   const isBuggedSavedW4Zero = activeScenarioId === 'return-of-werdna' && savedSession?.posX === 0 && savedSession?.posY === 0;
   const rescuedX = initLevel === 10 ? 10 : (initLevel === 9 ? 10 : (initLevel % 2 === 0 ? 14 : 6));
   const rescuedY = initLevel === 10 ? 9 : (initLevel === 9 ? 18 : (initLevel % 2 === 0 ? 14 : 6));
-  const [location, setLocation] = useState<GameLocation>(() => savedSession?.location || 'CASTLE');
+  const [location, setLocation] = useState<GameLocation>(() => {
+    if (activeScenarioId === 'return-of-werdna') {
+      // In Wizardry IV, Werdna starts in the dungeon (Level 10); Castle is only visible at surface Level 0
+      return initLevel === 0 ? (savedSession?.location || 'CASTLE') : 'MAZE';
+    }
+    return savedSession?.location || 'CASTLE';
+  });
   const [dungeonLevel, setDungeonLevel] = useState<number>(initLevel);
   const [maze, setMaze] = useState<TMazeFloor>(() => getMazeForFloor(initLevel));
   const [posX, setPosX] = useState<number>(() => isBuggedSavedW4Zero ? rescuedX : (savedSession?.posX ?? initDefaultX));
@@ -493,7 +499,10 @@ export default function App() {
 
     setParty(nextParty);
     setAllCharacters(nextRoster);
-    setLocation(nextSession?.location || 'CASTLE');
+    const initialLocation = scenarioId === 'return-of-werdna'
+      ? (lvl === 0 ? (nextSession?.location || 'CASTLE') : 'MAZE')
+      : (nextSession?.location || 'CASTLE');
+    setLocation(initialLocation);
     setDungeonLevel(lvl);
     setMaze(getMazeForFloor(lvl));
     setPosX(px);
@@ -1219,7 +1228,11 @@ export default function App() {
   // Authentic Pascal PROCEDURE CHK4WIN (pascal_source/Wiz1A/SHOPS2.TEXT.pas, l. 1341-1381):
   // Upon returning to the Castle, clear lostLocation, sync all party members to the roster,
   // and remove dead/ashed characters from the active party so they rest at the Temple of Cant.
-  const handleReturnPartyToCastle = () => {
+  const handleReturnPartyToCastle = (forceAllowCastle = false) => {
+    if (activeScenarioId === 'return-of-werdna' && dungeonLevel > 0 && !forceAllowCastle) {
+      // In Wizardry IV, the surface castle of Trebor is only reached when ascending to Level 0
+      return;
+    }
     sounds.playDoor();
     const cleanedParty = party.map(h => ({
       ...h,
@@ -1243,19 +1256,16 @@ export default function App() {
     });
     setParty(survivingParty);
     setLocation('CASTLE');
-    const castleLevel = activeScenarioId === 'return-of-werdna' ? 10 : 1;
-    const castleX = activeScenarioId === 'return-of-werdna' ? 10 : 0;
-    const castleY = activeScenarioId === 'return-of-werdna' ? 9 : 0;
-    setDungeonLevel(castleLevel);
-    setPosX(castleX);
-    setPosY(castleY);
+    setDungeonLevel(0);
+    setPosX(0);
+    setPosY(0);
     setDirection(0);
     setLightLevel(0);
     setAcModifier(0);
     setFightMapsByLevel({});
 
     const castleTitle = activeScenarioId === 'return-of-werdna' 
-      ? "Retour au Tombeau de Werdna" 
+      ? "Arrivée au Château de Trebor (Surface)" 
       : "Retour au Château de Trebor";
 
     addAdventureEvent(
@@ -1263,7 +1273,9 @@ export default function App() {
       castleTitle,
       fallenHeroes.length > 0
         ? `L'escouade regagne le château. Les dépouilles de ${fallenHeroes.map(f => f.name).join(', ')} ont été retirées du groupe et confiées au Temple de Cant.`
-        : "L'escouade a gravi les marches pour regagner la sécurité du château.",
+        : (activeScenarioId === 'return-of-werdna'
+          ? "Werdna et ses hordes ont percé le donjon et foulent la surface du Château de Trebor !"
+          : "L'escouade a gravi les marches pour regagner la sécurité du château."),
       fallenHeroes.length > 0 ? `Transférés au Temple de Cant : ${fallenHeroes.map(f => f.name).join(', ')}` : undefined,
       dungeonLevel,
       { x: posX, y: posY }
@@ -1272,7 +1284,7 @@ export default function App() {
 
   const handleTakeStairs = (targetLevel: number, targetX: number, targetY: number) => {
     if (targetLevel === 0) {
-      handleReturnPartyToCastle();
+      handleReturnPartyToCastle(true);
       return;
     }
 

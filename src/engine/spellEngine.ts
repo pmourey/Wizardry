@@ -198,6 +198,7 @@ export function castCombatSpell(
     case 'BAMATU':
     case 'MASOPIC': addAc(party, 4); log.push('Le groupe gagne 4 points de CA.'); break;
     case 'MAPORFIC':
+      addAc(party, 2);
       effects.acModifier = 2;
       log.push('Un bouclier magique protège le groupe pour toute l’expédition (+2 CA).');
       break;

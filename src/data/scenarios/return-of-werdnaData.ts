@@ -2536,7 +2536,7 @@ export const RETURN_OF_WERDNA_STARTER_PARTY: TCharacter[] = [
     age: 999,
     attrib: { STRENGTH: 15, IQ: 18, PIETY: 12, VITALITY: 16, AGILITY: 15, LUCK: 14 },
     luckSkill: [10, 10, 10, 10, 10],
-    gold: 0,
+    gold: 50,
     exp: 0,
     maxLevel: 1,
     charLevel: 1,
@@ -2548,16 +2548,22 @@ export const RETURN_OF_WERDNA_STARTER_PARTY: TCharacter[] = [
     ],
     mageSpells: [0, 4, 0, 0, 0, 0, 0, 0],
     priestSpells: [0, 0, 0, 0, 0, 0, 0, 0],
-    armorClass: 7,
+    armorClass: 4,
     healPts: 0,
     critHit: false,
-    swingCount: 1,
-    wepDamage: { level: 1, hpFac: 6, hpMinAdd: 2 },
-    hitMod: 3,
+    swingCount: 2,
+    wepDamage: { level: 2, hpFac: 4, hpMinAdd: 4 },
+    hitMod: 5,
     poisonAmount: 0,
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
-    possessions: []
+    possessions: [
+      { equipped: true, cursed: false, identified: true, itemIndex: 1 },  // BLOODSTONE
+      { equipped: true, cursed: false, identified: true, itemIndex: 2 },  // BLACK CANDLE
+      { equipped: true, cursed: false, identified: true, itemIndex: 3 },  // JEWELED AMULET (DUMAPIC)
+      { equipped: true, cursed: false, identified: true, itemIndex: 42 }, // ROBE OF MIDNIGHT
+      { equipped: true, cursed: false, identified: true, itemIndex: 56 }  // MAGE MASHER DAGGER
+    ]
   },
   {
     id: "minion-gas-cloud",
@@ -2569,7 +2575,7 @@ export const RETURN_OF_WERDNA_STARTER_PARTY: TCharacter[] = [
     age: 100,
     attrib: { STRENGTH: 12, IQ: 10, PIETY: 8, VITALITY: 14, AGILITY: 16, LUCK: 12 },
     luckSkill: [8, 8, 8, 8, 8],
-    gold: 0,
+    gold: 10,
     exp: 0,
     maxLevel: 2,
     charLevel: 2,
@@ -2587,7 +2593,9 @@ export const RETURN_OF_WERDNA_STARTER_PARTY: TCharacter[] = [
     poisonAmount: 0,
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
-    possessions: []
+    possessions: [
+      { equipped: false, cursed: false, identified: true, itemIndex: 31 } // DRINK ME POTION
+    ]
   },
   {
     id: "minion-garian-raider",
@@ -2599,7 +2607,7 @@ export const RETURN_OF_WERDNA_STARTER_PARTY: TCharacter[] = [
     age: 120,
     attrib: { STRENGTH: 16, IQ: 9, PIETY: 8, VITALITY: 16, AGILITY: 12, LUCK: 10 },
     luckSkill: [6, 6, 6, 6, 6],
-    gold: 0,
+    gold: 25,
     exp: 0,
     maxLevel: 2,
     charLevel: 2,
@@ -2608,16 +2616,19 @@ export const RETURN_OF_WERDNA_STARTER_PARTY: TCharacter[] = [
     spellsKnown: Array(51).fill(false),
     mageSpells: [0, 0, 0, 0, 0, 0, 0, 0],
     priestSpells: [0, 0, 0, 0, 0, 0, 0, 0],
-    armorClass: 5,
+    armorClass: 3,
     healPts: 0,
     critHit: false,
-    swingCount: 1,
-    wepDamage: { level: 1, hpFac: 8, hpMinAdd: 2 },
-    hitMod: 3,
+    swingCount: 2,
+    wepDamage: { level: 2, hpFac: 4, hpMinAdd: 3 },
+    hitMod: 4,
     poisonAmount: 0,
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
-    possessions: []
+    possessions: [
+      { equipped: true, cursed: false, identified: true, itemIndex: 51 }, // SHORT SWORD +2
+      { equipped: true, cursed: false, identified: true, itemIndex: 53 }  // SHIELD +2
+    ]
   },
   {
     id: "minion-initiate-priest",
@@ -2629,7 +2640,7 @@ export const RETURN_OF_WERDNA_STARTER_PARTY: TCharacter[] = [
     age: 140,
     attrib: { STRENGTH: 12, IQ: 12, PIETY: 16, VITALITY: 14, AGILITY: 10, LUCK: 12 },
     luckSkill: [8, 8, 8, 8, 8],
-    gold: 0,
+    gold: 15,
     exp: 0,
     maxLevel: 2,
     charLevel: 2,
@@ -2641,15 +2652,18 @@ export const RETURN_OF_WERDNA_STARTER_PARTY: TCharacter[] = [
     ],
     mageSpells: [0, 0, 0, 0, 0, 0, 0, 0],
     priestSpells: [0, 3, 0, 0, 0, 0, 0, 0],
-    armorClass: 6,
+    armorClass: 5,
     healPts: 0,
     critHit: false,
-    swingCount: 1,
-    wepDamage: { level: 1, hpFac: 6, hpMinAdd: 1 },
-    hitMod: 2,
+    swingCount: 2,
+    wepDamage: { level: 2, hpFac: 6, hpMinAdd: 4 },
+    hitMod: 4,
     poisonAmount: 0,
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
-    possessions: []
+    possessions: [
+      { equipped: true, cursed: false, identified: true, itemIndex: 50 }, // WAR HAMMER +2
+      { equipped: false, cursed: false, identified: true, itemIndex: 36 } // POTION OF HEALING
+    ]
   }
 ];

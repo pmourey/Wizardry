@@ -13,7 +13,8 @@ import {
   ArrowRightLeft,
   CheckCircle2,
   Cpu,
-  Languages
+  Languages,
+  ShieldAlert
 } from 'lucide-react';
 
 interface ScenarioLocalSummary {
@@ -122,6 +123,14 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
 
   // Transfer characters from one scenario to selectedScenario (WITHOUT equipment, per Zimlab / Wizardry rules)
   const handleTransferCharacters = () => {
+    if (selectedScenario.id === 'return-of-werdna') {
+      setTransferNotice(
+        lang === 'fr'
+          ? "L'importation de personnages est désactivée pour Wizardry IV : vous incarnez Werdna et invoquez des cohortes de monstres."
+          : "Character import is disabled for Wizardry IV: you play as Werdna and summon monster cohorts."
+      );
+      return;
+    }
     if (transferSourceId === selectedScenario.id) {
       setTransferNotice(t.transferDiffPrompt);
       return;
@@ -471,36 +480,50 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
               </div>
 
               {/* Inter-Scenario Character Transfer (without equipment, per Zimlab ReadMe) */}
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
-                <div className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
-                  <ArrowRightLeft className="w-3.5 h-3.5" />
-                  <span>{t.transferHeader}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={transferSourceId}
-                    onChange={e => setTransferSourceId(e.target.value)}
-                    className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200"
-                  >
-                    {WIZARDRY_SCENARIOS.map(s => (
-                      <option key={s.id} value={s.id}>
-                        {t.transferSelectOption(s.number, s.title, scenarioSummaries[s.id]?.rosterCount || 0)}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={handleTransferCharacters}
-                    className="px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold transition shrink-0"
-                  >
-                    {t.transferBtn}
-                  </button>
-                </div>
-                {transferNotice && (
-                  <div className="text-[11px] text-amber-300 bg-amber-950/40 border border-amber-700/40 rounded-lg p-2">
-                    {transferNotice}
+              {selectedScenario.id === 'return-of-werdna' ? (
+                <div className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-700/40 space-y-1.5">
+                  <div className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 text-purple-400" />
+                    <span>{lang === 'fr' ? 'Importation de Héros Désactivée' : 'Character Transfer Disabled'}</span>
                   </div>
-                )}
-              </div>
+                  <p className="text-[11px] text-purple-200/90 leading-relaxed">
+                    {lang === 'fr'
+                      ? "Dans Le Retour de Werdna, vous incarnez l'archimage Werdna piégé au fond de son donjon. Vous ne dirigez pas des aventuriers humains mais invoquez des monstres aux pentagrammes sacrés."
+                      : "In The Return of Werdna, you play as the archmage Werdna trapped at the bottom of the dungeon. You command summoned monsters rather than human adventurers."}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                  <div className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
+                    <ArrowRightLeft className="w-3.5 h-3.5" />
+                    <span>{t.transferHeader}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={transferSourceId}
+                      onChange={e => setTransferSourceId(e.target.value)}
+                      className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200"
+                    >
+                      {WIZARDRY_SCENARIOS.filter(s => s.id !== 'return-of-werdna').map(s => (
+                        <option key={s.id} value={s.id}>
+                          {t.transferSelectOption(s.number, s.title, scenarioSummaries[s.id]?.rosterCount || 0)}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleTransferCharacters}
+                      className="px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white text-xs font-bold transition shrink-0"
+                    >
+                      {t.transferBtn}
+                    </button>
+                  </div>
+                  {transferNotice && (
+                    <div className="text-[11px] text-amber-300 bg-amber-950/40 border border-amber-700/40 rounded-lg p-2">
+                      {transferNotice}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {!selectedScenario.dataExtracted && (
                 <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-700/40 text-[11px] text-amber-200 flex items-start gap-2">

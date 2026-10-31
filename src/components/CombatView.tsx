@@ -76,6 +76,14 @@ export const CombatView: React.FC<CombatViewProps> = ({
     return firstAlive >= 0 ? firstAlive : 0;
   });
 
+  // Calculate dynamic combat AC taking defensive spells (MOGREF, PORFIC, BAMATU, MAPORFIC, etc.) into account
+  const getDisplayAc = (hero: TCharacter) => {
+    const base = hero.armorClass;
+    const spellBonus = (hero.combatAcMod || 0) + (acModifier || 0);
+    const eff = Math.max(-10, base - spellBonus);
+    return { base, spellBonus, eff };
+  };
+
   // If no heroes are alive at all (e.g. entered combat with 0 characters), immediately trigger defeat
   useEffect(() => {
     if (!party || party.length === 0 || !party.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0)) {
@@ -384,7 +392,16 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   </div>
                   <div className="flex justify-between text-[9px] sm:text-[10px] text-slate-400 pt-0.5">
                     <span className="truncate">{hero.class}</span>
-                    <span>CA {hero.armorClass}</span>
+                    {(() => {
+                      const { base, spellBonus, eff } = getDisplayAc(hero);
+                      return spellBonus > 0 ? (
+                        <span className="text-emerald-400 font-bold" title={`CA de base : ${base} · Protection magique : -${spellBonus} CA`}>
+                          CA {eff} <span className="text-[9px] text-emerald-300">(-{spellBonus})</span>
+                        </span>
+                      ) : (
+                        <span>CA {base}</span>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -406,7 +423,18 @@ export const CombatView: React.FC<CombatViewProps> = ({
                         {e.badge}
                       </span>
                     ))}
-                    {effs.length === 0 && (
+                    {(() => {
+                      const { spellBonus } = getDisplayAc(hero);
+                      return spellBonus > 0 ? (
+                        <span 
+                          className="text-[8px] sm:text-[9px] font-bold px-1 py-0.2 rounded border bg-emerald-950/80 border-emerald-500/60 text-emerald-300"
+                          title={`Sorts de protection actifs : -${spellBonus} CA`}
+                        >
+                          🛡️ -{spellBonus} CA
+                        </span>
+                      ) : null;
+                    })()}
+                    {effs.length === 0 && !getDisplayAc(hero).spellBonus && (
                       <span className="text-[8px] sm:text-[9px] text-emerald-500 font-medium">OK</span>
                     )}
                   </div>
@@ -487,8 +515,19 @@ export const CombatView: React.FC<CombatViewProps> = ({
                     <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-400">
                       Ordre #{currentHeroIdx + 1}/{livingHeroes.length} :
                     </span>
-                    <span className="text-xs sm:text-sm font-bold text-white">
-                      {activeHero.name} ({activeHero.class} · CA {activeHero.armorClass} · {activeHero.hpLeft}/{activeHero.hpMax} PV)
+                    <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 flex-wrap">
+                      <span>{activeHero.name} ({activeHero.class} ·</span>
+                      {(() => {
+                        const { base, spellBonus, eff } = getDisplayAc(activeHero);
+                        return spellBonus > 0 ? (
+                          <span className="text-emerald-400 font-bold" title={`CA de base : ${base} · Protection magique : -${spellBonus} CA`}>
+                            CA {eff} <span className="text-[10px] text-emerald-300">(-{spellBonus})</span>
+                          </span>
+                        ) : (
+                          <span>CA {base}</span>
+                        );
+                      })()}
+                      <span>· {activeHero.hpLeft}/{activeHero.hpMax} PV)</span>
                     </span>
                     <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded border ${
                       isFrontRank 
