@@ -107,7 +107,7 @@ while (RETURN_OF_WERDNA_ITEMS.length <= 100) {
     hitMod: 2,
     healPts: 0,
     critHit: false,
-    boltacStock: 1
+    boltacStock: 0
   });
 }
 
