@@ -12,7 +12,10 @@ import {
   getMaxCharacterSpells,
   formatDamageDice,
   recalculateCharacterCombatStats,
-  isItemUsable
+  isItemUsable,
+  canHeroEquipItem,
+  canClassUseItem,
+  getUsableClassesList
 } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { 
@@ -168,6 +171,14 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
       setFeedbackMessage(`${itm.name} retiré (CA : ${hero.armorClass} · Dégâts : ${formatDamageDice(hero.wepDamage)}).`);
       sounds.playTurn();
     } else {
+      // Authentic Pascal Class Proficiency Check (UTILITIE2.TEXT l. 276)
+      const check = canHeroEquipItem(hero, itm);
+      if (!check.canEquip) {
+        setFeedbackMessage(check.reason || 'Objet impossible à équiper pour cette classe.');
+        sounds.playBump();
+        return;
+      }
+
       // Unequip any non-cursed item of the same equipment slot type (WEAPON, ARMOR, SHIELD, HELMET, GAUNTLET)
       if (itm.objType !== 'SPECIAL' && itm.objType !== 'MISC') {
         hero.possessions.forEach((other, idx) => {
@@ -198,6 +209,13 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
     if (!slot) return;
     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
     if (!itm) return;
+
+    if (!canClassUseItem(hero.class, itm)) {
+      const allowed = getUsableClassesList(itm).join(', ') || 'Aucune';
+      setFeedbackMessage(`${hero.name} (${hero.class}) ne sait pas manier cet objet magique (Classes : ${allowed}).`);
+      sounds.playBump();
+      return;
+    }
 
     sounds.playFanfare();
     let msg = '';
@@ -685,6 +703,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
                     if (!itm) return null;
 
+                    const isProficient = canClassUseItem(hero.class, itm);
                     return (
                       <div
                         key={idx}
@@ -697,7 +716,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                         <div>
                           <div className="flex items-start justify-between gap-2 mb-1.5">
                             <div>
-                              <div className="font-bold text-xs text-white flex items-center gap-1.5">
+                              <div className="font-bold text-xs text-white flex items-center gap-1.5 flex-wrap">
                                 <span>{itm.name}</span>
                                 {slot.equipped && (
                                   <span className="text-[10px] px-1.5 py-0.2 bg-emerald-950 text-emerald-300 border border-emerald-500/30 rounded font-bold">
@@ -707,6 +726,11 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                                 {slot.cursed && (
                                   <span className="text-[10px] px-1.5 py-0.2 bg-red-950 text-red-300 border border-red-500/30 rounded font-bold">
                                     Maudit
+                                  </span>
+                                )}
+                                {!isProficient && (
+                                  <span className="text-[10px] px-1.5 py-0.2 bg-rose-950/80 text-rose-300 border border-rose-800/60 rounded font-bold" title={`Incompatible avec ${hero.class}`}>
+                                    Incompatible
                                   </span>
                                 )}
                               </div>
@@ -733,6 +757,12 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                                 </strong>
                               </div>
                             )}
+                            <div className="flex justify-between text-[10px] pt-0.5">
+                              <span className="text-slate-400">Classes autorisées :</span>
+                              <span className={isProficient ? "text-slate-300 font-mono" : "text-rose-400 font-bold font-mono"}>
+                                {getUsableClassesList(itm, true).join(', ') || 'Aucune'}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
@@ -743,8 +773,11 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                               className={`px-3 py-1 rounded text-xs font-bold transition ${
                                 slot.equipped 
                                   ? 'bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-700/50' 
-                                  : 'bg-amber-600 hover:bg-amber-500 text-white'
+                                  : !isProficient
+                                    ? 'bg-slate-800 hover:bg-rose-950/70 text-slate-400 hover:text-rose-200 border border-slate-700 hover:border-rose-700/60'
+                                    : 'bg-amber-600 hover:bg-amber-500 text-white'
                               }`}
+                              title={!slot.equipped && !isProficient ? `Incompatible avec ${hero.class}. Autorisés : ${getUsableClassesList(itm).join(', ')}` : undefined}
                             >
                               {slot.equipped ? 'Déséquiper' : 'Équiper'}
                             </button>

@@ -2,7 +2,7 @@
  * Faithful Wizardry I Combat Engine matching Pascal reverse engineering
  */
 import { TCharacter, TMazeFloor, TMonster, TSpell, TStatus } from '../types/wizardry';
-import { MONSTERS_DATABASE, SPELLS } from '../data/provingGroundsData';
+import { MONSTERS_DATABASE, SPELLS, canClassUseItem } from '../data/provingGroundsData';
 import { castCombatSpell, CombatEffects, SpellContext } from './spellEngine';
 
 export interface CombatMonsterInstance {
@@ -451,6 +451,11 @@ export function executeCombatRound(
         const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
         if (!itm) {
           log.push(`${hero.name} ne parvient pas à utiliser l'objet.`);
+          continue;
+        }
+
+        if (!canClassUseItem(hero.class, itm)) {
+          log.push(`${hero.name} tente d'utiliser ${itm.name}, mais sa classe (${hero.class}) ne maîtrise pas cet objet !`);
           continue;
         }
 

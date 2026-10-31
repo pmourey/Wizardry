@@ -6,7 +6,17 @@ import {
   AdventureLogCategory
 } from '../types/wizardry';
 import { DungeonRenderer3D } from '../engine/dungeonRenderer3D';
-import { ITEMS_DATABASE, SPELLS, formatDamageDice, recalculateCharacterCombatStats, getActiveMaxFloors, isItemUsable } from '../data/provingGroundsData';
+import { 
+  ITEMS_DATABASE, 
+  SPELLS, 
+  formatDamageDice, 
+  recalculateCharacterCombatStats, 
+  getActiveMaxFloors, 
+  isItemUsable,
+  canHeroEquipItem,
+  canClassUseItem,
+  getUsableClassesList
+} from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { music } from '../utils/musicManager';
 import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
@@ -380,12 +390,21 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (slot.equipped) {
       if (slot.cursed) {
         setCampMessage(`L'objet ${itm.name} est MAUDIT ! Impossible de le retirer.`);
+        sounds.playBump();
         return;
       }
       slot.equipped = false;
       recalculateCharacterCombatStats(activeCampHero);
       setCampMessage(`${itm.name} retiré (CA : ${activeCampHero.armorClass} · Dégâts : ${formatDamageDice(activeCampHero.wepDamage)}).`);
     } else {
+      // Authentic Pascal Class Proficiency Check (UTILITIE2.TEXT l. 276)
+      const check = canHeroEquipItem(activeCampHero, itm);
+      if (!check.canEquip) {
+        setCampMessage(check.reason || 'Objet impossible à équiper pour cette classe.');
+        sounds.playBump();
+        return;
+      }
+
       if (itm.objType !== 'SPECIAL' && itm.objType !== 'MISC') {
         activeCampHero.possessions.forEach((other, idx) => {
           if (idx !== slotIdx && other.equipped && !other.cursed) {
@@ -411,6 +430,13 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (!slot) return;
     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
     if (!itm) return;
+
+    if (!canClassUseItem(activeCampHero.class, itm)) {
+      const allowed = getUsableClassesList(itm).join(', ') || 'Aucune';
+      setCampMessage(`${activeCampHero.name} (${activeCampHero.class}) ne maîtrise pas cet objet (Classes autorisées : ${allowed}).`);
+      sounds.playBump();
+      return;
+    }
 
     sounds.playFanfare();
     const targetHero = party[campTargetIdx] || activeCampHero;
@@ -702,6 +728,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       if (Math.random() * 100 < 25 && itm.cursed) {
         slot.equipped = true;
         slot.cursed = true;
+        recalculateCharacterCombatStats(activeCampHero);
         setCampMessage(`ÉCHEC ! ${activeCampHero.name} échoue et l'objet maudit se fixe sur lui !`);
       } else {
         setCampMessage(`Échec de l'identification.`);
@@ -1436,17 +1463,22 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
                     if (!itm) return null;
                     const isTransferringThis = transferringSlotIdx === sIdx;
+                    const isProficient = canClassUseItem(activeCampHero.class, itm);
                     return (
                       <div key={sIdx} className="p-2.5 bg-slate-800/70 border border-slate-700/50 rounded-lg flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="font-bold text-white flex items-center gap-1.5">
+                            <div className="font-bold text-white flex items-center gap-1.5 flex-wrap">
                               <span>{slot.identified ? itm.name : itm.nameUnknown}</span>
                               {slot.equipped && <span className="text-[10px] text-emerald-400 font-bold">[Équipé]</span>}
                               {slot.cursed && <span className="text-[10px] text-red-400 font-bold">[Maudit]</span>}
+                              {!isProficient && <span className="text-[10px] text-rose-400 font-bold">[Incompatible]</span>}
                             </div>
                             <div className="text-[11px] text-slate-400">
                               {itm.objType} {itm.objType === 'WEAPON' && itm.wepHpDam?.level ? `· Dégâts ${formatDamageDice(itm.wepHpDam)}` : ''} {itm.armorMod ? `· CA -${itm.armorMod}` : ''}
+                            </div>
+                            <div className="text-[10px] text-slate-500">
+                              Classes : <span className={isProficient ? "text-slate-400" : "text-rose-400 font-semibold"}>{getUsableClassesList(itm, true).join(', ') || 'Aucune'}</span>
                             </div>
                           </div>
 
@@ -1463,7 +1495,14 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                             )}
                             <button
                               onClick={() => handleEquipSlot(sIdx)}
-                              className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-semibold transition"
+                              className={`px-2.5 py-1 ${
+                                slot.equipped
+                                  ? 'bg-red-950/70 hover:bg-red-900 text-red-200 border border-red-700/50'
+                                  : !isProficient
+                                    ? 'bg-slate-800 hover:bg-rose-950/70 text-slate-400 hover:text-rose-200 border border-slate-700'
+                                    : 'bg-slate-700 hover:bg-slate-600 text-white'
+                              } rounded text-xs font-semibold transition`}
+                              title={!slot.equipped && !isProficient ? `Incompatible avec ${activeCampHero.class}. Autorisés : ${getUsableClassesList(itm).join(', ')}` : undefined}
                             >
                               {slot.equipped ? 'Retirer' : 'Équiper'}
                             </button>

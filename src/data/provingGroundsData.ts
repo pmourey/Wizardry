@@ -1247,9 +1247,71 @@ export function formatDamageDice(d?: { level: number; hpFac: number; hpMinAdd: n
   return `${d.level}d${d.hpFac}${bonus}`;
 }
 
+export const CLASS_NAMES_FR: Record<TClass, string> = {
+  FIGHTER: 'Guerrier',
+  MAGE: 'Mage',
+  PRIEST: 'Prêtre',
+  THIEF: 'Voleur',
+  BISHOP: 'Évêque',
+  SAMURAI: 'Samouraï',
+  LORD: 'Seigneur',
+  NINJA: 'Ninja'
+};
+
+export const CLASS_SHORT_CODES: Record<TClass, string> = {
+  FIGHTER: 'FIG',
+  MAGE: 'MAG',
+  PRIEST: 'PRI',
+  THIEF: 'THI',
+  BISHOP: 'BIS',
+  SAMURAI: 'SAM',
+  LORD: 'LOR',
+  NINJA: 'NIN'
+};
+
+/**
+ * Returns true if the given character class has proficiency to equip or use the item.
+ * Strictly based on Pascal ITMREC.CLASSUSE: PACKED ARRAY[TCLASS] OF BOOLEAN (SHOPS.TEXT l. 244, UTILITIE2.TEXT l. 140, 276).
+ */
+export function canClassUseItem(charClass?: TClass, itm?: TItem | null): boolean {
+  if (!itm) return true;
+  // If item has no class restrictions or is MISC / SPECIAL non-equipment, allow
+  if (!itm.classUse) return true;
+  if (!charClass) return true;
+  return Boolean(itm.classUse[charClass]);
+}
+
+/**
+ * Returns the list of human-readable class names that can use the item.
+ */
+export function getUsableClassesList(itm?: TItem | null, useShort = false): string[] {
+  if (!itm || !itm.classUse) return [];
+  const classes: TClass[] = ['FIGHTER', 'MAGE', 'PRIEST', 'THIEF', 'BISHOP', 'SAMURAI', 'LORD', 'NINJA'];
+  return classes
+    .filter(c => itm.classUse[c])
+    .map(c => (useShort ? CLASS_SHORT_CODES[c] : CLASS_NAMES_FR[c]));
+}
+
+/**
+ * Checks if a specific hero can equip an item, verifying class proficiency.
+ */
+export function canHeroEquipItem(hero: TCharacter, itm?: TItem | null): { canEquip: boolean; reason?: string } {
+  if (!itm) return { canEquip: false, reason: 'Objet introuvable.' };
+  if (!canClassUseItem(hero.class, itm)) {
+    const allowed = getUsableClassesList(itm).join(', ') || 'Aucune';
+    const heroClassName = CLASS_NAMES_FR[hero.class] || hero.class;
+    return {
+      canEquip: false,
+      reason: `${hero.name} (${heroClassName}) n'est pas qualifié pour manier cet objet. Classes autorisées : ${allowed}.`
+    };
+  }
+  return { canEquip: true };
+}
+
 /**
  * Authentic Pascal EQUIPCHR + ARM4CHAR (pascal_source/Wiz1B/UTILITIE2.TEXT.pas, l. 154-208, 411-469):
  * Recomputes armorClass, hitMod, wepDamage, swingCount, critHit, and healPts from base stats and equipped items.
+ * Enforces class proficiency: any equipped item the class cannot use is automatically unequipped.
  */
 export function recalculateCharacterCombatStats(hero: TCharacter): void {
   let hitMod =
@@ -1293,6 +1355,14 @@ export function recalculateCharacterCombatStats(hero: TCharacter): void {
       healPts = itm.healPts;
     }
     if (!slot.equipped) continue;
+
+    // Authentic Pascal proficiency restriction:
+    // If hero's class cannot use the item, force unequip!
+    if (!canClassUseItem(hero.class, itm)) {
+      slot.equipped = false;
+      continue;
+    }
+
     unarmed = false;
     if (itm.align === 'UNALIGN' || itm.align === hero.align) {
       if (itm.extraSwings > swingCount) {

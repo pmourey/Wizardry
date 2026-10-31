@@ -10,7 +10,7 @@ import {
   executeCombatRound,
   attemptPartyRun
 } from '../engine/combatEngine';
-import { SPELLS, ITEMS_DATABASE, isItemUsable } from '../data/provingGroundsData';
+import { SPELLS, ITEMS_DATABASE, isItemUsable, canClassUseItem } from '../data/provingGroundsData';
 import { CombatEffects, isFriendlySingleSpell } from '../engine/spellEngine';
 import { sounds } from '../utils/soundEffects';
 import { CharacterSheetModal } from './CharacterSheetModal';
@@ -628,7 +628,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                 {(() => {
                   const usableItems = activeHero.possessions
                     .map((slot, sIdx) => ({ slot, sIdx, itm: ITEMS_DATABASE.find(i => i.id === slot.itemIndex)! }))
-                    .filter(({ itm }) => itm && isItemUsable(itm));
+                    .filter(({ itm }) => itm && isItemUsable(itm) && canClassUseItem(activeHero.class, itm));
 
                   if (selectingSpell) {
                     return (

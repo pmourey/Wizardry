@@ -17,7 +17,10 @@ import {
   initLevel1CharacterSpells,
   levelUpCharacter,
   formatDamageDice,
-  recalculateCharacterCombatStats
+  recalculateCharacterCombatStats,
+  canClassUseItem,
+  getUsableClassesList,
+  CLASS_NAMES_FR
 } from '../data/provingGroundsData';
 import { CharacterSheetModal } from './CharacterSheetModal';
 import { sounds } from '../utils/soundEffects';
@@ -275,6 +278,21 @@ export const CastleView: React.FC<CastleViewProps> = ({
     if (selectedHero.possessions.length >= 8) {
       setMessage(`L'inventaire de ${selectedHero.name} est plein (max 8 objets).`);
       return;
+    }
+
+    // Authentic Pascal SHOPS.TEXT l. 323-333:
+    // IF NOT (OBJECT.CLASSUSE[CHARACTR[CHARI].CLASS]) THEN UNUSABLE ITEM - CONFIRM BUY (Y/N) ?
+    if (!canClassUseItem(selectedHero.class, item)) {
+      const allowed = getUsableClassesList(item).join(', ') || 'Aucune';
+      const heroClassName = CLASS_NAMES_FR[selectedHero.class] || selectedHero.class;
+      const confirmBuy = window.confirm(
+        `OBJET INUTILISABLE (UNUSABLE)\n\n${item.name} ne peut pas être équipé par ${selectedHero.name} (${heroClassName}).\nClasses autorisées : ${allowed}.\n\nConfirmer l'achat quand même ?`
+      );
+      if (!confirmBuy) {
+        sounds.playBump();
+        setMessage(`Achat annulé : tout le monde fait des erreurs ! (WE ALL MAKE MISTAKES)`);
+        return;
+      }
     }
 
     sounds.playGold();
@@ -1101,22 +1119,40 @@ export const CastleView: React.FC<CastleViewProps> = ({
               <div className="bg-slate-900/60 border border-slate-800 p-3 sm:p-4 rounded-xl space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">Articles en vente</h3>
                 <div className="space-y-2 max-h-[340px] sm:max-h-[380px] overflow-y-auto pr-1">
-                  {ITEMS_DATABASE.filter(it => it.price > 0 && it.boltacStock !== 0 && !it.cursed).map(item => (
-                    <div key={item.id} className="p-2 sm:p-2.5 bg-slate-800/50 border border-slate-700/40 rounded-lg flex items-center justify-between gap-2 text-xs">
-                      <div className="min-w-0">
-                        <div className="font-semibold text-white truncate">{item.name}</div>
-                        <div className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                          {item.objType} {item.objType === 'WEAPON' && item.wepHpDam?.level ? `· Dégâts ${formatDamageDice(item.wepHpDam)}` : ''} {item.armorMod ? `· CA -${item.armorMod}` : ''} · {item.price} PO
+                  {ITEMS_DATABASE.filter(it => it.price > 0 && it.boltacStock !== 0 && !it.cursed).map(item => {
+                    const usableByHero = !selectedHero || canClassUseItem(selectedHero.class, item);
+                    return (
+                      <div key={item.id} className="p-2 sm:p-2.5 bg-slate-800/50 border border-slate-700/40 rounded-lg flex items-center justify-between gap-2 text-xs">
+                        <div className="min-w-0">
+                          <div className="font-semibold text-white truncate flex items-center gap-1.5 flex-wrap">
+                            <span>{item.name}</span>
+                            {!usableByHero && (
+                              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-800/60 uppercase">
+                                Inutilisable
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+                            {item.objType} {item.objType === 'WEAPON' && item.wepHpDam?.level ? `· Dégâts ${formatDamageDice(item.wepHpDam)}` : ''} {item.armorMod ? `· CA -${item.armorMod}` : ''} · {item.price} PO
+                          </div>
+                          <div className="text-[10px] text-slate-500">
+                            Classes : <span className={usableByHero ? "text-slate-400" : "text-rose-400 font-semibold"}>{getUsableClassesList(item, true).join(', ') || 'Aucune'}</span>
+                          </div>
                         </div>
+                        <button
+                          onClick={() => handleBuyItem(item)}
+                          className={`px-3 py-1.5 min-h-[32px] ${
+                            usableByHero 
+                              ? 'bg-amber-600 hover:bg-amber-500' 
+                              : 'bg-slate-700 hover:bg-rose-900/60 text-slate-300 hover:text-white border border-slate-600'
+                          } text-white rounded text-xs font-bold transition shrink-0 active:scale-95`}
+                          title={!usableByHero ? `Inutilisable par ${selectedHero?.name} (${selectedHero?.class})` : undefined}
+                        >
+                          Acheter
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleBuyItem(item)}
-                        className="px-3 py-1.5 min-h-[32px] bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-bold transition shrink-0 active:scale-95"
-                      >
-                        Acheter
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1132,13 +1168,15 @@ export const CastleView: React.FC<CastleViewProps> = ({
                   {selectedHero?.possessions.map((slot, sIdx) => {
                     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
                     if (!itm) return null;
+                    const isProficient = canClassUseItem(selectedHero.class, itm);
                     return (
                       <div key={sIdx} className="p-2 sm:p-2.5 bg-slate-800/50 border border-slate-700/40 rounded-lg flex items-center justify-between gap-2 text-xs">
                         <div className="min-w-0">
-                          <div className="font-semibold text-white flex items-center gap-1.5 truncate">
+                          <div className="font-semibold text-white flex items-center gap-1.5 flex-wrap">
                             <span className="truncate">{itm.name}</span>
                             {slot.equipped && <span className="text-[9px] sm:text-[10px] text-emerald-400 font-bold shrink-0">[Équipé]</span>}
                             {slot.cursed && <span className="text-[9px] sm:text-[10px] text-red-400 font-bold shrink-0">[Maudit]</span>}
+                            {!isProficient && <span className="text-[9px] sm:text-[10px] text-rose-400 font-bold shrink-0">[Incompatible]</span>}
                           </div>
                           <div className="text-[10px] sm:text-[11px] text-slate-400">Revente : {Math.floor(itm.price / 2)} PO</div>
                         </div>
