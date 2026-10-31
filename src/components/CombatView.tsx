@@ -92,7 +92,9 @@ export const CombatView: React.FC<CombatViewProps> = ({
   // Living heroes who are conscious (OK) and can choose actions
   const livingHeroes = party.filter(h => h.status === 'OK' && h.hpLeft > 0);
   const anyHeroAlive = party.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0);
+  const anyHeroAsleep = party.some(h => h.status === 'ASLEEP' && h.hpLeft > 0);
   const allHelpless = anyHeroAlive && livingHeroes.length === 0;
+  const allLivingParalyzed = allHelpless && !anyHeroAsleep;
 
   const safeHeroIdx = Math.min(currentHeroIdx, Math.max(0, livingHeroes.length - 1));
   const activeHero = livingHeroes[safeHeroIdx];
@@ -436,15 +438,31 @@ export const CombatView: React.FC<CombatViewProps> = ({
             <span>Tous vos aventuriers sont endormis ou paralysés !</span>
           </div>
           <p className="text-xs text-purple-300/90 max-w-lg mx-auto">
-            Aucun héros conscient n'est en état de donner d'ordre ce tour-ci. Les monstres mènent leur assaut. Les héros endormis ont une chance de se réveiller à chaque tour ou à chaque coup reçu.
+            {anyHeroAsleep 
+              ? "Aucun héros conscient n'est en état de donner d'ordre ce tour-ci. Les monstres mènent leur assaut. Les héros endormis ont une chance de se réveiller à chaque tour ou à chaque coup reçu."
+              : "Tous vos survivants sont paralysés et incapables d'agir ! Les monstres mènent leur assaut sans pitié."}
           </p>
-          <button
-            onClick={() => resolveRound([])}
-            className="px-6 py-2.5 bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs rounded-xl transition shadow-lg inline-flex items-center gap-2"
-          >
-            <Moon className="w-4 h-4" />
-            <span>Résoudre le tour des monstres</span>
-          </button>
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            <button
+              onClick={() => resolveRound([])}
+              className="px-6 py-2.5 bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs rounded-xl transition shadow-lg inline-flex items-center gap-2 active:scale-95"
+            >
+              <Moon className="w-4 h-4" />
+              <span>Résoudre le tour des monstres</span>
+            </button>
+            {allLivingParalyzed && (
+              <button
+                onClick={() => {
+                  sounds.playBell();
+                  onCombatEnd(false, false, false);
+                }}
+                className="px-5 py-2.5 bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-red-200 font-bold text-xs rounded-xl transition shadow-lg inline-flex items-center gap-2 active:scale-95"
+              >
+                <Skull className="w-4 h-4 text-red-400" />
+                <span>Capituler (Décimation de l'escouade)</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 

@@ -392,10 +392,10 @@ export function executeCombatRound(
 
   // 2. Process actions in turn
   for (const unit of turnQueue) {
-    // Check if battle still ongoing
-    const partyHasConscious = party.some(p => p.status === 'OK' && p.hpLeft > 0);
+    // Check if battle still ongoing (any party member alive to be targeted)
+    const partyHasLiving = party.some(p => p.status !== 'DEAD' && p.status !== 'ASHES' && p.hpLeft > 0);
     const monstersRemaining = groups.some(g => g.aliveCount > 0);
-    if (!partyHasConscious || !monstersRemaining || fled || effects.malor || effects.loktofeit) break;
+    if (!partyHasLiving || !monstersRemaining || fled || effects.malor || effects.loktofeit) break;
 
     if (unit.isPlayer) {
       const hero = party[unit.charIndex];
@@ -708,8 +708,10 @@ function executeMonsterTurn(
   const eligibleMeleeTargets = frontRankCandidates.length > 0 ? frontRankCandidates : livingHeroes;
   const chosenTarget = eligibleMeleeTargets[Math.floor(Math.random() * eligibleMeleeTargets.length)].hero;
 
+  const isHelpless = chosenTarget.status === 'ASLEEP' || chosenTarget.status === 'PLYZE';
+  const helplessPenalty = isHelpless ? 6 : 0;
   const parryBonus = parryingHeroIds.has(chosenTarget.id) ? 2 : 0;
-  const toHitThreshold = Math.max(1, Math.min(19, 20 - chosenTarget.armorClass - monster.level + (chosenTarget.combatAcMod || 0) + parryBonus + acModifier));
+  const toHitThreshold = Math.max(1, Math.min(19, 20 - chosenTarget.armorClass - monster.level + (chosenTarget.combatAcMod || 0) + parryBonus + acModifier - helplessPenalty));
 
   let totalDmg = 0;
   let hits = 0;
