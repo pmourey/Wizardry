@@ -146,10 +146,12 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   }, [x, y, setVisitedTiles]);
 
   // Check if current tile is special
+  const currentEvent = maze.events?.find(e => e.x === x && e.y === y && e.type === 'STAIRS');
   const currentSqrDef = maze.extraDefs[maze.sqrExtra[x]?.[y]];
-  const sqrType = currentSqrDef?.type || 'NORMAL';
+  const sqrType = currentEvent ? 'STAIRS' : (currentSqrDef?.type || 'NORMAL');
   const isDarkZone = sqrType === 'DARK';
   const isStairs = sqrType === 'STAIRS';
+  const stairsTargetLvl = currentEvent ? currentEvent.aux0 : currentSqrDef?.aux0;
 
   const [showStairsPrompt, setShowStairsPrompt] = useState<boolean>(false);
   const lastPromptedPos = React.useRef<string>('');
@@ -165,12 +167,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
   const handleExecuteTakeStairs = () => {
     setShowStairsPrompt(false);
-    if (!currentSqrDef || currentSqrDef.type !== 'STAIRS') return;
-    if (currentSqrDef.aux0 === 0) {
+    const targetLvl = currentEvent ? currentEvent.aux0 : currentSqrDef?.aux0;
+    const targetX = currentEvent ? currentEvent.aux2 : currentSqrDef?.aux2;
+    const targetY = currentEvent ? currentEvent.aux1 : currentSqrDef?.aux1;
+
+    if (targetLvl === undefined) return;
+    if (targetLvl === 0) {
       onReturnToCastle();
     } else {
       if (onTakeStairs) {
-        onTakeStairs(currentSqrDef.aux0, currentSqrDef.aux2, currentSqrDef.aux1);
+        onTakeStairs(targetLvl, targetX ?? x, targetY ?? y);
       } else {
         onReturnToCastle();
       }
@@ -801,15 +807,15 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             </button>
           )}
           {/* Stairs Detected Floating Banner */}
-          {isStairs && currentSqrDef && (
+          {isStairs && stairsTargetLvl !== undefined && (
             <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 border border-amber-500/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-2xl backdrop-blur-md max-w-[calc(100vw-1rem)]">
               <Layers className="w-4 h-4 text-amber-400 animate-bounce" />
               <span className="text-xs font-bold text-amber-300">
-                {currentSqrDef.aux0 === 0 
+                {stairsTargetLvl === 0 
                   ? 'Escalier montant vers le Château' 
-                  : currentSqrDef.aux0 > maze.level 
-                    ? `Escalier descendant vers le Niveau ${currentSqrDef.aux0}` 
-                    : `Escalier montant vers le Niveau ${currentSqrDef.aux0}`}
+                  : stairsTargetLvl > maze.level 
+                    ? `Escalier descendant vers le Niveau ${stairsTargetLvl}` 
+                    : `Escalier montant vers le Niveau ${stairsTargetLvl}`}
               </span>
               <button
                 onClick={handleExecuteTakeStairs}
@@ -821,25 +827,25 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           )}
 
           {/* Interactive Stairs Confirmation Modal */}
-          {showStairsPrompt && isStairs && currentSqrDef && (
+          {showStairsPrompt && isStairs && stairsTargetLvl !== undefined && (
             <div className="absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
               <div className="bg-slate-900 border-2 border-amber-500/80 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center">
                 <div className="w-14 h-14 mx-auto rounded-full bg-amber-950/80 border-2 border-amber-400 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-950/60">
                   <Layers className="w-7 h-7" />
                 </div>
                 <h3 className="text-lg font-black text-amber-300 tracking-wide">
-                  {currentSqrDef.aux0 === 0 
+                  {stairsTargetLvl === 0 
                     ? "Escalier vers le Château" 
-                    : currentSqrDef.aux0 > maze.level 
-                      ? `Escalier Descendant (Niveau ${currentSqrDef.aux0})` 
-                      : `Escalier Montant (Niveau ${currentSqrDef.aux0})`}
+                    : stairsTargetLvl > maze.level 
+                      ? `Escalier Descendant (Niveau ${stairsTargetLvl})` 
+                      : `Escalier Montant (Niveau ${stairsTargetLvl})`}
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  {currentSqrDef.aux0 === 0
+                  {stairsTargetLvl === 0
                     ? "Un large perron de pierre remonte vers la cour et la sécurité du Château."
-                    : currentSqrDef.aux0 > maze.level
-                      ? `Un escalier en colimaçon taillé dans la roche brute s'enfonce dans les profondeurs vers le Niveau ${currentSqrDef.aux0}. L'air y est plus froid, et les rugissements des créatures résonnent plus près.`
-                      : `Un escalier de pierre taillée remonte vers les couloirs du Niveau ${currentSqrDef.aux0}.`}
+                    : stairsTargetLvl > maze.level
+                      ? `Un escalier en colimaçon taillé dans la roche brute s'enfonce dans les profondeurs vers le Niveau ${stairsTargetLvl}. L'air y est plus froid, et les rugissements des créatures résonnent plus près.`
+                      : `Un escalier de pierre taillée remonte vers les couloirs du Niveau ${stairsTargetLvl}.`}
                 </p>
                 <div className="text-amber-200/90 font-bold text-xs pt-1">
                   Voulez-vous emprunter cet escalier ?
@@ -849,11 +855,11 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                     onClick={handleExecuteTakeStairs}
                     className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl text-xs font-black shadow-lg transition active:scale-95 cursor-pointer"
                   >
-                    {currentSqrDef.aux0 === 0 
+                    {stairsTargetLvl === 0 
                       ? 'Remonter au Château (Y)' 
-                      : currentSqrDef.aux0 > maze.level 
-                        ? `Descendre au Niveau ${currentSqrDef.aux0} (Y)` 
-                        : `Monter au Niveau ${currentSqrDef.aux0} (Y)`}
+                      : stairsTargetLvl > maze.level 
+                        ? `Descendre au Niveau ${stairsTargetLvl} (Y)` 
+                        : `Monter au Niveau ${stairsTargetLvl} (Y)`}
                   </button>
                   <button
                     onClick={() => setShowStairsPrompt(false)}
@@ -933,18 +939,18 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             </div>
 
             {/* Dynamic Stairs or 180 Turnaround button */}
-            {isStairs && currentSqrDef ? (
+            {isStairs && stairsTargetLvl !== undefined ? (
               <button
                 onClick={handleExecuteTakeStairs}
                 className="w-full py-2 px-2 bg-gradient-to-r from-amber-600 to-amber-500 active:from-amber-500 active:to-amber-400 text-white rounded-lg text-xs font-black transition shadow flex items-center justify-center gap-1.5 border border-amber-300/40 active:scale-95"
               >
                 <Layers className="w-3.5 h-3.5" />
                 <span className="truncate">
-                  {currentSqrDef.aux0 === 0 
+                  {stairsTargetLvl === 0 
                     ? 'Château (Y)' 
-                    : currentSqrDef.aux0 > maze.level 
-                      ? `Niveau ${currentSqrDef.aux0} ↓` 
-                      : `Niveau ${currentSqrDef.aux0} ↑`}
+                    : stairsTargetLvl > maze.level 
+                      ? `Niveau ${stairsTargetLvl} ↓` 
+                      : `Niveau ${stairsTargetLvl} ↑`}
                 </span>
               </button>
             ) : (
@@ -1047,18 +1053,18 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           </div>
 
           {/* Dynamic Stairs Action Button */}
-          {isStairs && currentSqrDef && (
+          {isStairs && stairsTargetLvl !== undefined && (
             <button
               onClick={handleExecuteTakeStairs}
               className="w-full p-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl text-xs font-black transition shadow-lg shadow-amber-950/40 flex items-center justify-center gap-2 border border-amber-300/40 active:scale-95 cursor-pointer"
             >
               <Layers className="w-4 h-4" />
               <span>
-                {currentSqrDef.aux0 === 0 
+                {stairsTargetLvl === 0 
                   ? 'Remonter au Château (Y)' 
-                  : currentSqrDef.aux0 > maze.level 
-                    ? `Descendre au Niveau ${currentSqrDef.aux0} (Y)` 
-                    : `Monter au Niveau ${currentSqrDef.aux0} (Y)`}
+                  : stairsTargetLvl > maze.level 
+                    ? `Descendre au Niveau ${stairsTargetLvl} (Y)` 
+                    : `Monter au Niveau ${stairsTargetLvl} (Y)`}
               </span>
             </button>
           )}

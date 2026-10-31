@@ -309,12 +309,26 @@ def build_level_10():
             "description": "Garde de la Pyramide", "monsterId": 4
         },
         {
-            "x": 10, "y": 18, "type": "STAIRS", "aux0": 9, "aux1": 10, "aux2": 18,
+            "x": 10, "y": 18, "type": "STAIRS", "aux0": 9, "aux1": 18, "aux2": 10,
             "description": "Escalier ascendant vers le Niveau 9"
         }
     ]
     
+    m.extraDefs[1] = {"type": "STAIRS", "aux0": 9, "aux1": 18, "aux2": 10}
     return m
+
+def get_stairs_for_level(lvl):
+    if lvl == 10:
+        return (None, (10, 18))
+    elif lvl == 9:
+        return ((10, 18), (14, 14))
+    elif lvl == 1:
+        return ((6, 6), (10, 10))
+    else:
+        if lvl % 2 == 0:
+            return ((14, 14), (6, 6))
+        else:
+            return ((6, 6), (14, 14))
 
 def build_level(lvl):
     m = MazeBuilder(lvl)
@@ -324,17 +338,10 @@ def build_level(lvl):
     m.open_corridor_v(10, 2, 17)
     
     # 2. Outer ring loop:
-    # Row 2 (x=2..17), Row 17 (x=2..17)
-    # Col 2 (y=2..17), Col 17 (y=2..17)
     m.open_corridor_h(2, 17, 2)
     m.open_corridor_h(2, 17, 17)
     m.open_corridor_v(2, 2, 17)
     m.open_corridor_v(17, 2, 17)
-    
-    # Main cross directly connects with the outer ring at the 4 intersections:
-    # (2, 10) is part of col 2 and row 10! Already naturally connected because open_corridor_h(2, 17, 10) opens V from 3 to 17!
-    # To connect (2, 10) with (2, 9) and (2, 11), col 2 has open_corridor_v(2, 2, 17) which opens H along col 2!
-    # Same for (17, 10), (10, 2), (10, 17)!
     
     # 3. Intermediate ring at row 6, 14, col 6, 14
     m.open_corridor_h(6, 14, 6)
@@ -371,36 +378,39 @@ def build_level(lvl):
     m.door_v(12, 10) # Door East to cross
     
     # Stairs coordinates:
-    # Level 9 has stairs down to Level 10 at (10, 18) matching Level 10 stairs up!
-    stairs_down_x = 10 if lvl == 9 else 6
-    stairs_down_y = 18 if lvl == 9 else 6
-    stairs_up_x = 10 if lvl == 1 else 14
-    stairs_up_y = 10 if lvl == 1 else 14
+    down_coords, up_coords = get_stairs_for_level(lvl)
     
     if lvl == 9:
         # Open passage from (10, 17) to (10, 18) for stairs down to 10
         m.open_corridor_v(10, 17, 18)
     
     m.events = []
-    if lvl < 10:
+    if down_coords:
+        dest_down = get_stairs_for_level(lvl + 1)[1] # Destination is up_coords of floor below
         m.events.append({
-            "x": stairs_down_x, "y": stairs_down_y, "type": "STAIRS",
-            "aux0": lvl + 1, "aux1": stairs_down_x, "aux2": stairs_down_y,
+            "x": down_coords[0], "y": down_coords[1], "type": "STAIRS",
+            "aux0": lvl + 1, "aux1": dest_down[1], "aux2": dest_down[0],
             "description": f"Escalier descendant vers le Niveau {lvl + 1}"
         })
-    if lvl > 1:
-        m.events.append({
-            "x": stairs_up_x, "y": stairs_up_y, "type": "STAIRS",
-            "aux0": lvl - 1, "aux1": stairs_up_x, "aux2": stairs_up_y,
-            "description": f"Escalier ascendant vers le Niveau {lvl - 1}"
-        })
-    else:
-        # Floor 1: Gate out to Castle / Surface
-        m.events.append({
-            "x": 10, "y": 10, "type": "STAIRS",
-            "aux0": 0, "aux1": 0, "aux2": 0,
-            "description": "Porte de sortie vers la surface (Château de Trebor)"
-        })
+        m.extraDefs[2] = {"type": "STAIRS", "aux0": lvl + 1, "aux1": dest_down[1], "aux2": dest_down[0]}
+    
+    if up_coords:
+        if lvl > 1:
+            dest_up = get_stairs_for_level(lvl - 1)[0] # Destination is down_coords of floor above
+            m.events.append({
+                "x": up_coords[0], "y": up_coords[1], "type": "STAIRS",
+                "aux0": lvl - 1, "aux1": dest_up[1], "aux2": dest_up[0],
+                "description": f"Escalier ascendant vers le Niveau {lvl - 1}"
+            })
+            m.extraDefs[1] = {"type": "STAIRS", "aux0": lvl - 1, "aux1": dest_up[1], "aux2": dest_up[0]}
+        else:
+            # Floor 1: Gate out to Castle / Surface
+            m.events.append({
+                "x": up_coords[0], "y": up_coords[1], "type": "STAIRS",
+                "aux0": 0, "aux1": 0, "aux2": 0,
+                "description": "Porte de sortie vers la surface (Château de Trebor)"
+            })
+            m.extraDefs[1] = {"type": "STAIRS", "aux0": 0, "aux1": 0, "aux2": 0}
     
     # Add room encounters
     m.events.append({

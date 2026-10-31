@@ -365,8 +365,8 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 2,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 6,
+        "aux2": 6
       },
       {
         "type": "SCNMSG",
@@ -550,7 +550,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00004000000000000000",
       "00000000000000000000",
-      "00000020000000000000",
+      "00000010000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -558,7 +558,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
-      "00000000000000100000",
+      "00000000000000200000",
       "00000000000000000000",
       "00004000000000000000",
       "00000000000000000000",
@@ -575,14 +575,14 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 1,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 6,
+        "aux2": 6
       },
       {
         "type": "STAIRS",
         "aux0": 3,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 14,
+        "aux2": 14
       },
       {
         "type": "SCNMSG",
@@ -608,21 +608,21 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
     ],
     "events": [
       {
-        "x": 6,
-        "y": 6,
-        "type": "STAIRS",
-        "aux0": 3,
-        "aux1": 6,
-        "aux2": 6,
-        "description": "Escalier descendant vers le Niveau 3"
-      },
-      {
         "x": 14,
         "y": 14,
         "type": "STAIRS",
-        "aux0": 1,
+        "aux0": 3,
         "aux1": 14,
         "aux2": 14,
+        "description": "Escalier descendant vers le Niveau 3"
+      },
+      {
+        "x": 6,
+        "y": 6,
+        "type": "STAIRS",
+        "aux0": 1,
+        "aux1": 6,
+        "aux2": 6,
         "description": "Escalier ascendant vers le Niveau 1"
       },
       {
@@ -791,14 +791,14 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 2,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 14,
+        "aux2": 14
       },
       {
         "type": "STAIRS",
         "aux0": 4,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 6,
+        "aux2": 6
       },
       {
         "type": "SCNMSG",
@@ -982,7 +982,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00004000000000000000",
       "00000000000000000000",
-      "00000020000000000000",
+      "00000010000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -990,7 +990,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
-      "00000000000000100000",
+      "00000000000000200000",
       "00000000000000000000",
       "00004000000000000000",
       "00000000000000000000",
@@ -1007,14 +1007,14 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 3,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 6,
+        "aux2": 6
       },
       {
         "type": "STAIRS",
         "aux0": 5,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 14,
+        "aux2": 14
       },
       {
         "type": "SCNMSG",
@@ -1040,21 +1040,21 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
     ],
     "events": [
       {
-        "x": 6,
-        "y": 6,
-        "type": "STAIRS",
-        "aux0": 5,
-        "aux1": 6,
-        "aux2": 6,
-        "description": "Escalier descendant vers le Niveau 5"
-      },
-      {
         "x": 14,
         "y": 14,
         "type": "STAIRS",
-        "aux0": 3,
+        "aux0": 5,
         "aux1": 14,
         "aux2": 14,
+        "description": "Escalier descendant vers le Niveau 5"
+      },
+      {
+        "x": 6,
+        "y": 6,
+        "type": "STAIRS",
+        "aux0": 3,
+        "aux1": 6,
+        "aux2": 6,
         "description": "Escalier ascendant vers le Niveau 3"
       },
       {
@@ -1223,14 +1223,14 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 4,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 14,
+        "aux2": 14
       },
       {
         "type": "STAIRS",
         "aux0": 6,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 6,
+        "aux2": 6
       },
       {
         "type": "SCNMSG",
@@ -1414,7 +1414,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00004000000000000000",
       "00000000000000000000",
-      "00000020000000000000",
+      "00000010000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -1422,7 +1422,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
-      "00000000000000100000",
+      "00000000000000200000",
       "00000000000000000000",
       "00004000000000000000",
       "00000000000000000000",
@@ -1439,14 +1439,14 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 5,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 6,
+        "aux2": 6
       },
       {
         "type": "STAIRS",
         "aux0": 7,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 14,
+        "aux2": 14
       },
       {
         "type": "SCNMSG",
@@ -1472,21 +1472,21 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
     ],
     "events": [
       {
-        "x": 6,
-        "y": 6,
-        "type": "STAIRS",
-        "aux0": 7,
-        "aux1": 6,
-        "aux2": 6,
-        "description": "Escalier descendant vers le Niveau 7"
-      },
-      {
         "x": 14,
         "y": 14,
         "type": "STAIRS",
-        "aux0": 5,
+        "aux0": 7,
         "aux1": 14,
         "aux2": 14,
+        "description": "Escalier descendant vers le Niveau 7"
+      },
+      {
+        "x": 6,
+        "y": 6,
+        "type": "STAIRS",
+        "aux0": 5,
+        "aux1": 6,
+        "aux2": 6,
         "description": "Escalier ascendant vers le Niveau 5"
       },
       {
@@ -1655,14 +1655,14 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 6,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 14,
+        "aux2": 14
       },
       {
         "type": "STAIRS",
         "aux0": 8,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 6,
+        "aux2": 6
       },
       {
         "type": "SCNMSG",
@@ -1846,7 +1846,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00004000000000000000",
       "00000000000000000000",
-      "00000020000000000000",
+      "00000010000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -1854,7 +1854,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
-      "00000000000000100000",
+      "00000000000000200000",
       "00000000000000000000",
       "00004000000000000000",
       "00000000000000000000",
@@ -1871,14 +1871,14 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 7,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 6,
+        "aux2": 6
       },
       {
         "type": "STAIRS",
         "aux0": 9,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 14,
+        "aux2": 14
       },
       {
         "type": "SCNMSG",
@@ -1904,21 +1904,21 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
     ],
     "events": [
       {
-        "x": 6,
-        "y": 6,
-        "type": "STAIRS",
-        "aux0": 9,
-        "aux1": 6,
-        "aux2": 6,
-        "description": "Escalier descendant vers le Niveau 9"
-      },
-      {
         "x": 14,
         "y": 14,
         "type": "STAIRS",
-        "aux0": 7,
+        "aux0": 9,
         "aux1": 14,
         "aux2": 14,
+        "description": "Escalier descendant vers le Niveau 9"
+      },
+      {
+        "x": 6,
+        "y": 6,
+        "type": "STAIRS",
+        "aux0": 7,
+        "aux1": 6,
+        "aux2": 6,
         "description": "Escalier ascendant vers le Niveau 7"
       },
       {
@@ -2087,14 +2087,14 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 8,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 14,
+        "aux2": 14
       },
       {
         "type": "STAIRS",
         "aux0": 10,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 18,
+        "aux2": 10
       },
       {
         "type": "SCNMSG",
@@ -2124,8 +2124,8 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
         "y": 18,
         "type": "STAIRS",
         "aux0": 10,
-        "aux1": 10,
-        "aux2": 18,
+        "aux1": 18,
+        "aux2": 10,
         "description": "Escalier descendant vers le Niveau 10"
       },
       {
@@ -2303,8 +2303,8 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 9,
-        "aux1": 0,
-        "aux2": 0
+        "aux1": 18,
+        "aux2": 10
       },
       {
         "type": "STAIRS",
@@ -2456,8 +2456,8 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
         "y": 18,
         "type": "STAIRS",
         "aux0": 9,
-        "aux1": 10,
-        "aux2": 18,
+        "aux1": 18,
+        "aux2": 10,
         "description": "Escalier ascendant vers le Niveau 9"
       }
     ]

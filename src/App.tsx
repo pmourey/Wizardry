@@ -289,12 +289,15 @@ export default function App() {
   const initDefaultX = activeScenarioId === 'return-of-werdna' ? 10 : 0;
   const initDefaultY = activeScenarioId === 'return-of-werdna' ? 9 : 0;
   const initLevel = savedSession?.dungeonLevel || initDefaultLevel;
-  const isBuggedSavedW4Zero = activeScenarioId === 'return-of-werdna' && savedSession?.posX === 0 && savedSession?.posY === 0 && (initLevel === 10 || !savedSession?.dungeonLevel);
+  // Rescue Werdna if he was saved at (0, 0) on ANY floor of Wizardry IV:
+  const isBuggedSavedW4Zero = activeScenarioId === 'return-of-werdna' && savedSession?.posX === 0 && savedSession?.posY === 0;
+  const rescuedX = initLevel === 10 ? 10 : (initLevel === 9 ? 10 : (initLevel % 2 === 0 ? 14 : 6));
+  const rescuedY = initLevel === 10 ? 9 : (initLevel === 9 ? 18 : (initLevel % 2 === 0 ? 14 : 6));
   const [location, setLocation] = useState<GameLocation>(() => savedSession?.location || 'CASTLE');
   const [dungeonLevel, setDungeonLevel] = useState<number>(initLevel);
   const [maze, setMaze] = useState<TMazeFloor>(() => getMazeForFloor(initLevel));
-  const [posX, setPosX] = useState<number>(() => isBuggedSavedW4Zero ? initDefaultX : (savedSession?.posX ?? initDefaultX));
-  const [posY, setPosY] = useState<number>(() => isBuggedSavedW4Zero ? initDefaultY : (savedSession?.posY ?? initDefaultY));
+  const [posX, setPosX] = useState<number>(() => isBuggedSavedW4Zero ? rescuedX : (savedSession?.posX ?? initDefaultX));
+  const [posY, setPosY] = useState<number>(() => isBuggedSavedW4Zero ? rescuedY : (savedSession?.posY ?? initDefaultY));
   const [direction, setDirection] = useState<number>(() => savedSession?.direction ?? 0); // 0: N, 1: E, 2: S, 3: W
   const [lightLevel, setLightLevel] = useState<number>(() => savedSession?.lightLevel ?? 0);
   const [acModifier, setAcModifier] = useState<number>(() => savedSession?.acModifier ?? 0);
@@ -443,9 +446,11 @@ export default function App() {
     const defaultStartX = scenarioId === 'return-of-werdna' ? 10 : 0;
     const defaultStartY = scenarioId === 'return-of-werdna' ? 9 : 0;
     const lvl = nextSession?.dungeonLevel || defaultStartLvl;
-    const isBuggedSavedW4Zero = scenarioId === 'return-of-werdna' && nextSession?.posX === 0 && nextSession?.posY === 0 && (lvl === 10 || !nextSession?.dungeonLevel);
-    const px = isBuggedSavedW4Zero ? defaultStartX : (nextSession?.posX ?? defaultStartX);
-    const py = isBuggedSavedW4Zero ? defaultStartY : (nextSession?.posY ?? defaultStartY);
+    const isBuggedSavedW4Zero = scenarioId === 'return-of-werdna' && nextSession?.posX === 0 && nextSession?.posY === 0;
+    const rescuedX = lvl === 10 ? 10 : (lvl === 9 ? 10 : (lvl % 2 === 0 ? 14 : 6));
+    const rescuedY = lvl === 10 ? 9 : (lvl === 9 ? 18 : (lvl % 2 === 0 ? 14 : 6));
+    const px = isBuggedSavedW4Zero ? rescuedX : (nextSession?.posX ?? defaultStartX);
+    const py = isBuggedSavedW4Zero ? rescuedY : (nextSession?.posY ?? defaultStartY);
     if (!nextVisited[lvl]) {
       const fresh = Array.from({ length: 20 }, () => Array(20).fill(false));
       if (fresh[px]) fresh[px][py] = true;
@@ -1148,10 +1153,36 @@ export default function App() {
     const isDescending = targetLevel > dungeonLevel;
     const targetMaze = getMazeForFloor(targetLevel);
 
+    let finalX = targetX;
+    let finalY = targetY;
+
+    // Safety check: if targetX, targetY is (0,0) or walled in, find the real stairs on targetMaze connecting back to dungeonLevel
+    const isWalledIn = targetMaze.w[finalX]?.[finalY] === 'WALL' &&
+                       targetMaze.e[finalX]?.[finalY] === 'WALL' &&
+                       targetMaze.s[finalX]?.[finalY] === 'WALL' &&
+                       targetMaze.n[finalX]?.[finalY] === 'WALL';
+
+    if ((finalX === 0 && finalY === 0) || isWalledIn) {
+      // Find the connecting stairs on the target floor
+      const destStairs = targetMaze.events?.find(e => e.type === 'STAIRS' && e.aux0 === dungeonLevel);
+      if (destStairs) {
+        finalX = destStairs.x;
+        finalY = destStairs.y;
+      } else {
+        // Fallback for Return of Werdna:
+        if (activeScenarioId === 'return-of-werdna') {
+          if (targetLevel === 10) { finalX = 10; finalY = 18; }
+          else if (targetLevel === 9) { finalX = dungeonLevel === 10 ? 10 : 14; finalY = dungeonLevel === 10 ? 18 : 14; }
+          else if (targetLevel % 2 === 0) { finalX = 14; finalY = 14; }
+          else { finalX = 6; finalY = 6; }
+        }
+      }
+    }
+
     setMaze(targetMaze);
     setDungeonLevel(targetLevel);
-    setPosX(targetX);
-    setPosY(targetY);
+    setPosX(finalX);
+    setPosY(finalY);
 
     // Pascal NEWMAZE: Respawn monster room encounters when changing floors
     setFightMapsByLevel(prev => ({
