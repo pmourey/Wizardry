@@ -15,7 +15,7 @@ mazes.append(build_level_10().export())
 ts_mazes = "export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = " + json.dumps(mazes, indent=2) + ";\n"
 
 # Replace the old RETURN_OF_WERDNA_MAZES definition
-marker_start = "// 10 Dungeon Mazes: Level 10 (Tomb of Werdna) up to Level 1 (Surface of Trebor)"
+marker_start = "// 10 Dungeon Mazes: Level 1 (Surface of Trebor) to Level 10 (Pyramid of Entrapment)"
 marker_end = "// Starter Party: Werdna alone, accompanied by initial summoned creatures"
 
 idx_start = content.find(marker_start)

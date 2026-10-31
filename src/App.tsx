@@ -694,15 +694,38 @@ export default function App() {
           if (ev.message?.length) announce('Une salle singulière', ev.message, 'Fouillez (Inspecter) pour en savoir plus.', x, y);
           return false;
         }
-        if (ev.monsterId !== undefined && used === 0) {
+        if (ev.monsterId !== undefined) {
+          if (used > 0 && ev.uses !== 'ALWAYS') {
+            announce('Salle dégagée', ['Les créatures gardiennes de cette salle ont déjà été vaincues.'], undefined, x, y);
+            return false;
+          }
           markEventUsed(key, used + 1);
           triggerBattleEncounter(ev.monsterId);
           return true;
         }
-        if (ev.itemId !== undefined && used === 0) {
+        if (ev.itemId !== undefined) {
+          if (used > 0 && ev.uses !== 'ALWAYS') {
+            announce('Lieu déjà fouillé', ['Vous avez déjà fouillé cet endroit de fond en comble.', 'Il ne reste plus rien d\'intéressant ici.'], undefined, x, y);
+            return false;
+          }
+          const hero = party.find(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.possessions.length < 8);
+          if (!hero) {
+            announce('Inventaire plein !', ['Un objet précieux repose ici, mais tous vos inventaires sont saturés.', 'Libérez au moins un emplacement d\'inventaire pour le ramasser !'], undefined, x, y);
+            return false;
+          }
           markEventUsed(key, used + 1);
           const got = giveItemToParty(ev.itemId);
-          announce('Fouille fructueuse', ev.message || [], got || undefined, x, y);
+          sounds.playFanfare();
+          announce('Fouille fructueuse !', ev.message || [], got || undefined, x, y);
+          addAdventureEvent(
+            'TREASURE',
+            'Découverte d\'un objet précieux',
+            `Lors de la fouille de la case (${x}, ${y}), ${got ?? 'un objet a été récupéré'}.`,
+            undefined,
+            dungeonLevel,
+            { x, y }
+          );
+          return false;
         }
         return false;
       }
@@ -1163,19 +1186,40 @@ export default function App() {
 
   const handleInspectArea = () => {
     sounds.playTurn();
-    const sqrCode = maze.sqrExtra[posX][posY];
-    const sqrDef = maze.extraDefs[sqrCode];
+    
+    // 1. Direct event check on this tile (messages, search items, fixed encounters, stairs)
+    const ev = maze.events?.find(e => e.x === posX && e.y === posY);
+    if (ev) {
+      if (ev.type === 'STAIRS') {
+        handleTakeStairs(ev.aux0, ev.aux2, ev.aux1);
+        return;
+      }
+      if (ev.type === 'SCNMSG' || ev.type === 'ENCOUNTE') {
+        const triggered = handleSquareEvent(ev, posX, posY, true);
+        if (triggered) return;
+        return;
+      }
+    }
 
+    // 2. Fallback to sqrExtra / extraDefs
+    const sqrCode = maze.sqrExtra?.[posX]?.[posY];
+    const sqrDef = sqrCode !== undefined ? maze.extraDefs?.[sqrCode] : undefined;
     if (sqrDef?.type === 'STAIRS') {
       handleTakeStairs(sqrDef.aux0, sqrDef.aux2, sqrDef.aux1);
-    } else if (sqrDef?.type === 'SCNMSG') {
-      const ev = maze.events?.find(e => e.x === posX && e.y === posY);
-      if (ev) handleSquareEvent(ev, posX, posY, true);
+      return;
+    }
+
+    // 3. Wandering encounter check or inspection feedback on empty tile
+    if (Math.random() < 0.25) {
+      triggerBattleEncounter();
     } else {
-      // Trigger encounter check on search
-      if (Math.random() < 0.3) {
-        triggerBattleEncounter();
-      }
+      announce(
+        'Inspection des lieux',
+        ['Vous examinez attentivement les dalles et les parois environnantes.', 'Rien de particulier n\'attire votre attention.'],
+        undefined,
+        posX,
+        posY
+      );
     }
   };
 

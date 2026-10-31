@@ -72,7 +72,7 @@ export const RETURN_OF_WERDNA_ITEMS: TItem[] = [
   {"id":0,"name":"UNIDENTIFIED","identifiedName":"UNIDENTIFIED","itemType":"MISC","align":"UNALIGN","price":0,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":0,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":0},
   {"id":1,"name":"BLOODSTONE","identifiedName":"BLOODSTONE OF WERDNA","itemType":"SPECIAL","align":"EVIL","price":10000,"cursed":false,"ac":-2,"usableBy":["MAGE"],"weight":1,"swingCount":1,"wepDamage":{"level":1,"hpFac":6,"hpMinAdd":2},"hitMod":3,"healPts":1,"critHit":false,"boltacStock":1},
   {"id":2,"name":"BLACK CANDLE","identifiedName":"BLACK CANDLE OF LOMILWA","itemType":"MISC","align":"UNALIGN","price":500,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":2},
-  {"id":3,"name":"BLADE CUSINART'","identifiedName":"BLADE CUSINART'","itemType":"WEAPON","align":"UNALIGN","price":15000,"cursed":false,"ac":-3,"usableBy":["FIGHTER","SAMURAI","LORD","NINJA"],"weight":4,"swingCount":4,"wepDamage":{"level":3,"hpFac":6,"hpMinAdd":6},"hitMod":6,"healPts":0,"critHit":true,"boltacStock":1},
+  {"id":3,"name":"JEWELED AMULET","identifiedName":"JEWELED AMULET OF DUMAPIC","itemType":"SPECIAL","align":"UNALIGN","price":2000,"cursed":false,"ac":-1,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
   {"id":4,"name":"HOLY HANDGRENADE","identifiedName":"HOLY HANDGRENADE OF AUNTY OCK","itemType":"SPECIAL","align":"UNALIGN","price":20000,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":2,"swingCount":0,"wepDamage":{"level":10,"hpFac":20,"hpMinAdd":50},"hitMod":10,"healPts":0,"critHit":false,"boltacStock":1},
   {"id":5,"name":"AMBER DRAGON","identifiedName":"AMBER DRAGON STATUETTE","itemType":"SPECIAL","align":"EVIL","price":5000,"cursed":false,"ac":-1,"usableBy":["MAGE"],"weight":1,"swingCount":1,"wepDamage":{"level":1,"hpFac":4,"hpMinAdd":1},"hitMod":1,"healPts":0,"critHit":false,"boltacStock":1},
   {"id":6,"name":"LANDER'S TURQUOISE","identifiedName":"LANDER'S TURQUOISE GEM","itemType":"SPECIAL","align":"UNALIGN","price":5000,"cursed":false,"ac":0,"usableBy":["MAGE"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
@@ -84,7 +84,8 @@ export const RETURN_OF_WERDNA_ITEMS: TItem[] = [
   {"id":12,"name":"EAST WIND SWORD","identifiedName":"EAST WIND SWORD","itemType":"WEAPON","align":"NEUTRAL","price":18000,"cursed":false,"ac":-2,"usableBy":["FIGHTER","SAMURAI","LORD"],"weight":3,"swingCount":3,"wepDamage":{"level":2,"hpFac":8,"hpMinAdd":4},"hitMod":5,"healPts":0,"critHit":true,"boltacStock":1},
   {"id":13,"name":"DRAGON'S CLAW","identifiedName":"DRAGON'S CLAW BLADE","itemType":"WEAPON","align":"EVIL","price":30000,"cursed":false,"ac":-4,"usableBy":["FIGHTER","SAMURAI","NINJA"],"weight":4,"swingCount":4,"wepDamage":{"level":3,"hpFac":10,"hpMinAdd":6},"hitMod":8,"healPts":0,"critHit":true,"boltacStock":1},
   {"id":14,"name":"TREBOR'S SEAL","identifiedName":"OVERLORD TREBOR'S IMPERIAL SEAL","itemType":"SPECIAL","align":"GOOD","price":50000,"cursed":false,"ac":-5,"usableBy":["LORD"],"weight":2,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":3,"critHit":false,"boltacStock":1},
-  {"id":15,"name":"AMULET OF WERDNA","identifiedName":"THE AMULET OF WERDNA","itemType":"SPECIAL","align":"EVIL","price":100000,"cursed":false,"ac":-10,"usableBy":["MAGE"],"weight":1,"swingCount":2,"wepDamage":{"level":5,"hpFac":20,"hpMinAdd":10},"hitMod":10,"healPts":5,"critHit":true,"boltacStock":1}
+  {"id":15,"name":"AMULET OF WERDNA","identifiedName":"THE AMULET OF WERDNA","itemType":"SPECIAL","align":"EVIL","price":100000,"cursed":false,"ac":-10,"usableBy":["MAGE"],"weight":1,"swingCount":2,"wepDamage":{"level":5,"hpFac":20,"hpMinAdd":10},"hitMod":10,"healPts":5,"critHit":true,"boltacStock":1},
+  {"id":16,"name":"BLADE CUSINART'","identifiedName":"BLADE CUSINART'","itemType":"WEAPON","align":"UNALIGN","price":15000,"cursed":false,"ac":-3,"usableBy":["FIGHTER","SAMURAI","LORD","NINJA"],"weight":4,"swingCount":4,"wepDamage":{"level":3,"hpFac":6,"hpMinAdd":6},"hitMod":6,"healPts":0,"critHit":true,"boltacStock":1}
 ];
 
 // Pad items to 101 records matching classic engine
@@ -331,19 +332,19 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00004000000000000000",
+      "00000000000000000000",
+      "00000020000000000000",
+      "00000000000000000000",
+      "00000000000000000000",
+      "00000000000000000000",
+      "00000000001000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
+      "00004000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000"
@@ -364,6 +365,18 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 2,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "SCNMSG",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "ENCOUNTE",
+        "aux0": 0,
         "aux1": 0,
         "aux2": 0
       }
@@ -535,6 +548,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00004000000000000000",
+      "00000000000000000000",
+      "00000020000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -542,12 +558,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00000000000000100000",
       "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
+      "00004000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000"
@@ -568,6 +581,18 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 3,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "SCNMSG",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "ENCOUNTE",
+        "aux0": 0,
         "aux1": 0,
         "aux2": 0
       }
@@ -739,6 +764,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00004000000000000000",
+      "00000000000000000000",
+      "00000020000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -746,12 +774,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00000000000000100000",
       "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
+      "00004000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000"
@@ -772,6 +797,18 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 4,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "SCNMSG",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "ENCOUNTE",
+        "aux0": 0,
         "aux1": 0,
         "aux2": 0
       }
@@ -943,6 +980,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00004000000000000000",
+      "00000000000000000000",
+      "00000020000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -950,12 +990,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00000000000000100000",
       "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
+      "00004000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000"
@@ -976,6 +1013,18 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 5,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "SCNMSG",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "ENCOUNTE",
+        "aux0": 0,
         "aux1": 0,
         "aux2": 0
       }
@@ -1147,6 +1196,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00004000000000000000",
+      "00000000000000000000",
+      "00000020000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -1154,12 +1206,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00000000000000100000",
       "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
+      "00004000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000"
@@ -1180,6 +1229,18 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 6,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "SCNMSG",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "ENCOUNTE",
+        "aux0": 0,
         "aux1": 0,
         "aux2": 0
       }
@@ -1351,6 +1412,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00004000000000000000",
+      "00000000000000000000",
+      "00000020000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -1358,12 +1422,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00000000000000100000",
       "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
+      "00004000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000"
@@ -1384,6 +1445,18 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 7,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "SCNMSG",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "ENCOUNTE",
+        "aux0": 0,
         "aux1": 0,
         "aux2": 0
       }
@@ -1555,6 +1628,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00004000000000000000",
+      "00000000000000000000",
+      "00000020000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -1562,12 +1638,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00000000000000100000",
       "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
+      "00004000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000"
@@ -1588,6 +1661,18 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 8,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "SCNMSG",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "ENCOUNTE",
+        "aux0": 0,
         "aux1": 0,
         "aux2": 0
       }
@@ -1759,6 +1844,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00004000000000000000",
+      "00000000000000000000",
+      "00000020000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
@@ -1766,12 +1854,9 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00000000000000100000",
       "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
+      "00004000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000"
@@ -1792,6 +1877,18 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 9,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "SCNMSG",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "ENCOUNTE",
+        "aux0": 0,
         "aux1": 0,
         "aux2": 0
       }
@@ -1963,19 +2060,19 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00004000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00000000000000000020",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00000000000000100000",
       "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
+      "00004000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000"
@@ -1996,6 +2093,18 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       {
         "type": "STAIRS",
         "aux0": 10,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "SCNMSG",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "ENCOUNTE",
+        "aux0": 0,
         "aux1": 0,
         "aux2": 0
       }
@@ -2165,22 +2274,22 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
     "sqrExtra": [
       "00000000000000000000",
       "00000000000000000000",
+      "00000000000000000300",
+      "00000000040000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
+      "00000040030000040410",
+      "00000030000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
       "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
-      "00000000000000000000",
+      "00000000030000000300",
       "00000000000000000000",
       "00000000000000000000"
     ],
@@ -2199,6 +2308,18 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
       },
       {
         "type": "STAIRS",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "SCNMSG",
+        "aux0": 0,
+        "aux1": 0,
+        "aux2": 0
+      },
+      {
+        "type": "ENCOUNTE",
         "aux0": 0,
         "aux1": 0,
         "aux2": 0
@@ -2275,7 +2396,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
           "DANS UNE NICHE SCULPT\u00c9E REPOSE LA CHANDELLE NOIRE.",
           "SA FLAMME \u00c9MANE D'UN \u00c9CLAT LUMINEUX CONSTANT (LOMILWA)."
         ],
-        "uses": "ALWAYS",
+        "uses": "ONCE",
         "itemId": 2
       },
       {
@@ -2301,7 +2422,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
           "DANS LE SOCLE D'OBSIDIENNE PALPITE LA PIERRE DE SANG.",
           "L'\u00c9NERGIE VITALE DE WERDNA SE REVIGORE EN SA PR\u00c9SENCE."
         ],
-        "uses": "ALWAYS",
+        "uses": "ONCE",
         "itemId": 1
       },
       {
@@ -2317,7 +2438,7 @@ export const RETURN_OF_WERDNA_MAZES: PGRawMaze[] = [
           "VOUS TROUVEZ UNE AMULETTE DE JOYAUX \u00c9TINCELANTE.",
           "ELLE R\u00c9V\u00c8LE VOS COORDONN\u00c9ES EXACTES (DUMAPIC)."
         ],
-        "uses": "ALWAYS",
+        "uses": "ONCE",
         "itemId": 3
       },
       {
@@ -2376,10 +2497,7 @@ export const RETURN_OF_WERDNA_STARTER_PARTY: TCharacter[] = [
     poisonAmount: 0,
     awards: [0, 0, 0, 0, 0],
     inMaze: false,
-    possessions: [
-      { equipped: true, cursed: false, identified: true, itemIndex: 1 }, // Bloodstone
-      { equipped: false, cursed: false, identified: true, itemIndex: 2 } // Black Candle
-    ]
+    possessions: []
   },
   {
     id: "minion-gas-cloud",

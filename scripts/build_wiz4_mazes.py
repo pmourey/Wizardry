@@ -24,7 +24,9 @@ class MazeBuilder:
         self.extraDefs = [
             {"type": "NORMAL", "aux0": 0, "aux1": 0, "aux2": 0},
             {"type": "STAIRS", "aux0": level - 1 if level > 1 else 0, "aux1": 0, "aux2": 0},
-            {"type": "STAIRS", "aux0": level + 1 if level < 10 else 0, "aux1": 0, "aux2": 0}
+            {"type": "STAIRS", "aux0": level + 1 if level < 10 else 0, "aux1": 0, "aux2": 0},
+            {"type": "SCNMSG", "aux0": 0, "aux1": 0, "aux2": 0},
+            {"type": "ENCOUNTE", "aux0": 0, "aux1": 0, "aux2": 0}
         ]
 
     def open_h(self, x, y):
@@ -73,6 +75,17 @@ class MazeBuilder:
                     self.open_h(x, y)
 
     def export(self):
+        # Sync events to sqrExtra
+        for ev in self.events:
+            ex, ey = ev["x"], ev["y"]
+            if 0 <= ex < 20 and 0 <= ey < 20:
+                if ev["type"] == "STAIRS":
+                    self.sqrExtra[ex][ey] = 1 if ev.get("aux0", 0) < self.level else 2
+                elif ev["type"] == "SCNMSG":
+                    self.sqrExtra[ex][ey] = 3
+                elif ev["type"] == "ENCOUNTE":
+                    self.sqrExtra[ex][ey] = 4
+
         # Convert V and H to w, s, e, n strings
         # raw.w[x][y] = V[x][y]
         # raw.e[x][y] = V[x+1][y]
@@ -267,7 +280,7 @@ def build_level_10():
                 "DANS UNE NICHE SCULPTÉE REPOSE LA CHANDELLE NOIRE.",
                 "SA FLAMME ÉMANE D'UN ÉCLAT LUMINEUX CONSTANT (LOMILWA)."
             ],
-            "uses": "ALWAYS", "itemId": 2
+            "uses": "ONCE", "itemId": 2
         },
         {
             "x": 10, "y": 15, "type": "ENCOUNTE", "aux0": 1, "aux1": 1, "aux2": 3,
@@ -280,7 +293,7 @@ def build_level_10():
                 "DANS LE SOCLE D'OBSIDIENNE PALPITE LA PIERRE DE SANG.",
                 "L'ÉNERGIE VITALE DE WERDNA SE REVIGORE EN SA PRÉSENCE."
             ],
-            "uses": "ALWAYS", "itemId": 1
+            "uses": "ONCE", "itemId": 1
         },
         {
             "x": 17, "y": 17, "type": "SCNMSG", "aux0": -1003, "aux1": 0, "aux2": 4, "kind": "SEARCH_FIGHT",
@@ -289,7 +302,7 @@ def build_level_10():
                 "VOUS TROUVEZ UNE AMULETTE DE JOYAUX ÉTINCELANTE.",
                 "ELLE RÉVÈLE VOS COORDONNÉES EXACTES (DUMAPIC)."
             ],
-            "uses": "ALWAYS", "itemId": 3
+            "uses": "ONCE", "itemId": 3
         },
         {
             "x": 10, "y": 17, "type": "ENCOUNTE", "aux0": 1, "aux1": 1, "aux2": 4,
