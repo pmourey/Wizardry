@@ -1,8 +1,8 @@
-# ⚔️ Wizardry: The Classic Trilogy (I, II, III) & Collection 12 Scénarios Apple II (1981–2026)
+# ⚔️ Wizardry: The Classic Quadrilogy (I, II, III, IV) & Collection 13 Scénarios Apple II (1981–2026)
 
-Une recréation moderne, fidèle et enrichie du jeu de rôle culte de **Sir-Tech (1981–1983)** — comprenant la trilogie officielle complète (**Wizardry I: Proving Grounds of the Mad Overlord**, **Wizardry II: The Knight of Diamonds**, **Wizardry III: The Legacy of Llylgamyn**) ainsi que **9 scénarios additionnels** Apple II v3.2 —, rétro-ingéniée directement d'après le code source originel en **UCSD Pascal** (`pascal_source/Wizardry1_UCSD_Pascal.pas`) et les images disques `.dsk` d'époque archivées dans `scenario_disks/`.
+Une recréation moderne, fidèle et enrichie de la saga de jeux de rôle culte de **Sir-Tech (1981–1987)** — comprenant la quadrilogie officielle complète (**Wizardry I: Proving Grounds of the Mad Overlord**, **Wizardry II: The Knight of Diamonds**, **Wizardry III: The Legacy of Llylgamyn**, **Wizardry IV: The Return of Werdna**) ainsi que **9 scénarios additionnels** Apple II v3.2 —, rétro-ingéniée directement d'après le code source originel en **UCSD Pascal** (`pascal_source/Wizardry1_UCSD_Pascal.pas`) et les images disques `.dsk` d'époque archivées dans `scenario_disks/`.
 
-Ce projet combine l'authenticité des règles historiques de Wizardry avec une interface web moderne, un sélecteur de scénarios (12 campagnes complètes et jouables), un moteur 3D temps réel Three.js, les portraits originaux des monstres Apple II décodés en couleurs NTSC, les musiques d'ambiance d'origine, un système de cartographie tactique persistant, un journal d'aventures narratif et le support des claviers **AZERTY** et **QWERTY**.
+Ce projet combine l'authenticité des règles historiques de Wizardry avec une interface web moderne, un sélecteur de scénarios (13 campagnes complètes et jouables), un moteur 3D temps réel Three.js, les portraits originaux des monstres Apple II décodés en couleurs NTSC, les musiques d'ambiance d'origine, un système de cartographie tactique persistant, un journal d'aventures narratif et le support des claviers **AZERTY** et **QWERTY**.
 
 > 📜 **DIRECTIVE IMPÉRATIVE DE DÉVELOPPEMENT :**
 > Pour **toute modification, correction de bogue ou ajout de fonctionnalité** touchant aux règles, tables de monstres, probabilités, calculs de dégâts ou mécanismes du moteur de jeu, **TOUJOURS se référer impérativement au code source Pascal UCSD originel et aux données extraites des images disques Apple II** via `scripts/extract_pgmo.py` (basé sur `WizardryApp`) :
@@ -13,22 +13,23 @@ Ce projet combine l'authenticité des règles historiques de Wizardry avec une i
 ## 🏛️ Nature du Projet & Nouveautés
 
 Le projet propose une expérience de *dungeon crawler* à la première personne respectant à la lettre les mécanismes de jeu fondamentaux :
-- **Catalogue de 12 Scénarios Jouables (`ScenarioMenuView`)** :
+- **Catalogue de 13 Scénarios Jouables (`ScenarioMenuView`)** :
   1. **#1 — Proving Grounds of the Mad Overlord** (*Sir-Tech, Andrew Greenberg & Robert Woodhead, 1981*) — 10 étages, 101 monstres, 101 objets.
-  2. **#2 — The Black Stone** (*Steve Evans, 1985*) — 8 étages d'énigmes et de combats ardus.
-  3. **#3 — The Catacombs of Vlad** (*1984*) — 10 étages de cryptes vampiriques et de morts-vivants.
-  4. **#4 — DragonQuest** (*Dan Gartung, 1984*) — 8 étages d'exploration médiévale fantastique.
-  5. **#5 — Knight of the Grave** (*1987*) — Nécromanciens et cryptes anciennes.
-  6. **#6 — Scarlet Brotherhood of Hsi-So** (*1985*) — Forteresse orientale d'assassins et de mages.
-  7. **#7 — Nihonbashi (日本橋)** (*1986*) — Scénario inspiré du Japon féodal avec samouraïs et maîtres ninjas.
-  8. **#8 — O'Connor's Mine** (*1985*) — Mines naines profondes et périlleuses.
-  9. **#9 — The Emperor's Seal** (*1986*) — Quête du sceau impérial à travers des pièges retors.
-  10. **#10 — Atomic Wasteland 2098** (*Dan Gartung, 1987*) — Reconversion totale post-apocalyptique et SF.
-  11. **#11 — Wizardry II: The Knight of Diamonds** (*Sir-Tech, 1982*) — 10 étages, 78 monstres, 130 objets, 30 portraits de monstres, escouade niveau 9+ préparée.
-  12. **#12 — Wizardry III: The Legacy of Llylgamyn** (*Sir-Tech, 1983*) — 6 niveaux de montagne sacrée, 78 monstres, 104 objets, 30 portraits originaux avec décodage Apple II V2, restrictions d'alignement.
+  2. **#2 — Wizardry II: The Knight of Diamonds** (*Sir-Tech, 1982*) — 10 étages, 78 monstres, 130 objets, 30 portraits de monstres, escouade niveau 9+ préparée.
+  3. **#3 — Wizardry III: The Legacy of Llylgamyn** (*Sir-Tech, 1983*) — 6 niveaux de montagne sacrée, 78 monstres, 104 objets, 30 portraits originaux avec décodage Apple II V2, restrictions d'alignement.
+  4. **#4 — Wizardry IV: The Return of Werdna** (*Sir-Tech, Roe R. Adams III & Robert Woodhead, 1987*) — Incarnez l'archimage Werdna au fond de son tombeau, invoquez vos serviteurs sur les pentagrammes et remontez la pyramide inversée de Trebor ! (10 étages, 101 monstres, 17 reliques).
+  5. **#5 — The Black Stone** (*Steve Evans, 1985*) — 8 étages d'énigmes et de combats ardus.
+  6. **#6 — The Catacombs of Vlad** (*1984*) — 10 étages de cryptes vampiriques et de morts-vivants.
+  7. **#7 — DragonQuest** (*Dan Gartung, 1984*) — 8 étages d'exploration médiévale fantastique.
+  8. **#8 — Knight of the Grave** (*1987*) — Nécromanciens et cryptes anciennes.
+  9. **#9 — Scarlet Brotherhood of Hsi-So** (*1985*) — Forteresse orientale d'assassins et de mages.
+  10. **#10 — Nihonbashi (日本橋)** (*1986*) — Scénario inspiré du Japon féodal avec samouraïs et maîtres ninjas.
+  11. **#11 — O'Connor's Mine** (*1985*) — Mines naines profondes et périlleuses.
+  12. **#12 — The Emperor's Seal** (*1986*) — Quête du sceau impérial à travers des pièges retors.
+  13. **#13 — Atomic Wasteland 2098** (*Dan Gartung, 1987*) — Reconversion totale post-apocalyptique et SF.
   Chaque scénario dispose de ses propres cartes (6 à 10 étages), objets, monstres, tables d'expérience, messages d'événements, personnages pré-tirés (`ZCHAR`) et de ses **portraits de monstres originaux en couleur NTSC**, avec une sauvegarde `localStorage` totalement isolée et exportable/importable en JSON.
-- **Archive intégrale des 12 images disques `.dsk` d'origine (`scenario_disks/`)** :
-  Toutes les images disques brutes Apple II (140 Ko DOS 3.3 / UCSD Pascal) des 12 scénarios sont désormais archivées et conservées au sein même du dépôt.
+- **Archive intégrale des 13 images disques `.dsk` d'origine (`scenario_disks/`)** :
+  Toutes les images disques brutes Apple II (140 Ko DOS 3.3 / UCSD Pascal) des 13 scénarios sont archivées et conservées au sein même du dépôt.
 - **Règles authentiques de Wizardry (UCSD Pascal)** :
   - Système de caractéristiques (`FOR`, `INT`, `PIE`, `VIT`, `AGI`, `CHA`), tables d'expérience `ZEXP` par classe (`CHNEWLEV`), classes d'armure (CA décroissante) et calcul des dégâts d'armes (`THPREC` : `LEVEL`d`HPFAC` + `HPMINAD`, recalculé via `EQUIPCHR` / `ARM4CHAR`).
   - **Attribution et apprentissage des sorts (`SETSPELS`, `SPLPERLV`, `TRY2LRN`)** : calcul fidèle des emplacements de sorts de Mage et de Prêtre (incluant la progression décalée de l'Évêque / *Bishop* : sorts de Mage dès le niveau 1, miracles de Prêtre à partir du niveau 4).
