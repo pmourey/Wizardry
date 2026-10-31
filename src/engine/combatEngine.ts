@@ -441,6 +441,52 @@ export function executeCombatRound(
           log.push(`${hero.name} entonne le sort ${spell.name} !`);
           castCombatSpell(hero, spell, action, groups, party, log, ctx, effects);
         }
+      } else if (action.actionType === 'USE_ITEM') {
+        const slotIdx = action.inventorySlotIndex ?? -1;
+        const slot = hero.possessions[slotIdx];
+        if (!slot) {
+          log.push(`${hero.name} cherche un objet dans son inventaire mais ne trouve rien.`);
+          continue;
+        }
+        const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+        if (!itm) {
+          log.push(`${hero.name} ne parvient pas à utiliser l'objet.`);
+          continue;
+        }
+
+        log.push(`✨ ${hero.name} utilise ${itm.name} !`);
+
+        if (itm.spellPower && itm.spellPower > 0) {
+          const spell = SPELLS.find(s => s.id === itm.spellPower);
+          if (spell) {
+            log.push(`Le pouvoir magique de ${spell.name} jaillit de l'objet !`);
+            castCombatSpell(hero, spell, action, groups, party, log, ctx, effects);
+          }
+        } else if (itm.healPts && itm.healPts > 0) {
+          const target = party[action.targetCharIndex ?? unit.charIndex] || hero;
+          if (target.status === 'OK' || target.status === 'AFRAID' || target.status === 'ASLEEP') {
+            const healAmt = itm.healPts * 6 + Math.floor(Math.random() * 8);
+            target.hpLeft = Math.min(target.hpMax, target.hpLeft + healAmt);
+            log.push(`💚 ${target.name} récupère ${healAmt} PV (${target.hpLeft}/${target.hpMax}).`);
+          }
+        } else if (itm.name.toUpperCase().includes('LATUMOFIS') || itm.name.toUpperCase().includes('POISON')) {
+          const target = party[action.targetCharIndex ?? unit.charIndex] || hero;
+          target.poisonAmount = 0;
+          log.push(`💚 Le poison dans les veines de ${target.name} est neutralisé.`);
+        }
+
+        // Consumption or degradation
+        if (itm.changeChance > 0 && Math.random() * 100 < itm.changeChance) {
+          if (!itm.changeTo || itm.changeTo === 0) {
+            hero.possessions.splice(slotIdx, 1);
+            log.push(`L'objet ${itm.name} a été entièrement consommé.`);
+          } else {
+            slot.itemIndex = itm.changeTo;
+            const newItem = ITEMS_DATABASE.find(i => i.id === itm.changeTo);
+            log.push(`L'objet s'est transformé en ${newItem?.name || 'objet inerte'}.`);
+          }
+          recalculateCharacterCombatStats(hero);
+        }
       } else if (action.actionType === 'FIGHT') {
         // According to Pascal Wizardry 1 (line 4446: IF MYCHARX < 3 THEN FIGHT):
         // Only the first 3 characters (front rank) can execute a melee attack

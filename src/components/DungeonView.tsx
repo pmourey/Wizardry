@@ -6,11 +6,12 @@ import {
   AdventureLogCategory
 } from '../types/wizardry';
 import { DungeonRenderer3D } from '../engine/dungeonRenderer3D';
-import { ITEMS_DATABASE, SPELLS, formatDamageDice, recalculateCharacterCombatStats, getActiveMaxFloors } from '../data/provingGroundsData';
+import { ITEMS_DATABASE, SPELLS, formatDamageDice, recalculateCharacterCombatStats, getActiveMaxFloors, isItemUsable } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { music } from '../utils/musicManager';
 import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
 import { MiniMap, loadMiniMapPrefs, saveMiniMapPrefs } from './MiniMap';
+import { CharacterSheetModal } from './CharacterSheetModal';
 import { 
   Compass, 
   Eye, 
@@ -39,7 +40,9 @@ import {
   MoveDown,
   Users,
   Swords,
-  Keyboard
+  Keyboard,
+  FileText,
+  FlaskConical
 } from 'lucide-react';
 
 interface DungeonViewProps {
@@ -115,6 +118,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   const [campMessage, setCampMessage] = useState<string>('');
   const [campTab, setCampTab] = useState<'INVENTORY' | 'FORMATION'>('INVENTORY');
   const [transferringSlotIdx, setTransferringSlotIdx] = useState<number | null>(null);
+  const [showCharacterSheetModal, setShowCharacterSheetModal] = useState<boolean>(false);
   const [localVisitedTiles, setLocalVisitedTiles] = useState<boolean[][]>(() => 
     Array.from({ length: 20 }, () => Array(20).fill(false))
   );
@@ -399,6 +403,57 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       recalculateCharacterCombatStats(activeCampHero);
       setCampMessage(`${itm.name} équipé (CA : ${activeCampHero.armorClass} · Dégâts : ${formatDamageDice(activeCampHero.wepDamage)}).`);
     }
+    setParty([...party]);
+  };
+
+  const handleCampUseItem = (slotIdx: number) => {
+    const slot = activeCampHero.possessions[slotIdx];
+    if (!slot) return;
+    const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+    if (!itm) return;
+
+    sounds.playFanfare();
+    const targetHero = party[campTargetIdx] || activeCampHero;
+    let effectDone = false;
+
+    if (itm.spellPower && itm.spellPower > 0) {
+      const sp = SPELLS.find(s => s.id === itm.spellPower);
+      if (sp) {
+        handleCampCastSpell(sp, targetHero);
+        effectDone = true;
+      }
+    }
+
+    if (!effectDone) {
+      if (itm.healPts && itm.healPts > 0) {
+        const healAmt = itm.healPts * 6 + Math.floor(Math.random() * 8);
+        targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + healAmt);
+        setCampMessage(`🧪 ${activeCampHero.name} utilise ${itm.name} : ${targetHero.name} récupère ${healAmt} PV (${targetHero.hpLeft}/${targetHero.hpMax}).`);
+        effectDone = true;
+      } else if (itm.name.toUpperCase().includes('POISON') || itm.name.toUpperCase().includes('LATUMOFIS')) {
+        targetHero.poisonAmount = 0;
+        setCampMessage(`🧪 ${activeCampHero.name} utilise ${itm.name} : le poison de ${targetHero.name} est totalement dissipé.`);
+        effectDone = true;
+      } else {
+        setCampMessage(`✨ ${activeCampHero.name} utilise ${itm.name}.`);
+        effectDone = true;
+      }
+    }
+
+    // Degradation / consumption
+    if (itm.changeChance > 0 && Math.random() * 100 < itm.changeChance) {
+      if (!itm.changeTo || itm.changeTo === 0) {
+        if (slot.equipped) slot.equipped = false;
+        activeCampHero.possessions.splice(slotIdx, 1);
+        setCampMessage(prev => `${prev} L'objet ${itm.name} a été entièrement consommé.`);
+      } else {
+        slot.itemIndex = itm.changeTo;
+        const newItem = ITEMS_DATABASE.find(i => i.id === itm.changeTo);
+        setCampMessage(prev => `${prev} L'objet s'est transformé en ${newItem?.name || 'objet inerte'}.`);
+      }
+      recalculateCharacterCombatStats(activeCampHero);
+    }
+
     setParty([...party]);
   };
 
@@ -1087,7 +1142,20 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               <div>
                 <div className="flex items-center justify-between font-bold text-white">
                   <span className="truncate text-[11px] md:text-xs">{hero.name}</span>
-                  <span className="text-[9px] md:text-[10px] text-amber-400 font-mono">N.{hero.charLevel}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] md:text-[10px] text-amber-400 font-mono">N.{hero.charLevel}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCampCharIdx(idx);
+                        setShowCharacterSheetModal(true);
+                      }}
+                      className="p-0.5 hover:bg-slate-800 text-slate-400 hover:text-amber-300 rounded"
+                      title="Consulter la fiche complète"
+                    >
+                      <FileText className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
                 <div className="text-[9px] md:text-[11px] text-slate-400 truncate">{hero.race} {hero.class}</div>
               </div>
@@ -1268,6 +1336,14 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                           <ArrowUpDown className="w-3 h-3" />
                           <span>Ordre</span>
                         </button>
+                        <button
+                          onClick={() => setShowCharacterSheetModal(true)}
+                          className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded text-[11px] font-bold text-white flex items-center gap-1 transition shadow-sm"
+                          title="Consulter la fiche complète du personnage (Caractéristiques, Sorts, Équipement)"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Fiche</span>
+                        </button>
                       </div>
                     </div>
 
@@ -1375,6 +1451,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                           </div>
 
                           <div className="flex items-center gap-1.5">
+                            {isItemUsable(itm) && (
+                              <button
+                                onClick={() => handleCampUseItem(sIdx)}
+                                className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-xs font-semibold transition flex items-center gap-1 shadow-sm"
+                                title="Utiliser / Boire / Invoquer cet objet"
+                              >
+                                <FlaskConical className="w-3 h-3 text-emerald-200" />
+                                <span>Utiliser</span>
+                              </button>
+                            )}
                             <button
                               onClick={() => handleEquipSlot(sIdx)}
                               className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-semibold transition"
@@ -1692,6 +1778,20 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             onClose={() => setShowMinimap(false)}
           />
         </div>
+      )}
+
+      {/* FULL CHARACTER SHEET MODAL */}
+      {showCharacterSheetModal && party[campCharIdx] && (
+        <CharacterSheetModal
+          character={party[campCharIdx]}
+          party={party}
+          currentIndex={campCharIdx}
+          onSelectCharacter={idx => setCampCharIdx(idx)}
+          onClose={() => setShowCharacterSheetModal(false)}
+          onUpdateCharacter={updated => {
+            setParty(prev => prev.map(p => p.id === updated.id ? updated : p));
+          }}
+        />
       )}
     </div>
   );

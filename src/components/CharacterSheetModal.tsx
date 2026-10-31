@@ -11,7 +11,8 @@ import {
   getExpForNextLevel,
   getMaxCharacterSpells,
   formatDamageDice,
-  recalculateCharacterCombatStats
+  recalculateCharacterCombatStats,
+  isItemUsable
 } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { 
@@ -37,7 +38,8 @@ import {
   MicOff,
   Skull,
   Flame,
-  ShieldAlert
+  ShieldAlert,
+  FlaskConical
 } from 'lucide-react';
 import { getActiveStatusEffects, TActiveStatusEffect } from '../engine/statusSystem';
 
@@ -188,6 +190,63 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
 
     const updated = { ...hero };
     setHero(updated);
+    if (onUpdateCharacter) onUpdateCharacter(updated);
+  };
+
+  const handleUseItem = (slotIdx: number) => {
+    const slot = hero.possessions[slotIdx];
+    if (!slot) return;
+    const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+    if (!itm) return;
+
+    sounds.playFanfare();
+    let msg = '';
+    if (itm.spellPower && itm.spellPower > 0) {
+      const sp = SPELLS.find(s => s.id === itm.spellPower);
+      if (sp) {
+        if (sp.name === 'DIOS' || sp.name === 'DIAL' || sp.name === 'DIALMA') {
+          const heal = Math.floor(Math.random() * (sp.name === 'DIOS' ? 8 : sp.name === 'DIAL' ? 16 : 24)) + 1;
+          hero.hpLeft = Math.min(hero.hpMax, hero.hpLeft + heal);
+          msg = `✨ ${hero.name} utilise ${itm.name} et récupère ${heal} PV (${hero.hpLeft}/${hero.hpMax}).`;
+        } else if (sp.name === 'MADI') {
+          hero.hpLeft = hero.hpMax;
+          hero.poisonAmount = 0;
+          hero.status = 'OK';
+          msg = `✨ ${hero.name} utilise ${itm.name} : Guérison totale MADI !`;
+        } else if (sp.name === 'LATUMOFI') {
+          hero.poisonAmount = 0;
+          msg = `✨ ${hero.name} utilise ${itm.name} : Le poison est neutralisé.`;
+        } else {
+          msg = `✨ ${hero.name} libère le pouvoir de ${sp.name} via ${itm.name} !`;
+        }
+      }
+    } else if (itm.healPts && itm.healPts > 0) {
+      const heal = itm.healPts * 6;
+      hero.hpLeft = Math.min(hero.hpMax, hero.hpLeft + heal);
+      msg = `💚 ${hero.name} boit ${itm.name} et récupère ${heal} PV (${hero.hpLeft}/${hero.hpMax}).`;
+    } else if (itm.name.toUpperCase().includes('POISON') || itm.name.toUpperCase().includes('LATUMOFIS')) {
+      hero.poisonAmount = 0;
+      msg = `💚 ${hero.name} boit ${itm.name} : Le poison est guéri.`;
+    } else {
+      msg = `✨ ${hero.name} utilise ${itm.name}.`;
+    }
+
+    if (itm.changeChance > 0 && Math.random() * 100 < itm.changeChance) {
+      if (!itm.changeTo || itm.changeTo === 0) {
+        if (slot.equipped) slot.equipped = false;
+        hero.possessions.splice(slotIdx, 1);
+        msg += ` L'objet a été entièrement consommé.`;
+      } else {
+        slot.itemIndex = itm.changeTo;
+        const newItem = ITEMS_DATABASE.find(i => i.id === itm.changeTo);
+        msg += ` L'objet s'est transformé en ${newItem?.name || 'objet inerte'}.`;
+      }
+    }
+
+    recalculateCharacterCombatStats(hero);
+    const updated = { ...hero };
+    setHero(updated);
+    setFeedbackMessage(msg);
     if (onUpdateCharacter) onUpdateCharacter(updated);
   };
 
@@ -678,16 +737,28 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                         </div>
 
                         <div className="pt-2 mt-2 border-t border-slate-800/80 flex items-center justify-between">
-                          <button
-                            onClick={() => handleToggleEquip(idx)}
-                            className={`px-3 py-1 rounded text-xs font-bold transition ${
-                              slot.equipped 
-                                ? 'bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-700/50' 
-                                : 'bg-amber-600 hover:bg-amber-500 text-white'
-                            }`}
-                          >
-                            {slot.equipped ? 'Déséquiper' : 'Équiper'}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleToggleEquip(idx)}
+                              className={`px-3 py-1 rounded text-xs font-bold transition ${
+                                slot.equipped 
+                                  ? 'bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-700/50' 
+                                  : 'bg-amber-600 hover:bg-amber-500 text-white'
+                              }`}
+                            >
+                              {slot.equipped ? 'Déséquiper' : 'Équiper'}
+                            </button>
+                            {isItemUsable(itm) && (
+                              <button
+                                onClick={() => handleUseItem(idx)}
+                                className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                                title="Utiliser / Boire / Invoquer cet objet"
+                              >
+                                <FlaskConical className="w-3.5 h-3.5 text-emerald-200" />
+                                <span>Utiliser</span>
+                              </button>
+                            )}
+                          </div>
                           <span className="text-[10px] text-slate-500">
                             Revente : {Math.max(1, Math.floor(itm.price / 2))} PO
                           </span>

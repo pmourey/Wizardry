@@ -10,23 +10,27 @@ import {
   executeCombatRound,
   attemptPartyRun
 } from '../engine/combatEngine';
-import { SPELLS } from '../data/provingGroundsData';
+import { SPELLS, ITEMS_DATABASE, isItemUsable } from '../data/provingGroundsData';
 import { CombatEffects, isFriendlySingleSpell } from '../engine/spellEngine';
 import { sounds } from '../utils/soundEffects';
+import { CharacterSheetModal } from './CharacterSheetModal';
 import { 
   Swords, 
   ShieldAlert, 
   Sparkles, 
   Footprints, 
   RotateCcw, 
-  Crosshair,
-  Skull,
-  Zap,
-  CheckCircle2,
-  Biohazard,
-  Moon,
-  MicOff,
-  Target
+  Crosshair, 
+  Skull, 
+  Zap, 
+  CheckCircle2, 
+  Biohazard, 
+  Moon, 
+  MicOff, 
+  Target,
+  FileText,
+  FlaskConical,
+  Package
 } from 'lucide-react';
 import { getActiveStatusEffects } from '../engine/statusSystem';
 
@@ -66,6 +70,9 @@ export const CombatView: React.FC<CombatViewProps> = ({
   const [actions, setActions] = useState<PlayerCombatAction[]>([]);
   const [roundLog, setRoundLog] = useState<string[]>([]);
   const [selectingSpell, setSelectingSpell] = useState<boolean>(false);
+  const [selectingItem, setSelectingItem] = useState<boolean>(false);
+  const [pendingItemAction, setPendingItemAction] = useState<{ sIdx: number; itm: TItem } | null>(null);
+  const [inspectedHeroIndex, setInspectedHeroIndex] = useState<number | null>(null);
   const [isResolving, setIsResolving] = useState<boolean>(false);
   // Mutable round surprise state: surprise only lasts for Round 1!
   const [currentSurprise, setCurrentSurprise] = useState<'PARTY' | 'MONSTERS' | 'NONE'>(surprise);
@@ -107,7 +114,13 @@ export const CombatView: React.FC<CombatViewProps> = ({
   const safeHeroIdx = Math.min(currentHeroIdx, Math.max(0, livingHeroes.length - 1));
   const activeHero = livingHeroes[safeHeroIdx];
 
-  const handleSelectAction = (type: PlayerCombatAction['actionType'], spellId?: number, targetGrpIdx?: number, targetCharIdx?: number) => {
+  const handleSelectAction = (
+    type: PlayerCombatAction['actionType'], 
+    spellId?: number, 
+    targetGrpIdx?: number, 
+    targetCharIdx?: number,
+    inventorySlotIdx?: number
+  ) => {
     sounds.playTurn();
     if (!activeHero) return;
     const heroIndexInParty = party.findIndex(p => p.id === activeHero.id);
@@ -119,13 +132,16 @@ export const CombatView: React.FC<CombatViewProps> = ({
       actionType: type,
       targetGroupIndex: targetGroup,
       targetCharIndex: targetCharIdx,
-      spellId
+      spellId,
+      inventorySlotIndex: inventorySlotIdx
     };
 
     const nextActions = [...actions, newAction];
     setActions(nextActions);
     setSelectingSpell(false);
     setPendingSpell(null);
+    setSelectingItem(false);
+    setPendingItemAction(null);
 
     if (currentHeroIdx + 1 < livingHeroes.length) {
       setCurrentHeroIdx(currentHeroIdx + 1);
@@ -381,7 +397,20 @@ export const CombatView: React.FC<CombatViewProps> = ({
                 <div>
                   <div className="flex items-center justify-between font-bold text-white text-[11px] sm:text-xs">
                     <span className="truncate">{hero.name}</span>
-                    <span className="text-[8px] sm:text-[9px] text-amber-400 font-mono">N{hero.charLevel}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[8px] sm:text-[9px] text-amber-400 font-mono">N{hero.charLevel}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInspectedHeroIndex(idx);
+                        }}
+                        className="p-0.5 hover:bg-slate-800 text-slate-400 hover:text-amber-300 rounded transition"
+                        title="Consulter la fiche complète du personnage"
+                      >
+                        <FileText className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex justify-between text-[9px] sm:text-[10px] text-slate-400 pt-0.5">
                     <span className="truncate">{hero.class}</span>
@@ -530,17 +559,28 @@ export const CombatView: React.FC<CombatViewProps> = ({
                       {isFrontRank ? `Avant-garde · #${heroPartyIdx + 1}` : `Arrière-garde · #${heroPartyIdx + 1}`}
                     </span>
                   </div>
-                  {currentHeroIdx > 0 && (
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
-                      onClick={() => {
-                        setCurrentHeroIdx(currentHeroIdx - 1);
-                        setActions(actions.slice(0, -1));
-                      }}
-                      className="text-xs text-slate-400 hover:text-white flex items-center gap-1 shrink-0 p-1"
+                      type="button"
+                      onClick={() => setInspectedHeroIndex(party.findIndex(p => p.id === activeHero.id))}
+                      className="text-xs text-amber-300 hover:text-white flex items-center gap-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md font-semibold transition"
+                      title="Consulter la fiche complète du personnage"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Revenir</span>
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>Fiche</span>
                     </button>
-                  )}
+                    {currentHeroIdx > 0 && (
+                      <button
+                        onClick={() => {
+                          setCurrentHeroIdx(currentHeroIdx - 1);
+                          setActions(actions.slice(0, -1));
+                        }}
+                        className="text-xs text-slate-400 hover:text-white flex items-center gap-1 p-1"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Revenir</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Target Group Selector for Current Order */}
@@ -585,113 +625,202 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   </div>
                 )}
 
-                {!selectingSpell ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-                    {/* Fight attack button: ONLY front 3 characters can attack in melee as per Pascal */}
-                    <button
-                      onClick={() => handleSelectAction('FIGHT', undefined, selectedTargetGroupIdx)}
-                      disabled={!isFrontRank}
-                      className={`p-2.5 sm:p-3 min-h-[52px] rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95 ${
-                        isFrontRank 
-                          ? 'bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/60 text-amber-300' 
-                          : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-50'
-                      }`}
-                      title={isFrontRank ? `Attaquer le Groupe #${selectedTargetGroupIdx + 1}` : "Arrière-garde : Seuls les 3 premiers héros peuvent attaquer au corps-à-corps selon le code Pascal"}
-                    >
-                      <Swords className="w-4 h-4 text-amber-400" />
-                      <span>Attaquer</span>
-                      {!isFrontRank && <span className="text-[9px] text-slate-400 font-normal">Arrière-garde</span>}
-                    </button>
+                {(() => {
+                  const usableItems = activeHero.possessions
+                    .map((slot, sIdx) => ({ slot, sIdx, itm: ITEMS_DATABASE.find(i => i.id === slot.itemIndex)! }))
+                    .filter(({ itm }) => itm && isItemUsable(itm));
 
-                    <button
-                      onClick={() => setSelectingSpell(true)}
-                      disabled={availableSpells.length === 0 || (activeHero.silencedRounds !== undefined && activeHero.silencedRounds > 0)}
-                      className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
-                      title={activeHero.silencedRounds && activeHero.silencedRounds > 0 ? "Sous l'effet du silence magique MONTINO !" : undefined}
-                    >
-                      <Sparkles className="w-4 h-4 text-purple-400" />
-                      <span>
-                        {activeHero.silencedRounds && activeHero.silencedRounds > 0 
-                          ? `Silence (${activeHero.silencedRounds}T)` 
-                          : `Sorts (${availableSpells.length})`}
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={() => handleSelectAction('PARRY')}
-                      className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
-                    >
-                      <ShieldAlert className="w-4 h-4 text-blue-400" />
-                      <span>Parade (-2 CA)</span>
-                    </button>
-
-                    {(activeHero.class === 'PRIEST' || activeHero.class === 'BISHOP' || activeHero.class === 'LORD') && (
-                      <button
-                        onClick={() => handleSelectAction('DISPELL', undefined, selectedTargetGroupIdx)}
-                        className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
-                      >
-                        <Zap className="w-4 h-4 text-yellow-400" />
-                        <span>Exorcisme</span>
-                      </button>
-                    )}
-
-                    <button
-                      onClick={handlePartyRun}
-                      className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
-                      title="Fuite collective du groupe (PROCEDURE RUNAWAY)"
-                    >
-                      <Footprints className="w-4 h-4 text-emerald-400" />
-                      <span>Fuir (Groupe)</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-purple-300">Sélectionnez un sort magique :</span>
-                      <button
-                        onClick={() => setSelectingSpell(false)}
-                        className="text-xs text-slate-400 hover:text-white p-1"
-                      >
-                        Annuler
-                      </button>
-                    </div>
-                    {pendingSpell && (
-                      <div className="p-2.5 bg-slate-900 border border-purple-700 rounded-lg space-y-2">
-                        <div className="text-xs font-bold text-purple-300">{pendingSpell.name} : choisissez le personnage ciblé</div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                          {party.map((p, idx) => (
+                  if (selectingSpell) {
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-purple-300">Sélectionnez un sort magique :</span>
+                          <button
+                            onClick={() => setSelectingSpell(false)}
+                            className="text-xs text-slate-400 hover:text-white p-1"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                        {pendingSpell && (
+                          <div className="p-2.5 bg-slate-900 border border-purple-700 rounded-lg space-y-2">
+                            <div className="text-xs font-bold text-purple-300">{pendingSpell.name} : choisissez le personnage ciblé</div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {party.map((p, idx) => (
+                                <button
+                                  key={p.id}
+                                  onClick={() => handleSelectAction('SPELL', pendingSpell.id, selectedTargetGroupIdx, idx)}
+                                  className="p-2 min-h-[44px] bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition active:scale-95"
+                                >
+                                  <div className="font-bold text-white">{idx + 1}. {p.name}</div>
+                                  <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} PV{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                          {availableSpells.map(sp => (
                             <button
-                              key={p.id}
-                              onClick={() => handleSelectAction('SPELL', pendingSpell.id, selectedTargetGroupIdx, idx)}
-                              className="p-2 min-h-[44px] bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition active:scale-95"
+                              key={sp.id}
+                              onClick={() => {
+                                if (isFriendlySingleSpell(sp.name)) setPendingSpell(sp);
+                                else handleSelectAction('SPELL', sp.id, selectedTargetGroupIdx);
+                              }}
+                              className="p-2.5 min-h-[44px] bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition active:scale-95"
                             >
-                              <div className="font-bold text-white">{idx + 1}. {p.name}</div>
-                              <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} PV{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
+                              <div className="font-bold text-white flex justify-between">
+                                <span>{sp.name}</span>
+                                <span className="text-[10px] text-purple-400">T{sp.tier}</span>
+                              </div>
+                              <div className="text-[11px] text-slate-400 line-clamp-1">{sp.description}</div>
                             </button>
                           ))}
                         </div>
                       </div>
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      {availableSpells.map(sp => (
-                        <button
-                          key={sp.id}
-                          onClick={() => {
-                            if (isFriendlySingleSpell(sp.name)) setPendingSpell(sp);
-                            else handleSelectAction('SPELL', sp.id, selectedTargetGroupIdx);
-                          }}
-                          className="p-2.5 min-h-[44px] bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition active:scale-95"
-                        >
-                          <div className="font-bold text-white flex justify-between">
-                            <span>{sp.name}</span>
-                            <span className="text-[10px] text-purple-400">T{sp.tier}</span>
+                    );
+                  }
+
+                  if (selectingItem) {
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-emerald-300">Sélectionnez un objet à utiliser :</span>
+                          <button
+                            onClick={() => { setSelectingItem(false); setPendingItemAction(null); }}
+                            className="text-xs text-slate-400 hover:text-white p-1"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                        {pendingItemAction && (
+                          <div className="p-2.5 bg-slate-900 border border-emerald-700 rounded-lg space-y-2">
+                            <div className="text-xs font-bold text-emerald-300">{pendingItemAction.itm.name} : choisissez la cible alliée</div>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {party.map((p, idx) => (
+                                <button
+                                  key={p.id}
+                                  onClick={() => {
+                                    handleSelectAction('USE_ITEM', undefined, undefined, idx, pendingItemAction.sIdx);
+                                    setPendingItemAction(null);
+                                    setSelectingItem(false);
+                                  }}
+                                  className="p-2 min-h-[44px] bg-slate-800 hover:bg-emerald-950/50 border border-slate-700 hover:border-emerald-500 rounded-lg text-left text-xs transition active:scale-95"
+                                >
+                                  <div className="font-bold text-white">{idx + 1}. {p.name}</div>
+                                  <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} PV{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                          <div className="text-[11px] text-slate-400 line-clamp-1">{sp.description}</div>
+                        )}
+                        {!pendingItemAction && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                            {usableItems.map(({ slot, sIdx, itm }) => {
+                              const sp = itm.spellPower > 0 ? SPELLS.find(s => s.id === itm.spellPower) : null;
+                              const isSingleAlly = (sp && isFriendlySingleSpell(sp.name)) || itm.healPts > 0 || itm.name.toUpperCase().includes('POISON') || itm.name.toUpperCase().includes('LATUMOFIS');
+
+                              return (
+                                <button
+                                  key={sIdx}
+                                  onClick={() => {
+                                    if (isSingleAlly) {
+                                      setPendingItemAction({ sIdx, itm });
+                                    } else if (sp && sp.target === 'GROUP') {
+                                      handleSelectAction('USE_ITEM', undefined, selectedTargetGroupIdx, undefined, sIdx);
+                                    } else {
+                                      handleSelectAction('USE_ITEM', undefined, undefined, undefined, sIdx);
+                                    }
+                                  }}
+                                  className="p-2.5 min-h-[44px] bg-slate-800 hover:bg-emerald-950/50 border border-slate-700 hover:border-emerald-500 rounded-lg text-left text-xs transition active:scale-95"
+                                >
+                                  <div className="font-bold text-white flex justify-between items-center">
+                                    <span>{slot.identified ? itm.name : itm.nameUnknown}</span>
+                                    {sp && <span className="text-[10px] text-purple-400 font-mono">{sp.name}</span>}
+                                  </div>
+                                  <div className="text-[11px] text-slate-400 line-clamp-1">
+                                    {sp ? sp.description : itm.healPts > 0 ? `Restaure des points de vie (+${itm.healPts * 6} PV)` : 'Objet magique'}
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                      {/* Fight attack button: ONLY front 3 characters can attack in melee as per Pascal */}
+                      <button
+                        onClick={() => handleSelectAction('FIGHT', undefined, selectedTargetGroupIdx)}
+                        disabled={!isFrontRank}
+                        className={`p-2.5 sm:p-3 min-h-[52px] rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95 ${
+                          isFrontRank 
+                            ? 'bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/60 text-amber-300' 
+                            : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                        }`}
+                        title={isFrontRank ? `Attaquer le Groupe #${selectedTargetGroupIdx + 1}` : "Arrière-garde : Seuls les 3 premiers héros peuvent attaquer au corps-à-corps selon le code Pascal"}
+                      >
+                        <Swords className="w-4 h-4 text-amber-400" />
+                        <span>Attaquer</span>
+                        {!isFrontRank && <span className="text-[9px] text-slate-400 font-normal">Arrière-garde</span>}
+                      </button>
+
+                      <button
+                        onClick={() => { setSelectingSpell(true); setSelectingItem(false); setPendingSpell(null); }}
+                        disabled={availableSpells.length === 0 || (activeHero.silencedRounds !== undefined && activeHero.silencedRounds > 0)}
+                        className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
+                        title={activeHero.silencedRounds && activeHero.silencedRounds > 0 ? "Sous l'effet du silence magique MONTINO !" : undefined}
+                      >
+                        <Sparkles className="w-4 h-4 text-purple-400" />
+                        <span>
+                          {activeHero.silencedRounds && activeHero.silencedRounds > 0 
+                            ? `Silence (${activeHero.silencedRounds}T)` 
+                            : `Sorts (${availableSpells.length})`}
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={() => { setSelectingItem(true); setSelectingSpell(false); setPendingSpell(null); }}
+                        disabled={usableItems.length === 0}
+                        className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
+                        title={usableItems.length === 0 ? "Aucun consommable ou objet magique utilisable" : "Utiliser un objet magique ou consommable du sac"}
+                      >
+                        <FlaskConical className="w-4 h-4 text-emerald-400" />
+                        <span>Objet ({usableItems.length})</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleSelectAction('PARRY')}
+                        className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
+                      >
+                        <ShieldAlert className="w-4 h-4 text-blue-400" />
+                        <span>Parade (-2 CA)</span>
+                      </button>
+
+                      {(activeHero.class === 'PRIEST' || activeHero.class === 'BISHOP' || activeHero.class === 'LORD') && (
+                        <button
+                          onClick={() => handleSelectAction('DISPELL', undefined, selectedTargetGroupIdx)}
+                          className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
+                        >
+                          <Zap className="w-4 h-4 text-yellow-400" />
+                          <span>Exorcisme</span>
                         </button>
-                      ))}
+                      )}
+
+                      <button
+                        onClick={handlePartyRun}
+                        className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
+                        title="Fuite collective du groupe (PROCEDURE RUNAWAY)"
+                      >
+                        <Footprints className="w-4 h-4 text-emerald-400" />
+                        <span>Fuir (Groupe)</span>
+                      </button>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </>
             );
           })()}
@@ -710,6 +839,20 @@ export const CombatView: React.FC<CombatViewProps> = ({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Full Character Sheet Modal */}
+      {inspectedHeroIndex !== null && party[inspectedHeroIndex] && (
+        <CharacterSheetModal
+          character={party[inspectedHeroIndex]}
+          party={party}
+          currentIndex={inspectedHeroIndex}
+          onSelectCharacter={idx => setInspectedHeroIndex(idx)}
+          onClose={() => setInspectedHeroIndex(null)}
+          onUpdateCharacter={updated => {
+            setParty(prev => prev.map(p => p.id === updated.id ? updated : p));
+          }}
+        />
       )}
     </div>
   );

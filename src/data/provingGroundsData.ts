@@ -1360,3 +1360,18 @@ export function getMazeForFloor(level: number, scenarioId?: string): TMazeFloor 
 export function generateLevel1Maze(): TMazeFloor {
   return getMazeForFloor(1);
 }
+
+/**
+ * Checks whether an item can be actively used (consumed or invoked for spell / potion effect)
+ * in Camp or Combat.
+ */
+export function isItemUsable(itm?: TItem | null): boolean {
+  if (!itm) return false;
+  return Boolean(
+    (itm.spellPower && itm.spellPower > 0) ||
+    (itm.healPts && itm.healPts > 0) ||
+    itm.objType === 'SPECIAL' ||
+    itm.name.toUpperCase().includes('POTION') ||
+    itm.name.toUpperCase().includes('SCROLL')
+  );
+}
