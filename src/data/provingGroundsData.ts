@@ -1293,10 +1293,60 @@ export function getUsableClassesList(itm?: TItem | null, useShort = false): stri
 }
 
 /**
- * Checks if a specific hero can equip an item, verifying class proficiency.
+ * Checks whether an item can be equipped as combat gear (weapon, armor, shield, helmet, gauntlet, or wearable accessory).
+ * Consumables such as potions, scrolls, torches, or non-wearable quest items cannot be equipped.
+ */
+export function isItemEquippable(itm?: TItem | null): boolean {
+  if (!itm) return false;
+  const upper = itm.name.toUpperCase();
+  const upperUnk = (itm.nameUnknown || '').toUpperCase();
+  // Pure consumables (potions, scrolls, elixirs) can never be equipped
+  if (
+    upper.includes('POTION') ||
+    upper.includes('POT.') ||
+    upper.includes('SCROLL') ||
+    upperUnk.includes('POTION') ||
+    upperUnk.includes('SCROLL')
+  ) {
+    return false;
+  }
+  // Standard gear slots:
+  if (
+    itm.objType === 'WEAPON' ||
+    itm.objType === 'ARMOR' ||
+    itm.objType === 'SHIELD' ||
+    itm.objType === 'HELMET' ||
+    itm.objType === 'GAUNTLET'
+  ) {
+    return true;
+  }
+  // For SPECIAL or MISC items, only wearable accessories that provide passive bonuses
+  // (armor class, hp regeneration, hit modifier, extra swings, or resistances)
+  // are equippable. Pure quest items or purely consumable items cannot be equipped.
+  if (
+    itm.armorMod !== 0 ||
+    itm.healPts !== 0 ||
+    itm.extraSwings > 0 ||
+    itm.wepHitMod !== 0 ||
+    (itm.protVs2 && itm.protVs2.length > 0) ||
+    (itm.protVs3 && itm.protVs3.length > 0)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Checks if a specific hero can equip an item, verifying class proficiency and equippability.
  */
 export function canHeroEquipItem(hero: TCharacter, itm?: TItem | null): { canEquip: boolean; reason?: string } {
   if (!itm) return { canEquip: false, reason: 'Objet introuvable.' };
+  if (!isItemEquippable(itm)) {
+    return {
+      canEquip: false,
+      reason: `${itm.name} est un objet consommable ou spécial qui ne peut pas être équipé comme une arme ou armure.`
+    };
+  }
   if (!canClassUseItem(hero.class, itm)) {
     const allowed = getUsableClassesList(itm).join(', ') || 'Aucune';
     const heroClassName = CLASS_NAMES_FR[hero.class] || hero.class;
@@ -1356,9 +1406,9 @@ export function recalculateCharacterCombatStats(hero: TCharacter): void {
     }
     if (!slot.equipped) continue;
 
-    // Authentic Pascal proficiency restriction:
-    // If hero's class cannot use the item, force unequip!
-    if (!canClassUseItem(hero.class, itm)) {
+    // Authentic Pascal equipment & proficiency restriction:
+    // Pure consumables cannot be equipped, and hero's class must be proficient
+    if (!isItemEquippable(itm) || !canClassUseItem(hero.class, itm)) {
       slot.equipped = false;
       continue;
     }

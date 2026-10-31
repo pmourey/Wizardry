@@ -252,25 +252,25 @@ export const RETURN_OF_WERDNA_MONSTERS: TMonster[] = RAW_WERDNA_MONSTERS.map(m =
 // 24 Rewards Tiers
 export const RETURN_OF_WERDNA_REWARDS: TReward[] = Array.from({ length: 24 }, (_, idx) => ({
   id: idx,
-  goldRange: `${(idx + 1) * 100}-${(idx + 1) * 500}`,
-  itemChances: [
-    { chance: 60, itemRange: "1-16" },
-    { chance: 35, itemRange: "17-35" },
-    { chance: 20, itemRange: "36-60" }
+  chest: true,
+  trapTypes: [0, 1, 2, 3, 4, 5, 6, 7],
+  entries: [
+    { percent: 100, type: 'GOLD', tries: 10 + idx, average: 10, minAdd: 0, multiplier: 10, tries2: 1, average2: idx + 1, minAdd2: 0 },
+    { percent: 70, type: 'ITEM', minIndex: Math.max(1, idx * 2), factor: 0, maxTimes: 0, range: 10, percentBigger: 0 }
   ]
 }));
 
 // Scenario Messages & Cryptic Inscriptions of Wizardry IV
 export const RETURN_OF_WERDNA_MESSAGES: PGMessage[] = [
-  {"id":0,"text":"VOUS REPRENEZ CONSCIENCE AU FOND DU SARC враГ...","end":false},
-  {"id":1,"text":"DÉPOUILLÉ DE L'AMULETTE, VOUS ÊTES WERDNA.","end":true},
-  {"id":2,"text":"UN PENTAGRAMME MYSTIQUE BRILLE D'UN ÉCLAT SINISTRE.","end":false},
-  {"id":3,"text":"VOUS POUVEZ INVOQUER VOS SERVITEURS MONSTRUEUX.","end":true},
-  {"id":4,"text":"LE SPECTRE VENGEUR DE TREBOR RÔDE DANS LES OMBRES...","end":false},
-  {"id":5,"text":"NE VOUS ATTARDEZ PAS TROP LONGTEMPS SUR CET ÉTAGE !","end":true},
-  {"id":6,"text":"VOUS PÉNÉTREZ DANS LE CUBE COSMIQUE NON-EUCLIDIEN.","end":false},
-  {"id":7,"text":"L'ESPACE ET LE TEMPS S'ENROULENT DANS UN DÉDALE SANS FIN.","end":true},
-  {"id":8,"text":"VOICI LE PORTAIL MENANT VERS LA SURFACE ET TREBOR !","end":true}
+  {"text":"VOUS REPRENEZ CONSCIENCE AU FOND DU SARC враГ...","end":false},
+  {"text":"DÉPOUILLÉ DE L'AMULETTE, VOUS ÊTES WERDNA.","end":true},
+  {"text":"UN PENTAGRAMME MYSTIQUE BRILLE D'UN ÉCLAT SINISTRE.","end":false},
+  {"text":"VOUS POUVEZ INVOQUER VOS SERVITEURS MONSTRUEUX.","end":true},
+  {"text":"LE SPECTRE VENGEUR DE TREBOR RÔDE DANS LES OMBRES...","end":false},
+  {"text":"NE VOUS ATTARDEZ PAS TROP LONGTEMPS SUR CET ÉTAGE !","end":true},
+  {"text":"VOUS PÉNÉTREZ DANS LE CUBE COSMIQUE NON-EUCLIDIEN.","end":false},
+  {"text":"L'ESPACE ET LE TEMPS S'ENROULENT DANS UN DÉDALE SANS FIN.","end":true},
+  {"text":"VOICI LE PORTAIL MENANT VERS LA SURFACE ET TREBOR !","end":true}
 ];
 
 // 10 Dungeon Mazes: Level 1 (Surface of Trebor) to Level 10 (Pyramid of Entrapment)

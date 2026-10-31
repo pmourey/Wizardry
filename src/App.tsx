@@ -658,7 +658,7 @@ export default function App() {
         dungeonLevel >= 10 ||
         combatGroups.some(g => g.monster.name.toUpperCase().includes('WERDNA'));
       music.playTrack(isBossFight ? '12-werdna' : '10-fight');
-    } else if (location === 'GAMEOVER') {
+    } else if (location === 'GAME_OVER') {
       music.playTrack('11-exterminated');
     } else if (location === 'VICTORY') {
       music.playTrack('13-complete');
@@ -846,7 +846,7 @@ export default function App() {
           sounds.playFanfare();
           announce('Fouille fructueuse !', ev.message || [], got || undefined, x, y);
           addAdventureEvent(
-            'TREASURE',
+            'DISCOVERY',
             'Découverte d\'un objet précieux',
             `Lors de la fouille de la case (${x}, ${y}), ${got ?? 'un objet a été récupéré'}.`,
             undefined,
@@ -1605,7 +1605,10 @@ export default function App() {
                     [
                       "Votre escouade est vide ou tous vos aventuriers sont décédés.",
                       "Rendez-vous à la Taverne de Gilgamesh pour former une escouade de héros vivants avant de descendre dans le donjon !"
-                    ]
+                    ],
+                    undefined,
+                    0,
+                    0
                   );
                   return;
                 }

@@ -76,7 +76,7 @@ export function generateChestReward(level: number): ChestReward {
       it.id > 0 &&
       it.id !== 94 &&
       !it.name.startsWith('RELIC') &&
-      !it.identifiedName?.startsWith('RELIC') &&
+      !it.nameUnknown?.startsWith('RELIC') &&
       it.name !== 'DUMMY' &&
       it.name !== 'UNIDENTIFIED';
 

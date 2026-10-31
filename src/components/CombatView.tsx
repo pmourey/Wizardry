@@ -2,7 +2,8 @@ import { MonsterPicture, getMonsterPictureUrl } from './MonsterPicture';
 import React, { useState, useEffect } from 'react';
 import { 
   TCharacter, 
-  TSpell 
+  TSpell,
+  TItem 
 } from '../types/wizardry';
 import { 
   CombatGroup, 
@@ -403,7 +404,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setInspectedHeroIndex(idx);
+                          setInspectedHeroIndex(hIdx);
                         }}
                         className="p-0.5 hover:bg-slate-800 text-slate-400 hover:text-amber-300 rounded transition"
                         title="Consulter la fiche complète du personnage"

@@ -13,6 +13,7 @@ import {
   recalculateCharacterCombatStats, 
   getActiveMaxFloors, 
   isItemUsable,
+  isItemEquippable,
   canHeroEquipItem,
   canClassUseItem,
   getUsableClassesList
@@ -1464,6 +1465,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                     if (!itm) return null;
                     const isTransferringThis = transferringSlotIdx === sIdx;
                     const isProficient = canClassUseItem(activeCampHero.class, itm);
+                    const equippable = isItemEquippable(itm);
                     return (
                       <div key={sIdx} className="p-2.5 bg-slate-800/70 border border-slate-700/50 rounded-lg flex flex-col gap-2">
                         <div className="flex items-center justify-between">
@@ -1472,17 +1474,34 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                               <span>{slot.identified ? itm.name : itm.nameUnknown}</span>
                               {slot.equipped && <span className="text-[10px] text-emerald-400 font-bold">[Équipé]</span>}
                               {slot.cursed && <span className="text-[10px] text-red-400 font-bold">[Maudit]</span>}
-                              {!isProficient && <span className="text-[10px] text-rose-400 font-bold">[Incompatible]</span>}
+                              {equippable && !isProficient && <span className="text-[10px] text-rose-400 font-bold">[Incompatible]</span>}
                             </div>
                             <div className="text-[11px] text-slate-400">
                               {itm.objType} {itm.objType === 'WEAPON' && itm.wepHpDam?.level ? `· Dégâts ${formatDamageDice(itm.wepHpDam)}` : ''} {itm.armorMod ? `· CA -${itm.armorMod}` : ''}
                             </div>
-                            <div className="text-[10px] text-slate-500">
-                              Classes : <span className={isProficient ? "text-slate-400" : "text-rose-400 font-semibold"}>{getUsableClassesList(itm, true).join(', ') || 'Aucune'}</span>
-                            </div>
+                            {equippable && (
+                              <div className="text-[10px] text-slate-500">
+                                Classes : <span className={isProficient ? "text-slate-400" : "text-rose-400 font-semibold"}>{getUsableClassesList(itm, true).join(', ') || 'Aucune'}</span>
+                              </div>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-1.5">
+                            {(equippable || slot.equipped) && (
+                              <button
+                                onClick={() => handleEquipSlot(sIdx)}
+                                className={`px-2.5 py-1 ${
+                                  slot.equipped
+                                    ? 'bg-red-950/70 hover:bg-red-900 text-red-200 border border-red-700/50'
+                                    : !isProficient
+                                      ? 'bg-slate-800 hover:bg-rose-950/70 text-slate-400 hover:text-rose-200 border border-slate-700'
+                                      : 'bg-slate-700 hover:bg-slate-600 text-white'
+                                } rounded text-xs font-semibold transition`}
+                                title={!slot.equipped && !isProficient ? `Incompatible avec ${activeCampHero.class}. Autorisés : ${getUsableClassesList(itm).join(', ')}` : undefined}
+                              >
+                                {slot.equipped ? 'Retirer' : 'Équiper'}
+                              </button>
+                            )}
                             {isItemUsable(itm) && (
                               <button
                                 onClick={() => handleCampUseItem(sIdx)}
@@ -1493,19 +1512,6 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                 <span>Utiliser</span>
                               </button>
                             )}
-                            <button
-                              onClick={() => handleEquipSlot(sIdx)}
-                              className={`px-2.5 py-1 ${
-                                slot.equipped
-                                  ? 'bg-red-950/70 hover:bg-red-900 text-red-200 border border-red-700/50'
-                                  : !isProficient
-                                    ? 'bg-slate-800 hover:bg-rose-950/70 text-slate-400 hover:text-rose-200 border border-slate-700'
-                                    : 'bg-slate-700 hover:bg-slate-600 text-white'
-                              } rounded text-xs font-semibold transition`}
-                              title={!slot.equipped && !isProficient ? `Incompatible avec ${activeCampHero.class}. Autorisés : ${getUsableClassesList(itm).join(', ')}` : undefined}
-                            >
-                              {slot.equipped ? 'Retirer' : 'Équiper'}
-                            </button>
                             {activeCampHero.class === 'BISHOP' && !slot.identified && (
                               <button
                                 onClick={() => handleBishopIdentify(sIdx)}

@@ -2,7 +2,7 @@
  * Faithful Wizardry I Combat Engine matching Pascal reverse engineering
  */
 import { TCharacter, TMazeFloor, TMonster, TSpell, TStatus } from '../types/wizardry';
-import { MONSTERS_DATABASE, SPELLS, canClassUseItem } from '../data/provingGroundsData';
+import { MONSTERS_DATABASE, SPELLS, ITEMS_DATABASE, recalculateCharacterCombatStats, canClassUseItem } from '../data/provingGroundsData';
 import { castCombatSpell, CombatEffects, SpellContext } from './spellEngine';
 
 export interface CombatMonsterInstance {

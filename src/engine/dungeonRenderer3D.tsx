@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { TMazeFloor } from '../types/wizardry';
+import { TMazeFloor, TWall } from '../types/wizardry';
 
 interface DungeonRenderer3DProps {
   maze: TMazeFloor;

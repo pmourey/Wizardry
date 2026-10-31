@@ -13,6 +13,7 @@ import {
   formatDamageDice,
   recalculateCharacterCombatStats,
   isItemUsable,
+  isItemEquippable,
   canHeroEquipItem,
   canClassUseItem,
   getUsableClassesList
@@ -704,6 +705,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                     if (!itm) return null;
 
                     const isProficient = canClassUseItem(hero.class, itm);
+                    const equippable = isItemEquippable(itm);
                     return (
                       <div
                         key={idx}
@@ -728,7 +730,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                                     Maudit
                                   </span>
                                 )}
-                                {!isProficient && (
+                                {equippable && !isProficient && (
                                   <span className="text-[10px] px-1.5 py-0.2 bg-rose-950/80 text-rose-300 border border-rose-800/60 rounded font-bold" title={`Incompatible avec ${hero.class}`}>
                                     Incompatible
                                   </span>
@@ -757,30 +759,34 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                                 </strong>
                               </div>
                             )}
-                            <div className="flex justify-between text-[10px] pt-0.5">
-                              <span className="text-slate-400">Classes autorisées :</span>
-                              <span className={isProficient ? "text-slate-300 font-mono" : "text-rose-400 font-bold font-mono"}>
-                                {getUsableClassesList(itm, true).join(', ') || 'Aucune'}
-                              </span>
-                            </div>
+                            {equippable && (
+                              <div className="flex justify-between text-[10px] pt-0.5">
+                                <span className="text-slate-400">Classes autorisées :</span>
+                                <span className={isProficient ? "text-slate-300 font-mono" : "text-rose-400 font-bold font-mono"}>
+                                  {getUsableClassesList(itm, true).join(', ') || 'Aucune'}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         <div className="pt-2 mt-2 border-t border-slate-800/80 flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleToggleEquip(idx)}
-                              className={`px-3 py-1 rounded text-xs font-bold transition ${
-                                slot.equipped 
-                                  ? 'bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-700/50' 
-                                  : !isProficient
-                                    ? 'bg-slate-800 hover:bg-rose-950/70 text-slate-400 hover:text-rose-200 border border-slate-700 hover:border-rose-700/60'
-                                    : 'bg-amber-600 hover:bg-amber-500 text-white'
-                              }`}
-                              title={!slot.equipped && !isProficient ? `Incompatible avec ${hero.class}. Autorisés : ${getUsableClassesList(itm).join(', ')}` : undefined}
-                            >
-                              {slot.equipped ? 'Déséquiper' : 'Équiper'}
-                            </button>
+                            {(equippable || slot.equipped) && (
+                              <button
+                                onClick={() => handleToggleEquip(idx)}
+                                className={`px-3 py-1 rounded text-xs font-bold transition ${
+                                  slot.equipped 
+                                    ? 'bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-700/50' 
+                                    : !isProficient
+                                      ? 'bg-slate-800 hover:bg-rose-950/70 text-slate-400 hover:text-rose-200 border border-slate-700 hover:border-rose-700/60'
+                                      : 'bg-amber-600 hover:bg-amber-500 text-white'
+                                }`}
+                                title={!slot.equipped && !isProficient ? `Incompatible avec ${hero.class}. Autorisés : ${getUsableClassesList(itm).join(', ')}` : undefined}
+                              >
+                                {slot.equipped ? 'Déséquiper' : 'Équiper'}
+                              </button>
+                            )}
                             {isItemUsable(itm) && (
                               <button
                                 onClick={() => handleUseItem(idx)}
