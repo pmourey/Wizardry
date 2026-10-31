@@ -285,11 +285,16 @@ export default function App() {
   });
 
   // Location & Navigation State (restores exact place in dungeon on page refresh)
+  const initDefaultLevel = activeScenarioId === 'return-of-werdna' ? 10 : 1;
+  const initDefaultX = activeScenarioId === 'return-of-werdna' ? 10 : 0;
+  const initDefaultY = activeScenarioId === 'return-of-werdna' ? 9 : 0;
+  const initLevel = savedSession?.dungeonLevel || initDefaultLevel;
+  const isBuggedSavedW4Zero = activeScenarioId === 'return-of-werdna' && savedSession?.posX === 0 && savedSession?.posY === 0 && (initLevel === 10 || !savedSession?.dungeonLevel);
   const [location, setLocation] = useState<GameLocation>(() => savedSession?.location || 'CASTLE');
-  const [dungeonLevel, setDungeonLevel] = useState<number>(() => savedSession?.dungeonLevel || 1);
-  const [maze, setMaze] = useState<TMazeFloor>(() => getMazeForFloor(savedSession?.dungeonLevel || 1));
-  const [posX, setPosX] = useState<number>(() => savedSession?.posX ?? 0);
-  const [posY, setPosY] = useState<number>(() => savedSession?.posY ?? 0);
+  const [dungeonLevel, setDungeonLevel] = useState<number>(initLevel);
+  const [maze, setMaze] = useState<TMazeFloor>(() => getMazeForFloor(initLevel));
+  const [posX, setPosX] = useState<number>(() => isBuggedSavedW4Zero ? initDefaultX : (savedSession?.posX ?? initDefaultX));
+  const [posY, setPosY] = useState<number>(() => isBuggedSavedW4Zero ? initDefaultY : (savedSession?.posY ?? initDefaultY));
   const [direction, setDirection] = useState<number>(() => savedSession?.direction ?? 0); // 0: N, 1: E, 2: S, 3: W
   const [lightLevel, setLightLevel] = useState<number>(() => savedSession?.lightLevel ?? 0);
   const [acModifier, setAcModifier] = useState<number>(() => savedSession?.acModifier ?? 0);
@@ -435,9 +440,12 @@ export default function App() {
     }
 
     const defaultStartLvl = scenarioId === 'return-of-werdna' ? 10 : 1;
+    const defaultStartX = scenarioId === 'return-of-werdna' ? 10 : 0;
+    const defaultStartY = scenarioId === 'return-of-werdna' ? 9 : 0;
     const lvl = nextSession?.dungeonLevel || defaultStartLvl;
-    const px = nextSession?.posX ?? 0;
-    const py = nextSession?.posY ?? 0;
+    const isBuggedSavedW4Zero = scenarioId === 'return-of-werdna' && nextSession?.posX === 0 && nextSession?.posY === 0 && (lvl === 10 || !nextSession?.dungeonLevel);
+    const px = isBuggedSavedW4Zero ? defaultStartX : (nextSession?.posX ?? defaultStartX);
+    const py = isBuggedSavedW4Zero ? defaultStartY : (nextSession?.posY ?? defaultStartY);
     if (!nextVisited[lvl]) {
       const fresh = Array.from({ length: 20 }, () => Array(20).fill(false));
       if (fresh[px]) fresh[px][py] = true;
@@ -1074,9 +1082,11 @@ export default function App() {
     setParty(survivingParty);
     setLocation('CASTLE');
     const castleLevel = activeScenarioId === 'return-of-werdna' ? 10 : 1;
+    const castleX = activeScenarioId === 'return-of-werdna' ? 10 : 0;
+    const castleY = activeScenarioId === 'return-of-werdna' ? 9 : 0;
     setDungeonLevel(castleLevel);
-    setPosX(0);
-    setPosY(0);
+    setPosX(castleX);
+    setPosY(castleY);
     setDirection(0);
     setLightLevel(0);
     setAcModifier(0);
@@ -1347,13 +1357,15 @@ export default function App() {
             onClearAdventureEvents={() => setAdventureEvents([])}
             onAddAdventureEvent={addAdventureEvent}
             onEnterMaze={() => {
-              // Wizardry IV starts at level 10 (the Tomb of Werdna), while scenarios 1-3 start at level 1
+              // Wizardry IV starts at level 10 (the Tomb of Werdna) at (10, 9), while scenarios 1-3 start at level 1 at (0, 0)
               const startLevel = activeScenarioId === 'return-of-werdna' ? 10 : 1;
+              const startX = activeScenarioId === 'return-of-werdna' ? 10 : 0;
+              const startY = activeScenarioId === 'return-of-werdna' ? 9 : 0;
               const startMaze = getMazeForFloor(startLevel);
               setMaze(startMaze);
               setDungeonLevel(startLevel);
-              setPosX(0);
-              setPosY(0);
+              setPosX(startX);
+              setPosY(startY);
               setDirection(0);
               setFightMapsByLevel({
                 [startLevel]: generateFightMap(startMaze)
