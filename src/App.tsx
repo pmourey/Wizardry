@@ -1671,6 +1671,7 @@ export default function App() {
             acModifier={acModifier}
             onSpellEffects={handleCombatSpellEffects}
             onCombatEnd={handleCombatEnd}
+            onPartyWipedOut={() => handlePartyWipedOut(party, posX, posY, dungeonLevel)}
           />
         )}
 
