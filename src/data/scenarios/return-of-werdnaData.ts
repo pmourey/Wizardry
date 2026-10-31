@@ -111,8 +111,8 @@ while (RETURN_OF_WERDNA_ITEMS.length <= 100) {
   });
 }
 
-// Summonable monsters & Adventurer foes of Wizardry IV
-export const RETURN_OF_WERDNA_MONSTERS: TMonster[] = [
+// Summonable monsters & Adventurer foes of Wizardry IV (Raw definitions)
+const RAW_WERDNA_MONSTERS: any[] = [
   // Summonable Minions: Level 10 circle
   {"id":0,"name":"CREEPING COIN","nameUnknown":"GLINTING PILE","level":1,"hpMinAdd":4,"hpFac":6,"ac":7,"swingCount":1,"wepDamage":{"level":1,"hpFac":4,"hpMinAdd":0},"healPts":0,"drainAmount":0,"breathType":"NONE","resistances":[],"spells":[],"expReward":120,"rewardWandering":1,"rewardRoom":1,"picId":0,"monsterClass":0,"unique":-1,"teamId":0,"teamPercent":0},
   {"id":1,"name":"GARIAN RAIDER","nameUnknown":"BANDIT","level":2,"hpMinAdd":8,"hpFac":8,"ac":6,"swingCount":1,"wepDamage":{"level":1,"hpFac":8,"hpMinAdd":1},"healPts":0,"drainAmount":0,"breathType":"NONE","resistances":[],"spells":[],"expReward":240,"rewardWandering":1,"rewardRoom":2,"picId":1,"monsterClass":0,"unique":-1,"teamId":0,"teamPercent":0},
@@ -161,9 +161,9 @@ export const RETURN_OF_WERDNA_MONSTERS: TMonster[] = [
 ];
 
 // Pad monsters to 101 records matching classic engine
-while (RETURN_OF_WERDNA_MONSTERS.length <= 100) {
-  const i = RETURN_OF_WERDNA_MONSTERS.length;
-  RETURN_OF_WERDNA_MONSTERS.push({
+while (RAW_WERDNA_MONSTERS.length <= 100) {
+  const i = RAW_WERDNA_MONSTERS.length;
+  RAW_WERDNA_MONSTERS.push({
     id: i,
     name: `ADVENTURER GROUP #${i}`,
     nameUnknown: `ROAMING PARTY #${i}`,
@@ -188,6 +188,45 @@ while (RETURN_OF_WERDNA_MONSTERS.length <= 100) {
     teamPercent: 0
   });
 }
+
+export const RETURN_OF_WERDNA_MONSTERS: TMonster[] = RAW_WERDNA_MONSTERS.map(m => {
+  const count = m.swingCount || 1;
+  const wep = m.wepDamage || { level: 1, hpFac: 6, hpMinAdd: 1 };
+  const attacks = Array.from({ length: count }, () => ({
+    level: wep.level || 1,
+    hpFac: wep.hpFac || 6,
+    hpMinAdd: wep.hpMinAdd || 1
+  }));
+  return {
+    id: m.id,
+    name: m.name,
+    namePlural: m.name.endsWith('S') ? m.name : `${m.name}S`,
+    nameUnknown: m.nameUnknown,
+    nameUnknownPlural: m.nameUnknown.endsWith('S') ? m.nameUnknown : `${m.nameUnknown}S`,
+    level: m.level,
+    hp: { level: m.level || 1, hpFac: m.hpFac || 8, hpMinAdd: m.hpMinAdd || 0 },
+    appear: { level: 1, hpFac: 2, hpMinAdd: 1 },
+    resistances: m.resistances || [],
+    monsterClass: m.monsterClass || 0,
+    ac: m.ac,
+    attackCount: count,
+    attacks,
+    expReward: m.expReward,
+    drainAmount: m.drainAmount || 0,
+    healPts: m.healPts || 0,
+    reward1: m.rewardWandering || 1,
+    reward2: m.rewardRoom || 1,
+    teamId: m.teamId || 0,
+    teamPercent: m.teamPercent || 0,
+    mageSpells: m.spells?.some((s: number) => s < 22) ? 1 : 0,
+    priestSpells: m.spells?.some((s: number) => s >= 22) ? 1 : 0,
+    unique: m.unique ?? -1,
+    breathe: m.breathType === 'FIRE' ? 1 : (m.breathType === 'COLD' ? 2 : (m.breathType === 'POISON' ? 3 : 0)),
+    magicResistance: m.resistances?.length ? 20 : 0,
+    picId: m.picId,
+    specialPower: { sleepResist: true }
+  };
+});
 
 // 24 Rewards Tiers
 export const RETURN_OF_WERDNA_REWARDS: TReward[] = Array.from({ length: 24 }, (_, idx) => ({

@@ -306,6 +306,7 @@ export default function App() {
   const [combatGroups, setCombatGroups] = useState<CombatGroup[]>(() => savedSession?.combatGroups || []);
   const [combatSurprise, setCombatSurprise] = useState<'PARTY' | 'MONSTERS' | 'NONE'>(() => savedSession?.combatSurprise || 'NONE');
   const [chestReward, setChestReward] = useState<ChestReward | null>(() => savedSession?.chestReward || null);
+  const [pendingCombatEventKey, setPendingCombatEventKey] = useState<string | null>(null);
 
   // Modals & Sound
   const isItchioBuild =
@@ -648,6 +649,35 @@ export default function App() {
     localStorage.setItem(keys.usedEvents, JSON.stringify(eventUsesRef.current));
   };
 
+  // Safe cleanup for any broken Wizardry IV encounter keys where combat crashed before starting
+  useEffect(() => {
+    if (activeScenarioId === 'return-of-werdna') {
+      const keys = getStorageKeysForScenario(activeScenarioId);
+      const used = { ...eventUsesRef.current };
+      const buggedKeys = ['9:4:4', '9:16:4', '10:10:6', '10:3:9', '10:10:15', '10:10:17'];
+      let changed = false;
+      for (const k of buggedKeys) {
+        if (used[k]) {
+          const [lvlStr, xStr, yStr] = k.split(':');
+          const lvl = Number(lvlStr);
+          const x = Number(xStr);
+          const y = Number(yStr);
+          const hadVictory = adventureEvents.some(
+            e => e.category === 'COMBAT' && e.level === lvl && e.coordinates?.x === x && e.coordinates?.y === y && e.title.includes('Victoire')
+          );
+          if (!hadVictory) {
+            delete used[k];
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        eventUsesRef.current = used;
+        localStorage.setItem(keys.usedEvents, JSON.stringify(used));
+      }
+    }
+  }, [activeScenarioId, adventureEvents]);
+
   const giveItemToParty = (itemId: number): string | null => {
     const item = ITEMS_DATABASE.find(i => i.id === itemId);
     const hero = party.find(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.possessions.length < 8);
@@ -664,9 +694,16 @@ export default function App() {
     const text = ev.message?.join(' ').replace(/\s+/g, ' ').trim();
 
     if (ev.type === 'ENCOUNTE') {
-      if (ev.aux0 >= 0 && used >= ev.aux0) return false;
-      markEventUsed(key, used + 1);
-      const id = ev.aux2 + Math.floor(Math.random() * Math.max(1, ev.aux1));
+      if (ev.aux0 >= 0 && used >= ev.aux0) {
+        if (searching) {
+          announce('Gardiens déjà vaincus', ['Les créatures gardiennes de cette salle ont déjà été terrassées.', 'La voie est libre.'], undefined, x, y);
+        }
+        return false;
+      }
+      const id = ev.monsterId !== undefined
+        ? ev.monsterId
+        : (ev.aux2 + Math.floor(Math.random() * Math.max(1, ev.aux1)));
+      setPendingCombatEventKey(key);
       triggerBattleEncounter(id);
       return true;
     }
@@ -869,6 +906,18 @@ export default function App() {
     // Scenario special squares (messages, items, fixed fights)
     const event = maze.events?.find(ev => ev.x === newX && ev.y === newY);
     if (event && handleSquareEvent(event, newX, newY, false)) return;
+    if (!event && sqrDef?.type === 'ENCOUNTE') {
+      const syntheticEv: TMazeEvent = {
+        x: newX,
+        y: newY,
+        type: 'ENCOUNTE',
+        aux0: sqrDef.aux0 ?? 1,
+        aux1: sqrDef.aux1 ?? 1,
+        aux2: sqrDef.aux2 ?? 1,
+        description: 'Gardiens du secteur'
+      };
+      if (handleSquareEvent(syntheticEv, newX, newY, false)) return;
+    }
 
     // Authentic Pascal Encounter Determination (Wizardry1_UCSD_Pascal.pas l. 11403-11411):
     // 1. Room encounter: If this room tile has an active encounter primed in FIGHTMAP
@@ -972,6 +1021,7 @@ export default function App() {
       return;
     }
     if (fled) {
+      if (pendingCombatEventKey) setPendingCombatEventKey(null);
       addAdventureEvent(
         'COMBAT',
         'Repli stratégique devant les monstres',
@@ -985,9 +1035,16 @@ export default function App() {
     }
 
     if (!won) {
+      if (pendingCombatEventKey) setPendingCombatEventKey(null);
       // Party died -> Wipeout registered at current coordinates
       handlePartyWipedOut(party, posX, posY, dungeonLevel);
       return;
+    }
+
+    if (pendingCombatEventKey) {
+      const cur = eventUsesRef.current[pendingCombatEventKey] || 0;
+      markEventUsed(pendingCombatEventKey, cur + 1);
+      setPendingCombatEventKey(null);
     }
 
     // Battle won! Award experience per Pascal GIVEEXP / CALC1EXP / TOTALEXP (REWARDS2.TEXT l. 807-1015)
@@ -1237,6 +1294,20 @@ export default function App() {
     const sqrDef = sqrCode !== undefined ? maze.extraDefs?.[sqrCode] : undefined;
     if (sqrDef?.type === 'STAIRS') {
       handleTakeStairs(sqrDef.aux0, sqrDef.aux2, sqrDef.aux1);
+      return;
+    }
+    if (sqrDef?.type === 'ENCOUNTE') {
+      const syntheticEv: TMazeEvent = {
+        x: posX,
+        y: posY,
+        type: 'ENCOUNTE',
+        aux0: sqrDef.aux0 ?? 1,
+        aux1: sqrDef.aux1 ?? 1,
+        aux2: sqrDef.aux2 ?? 1,
+        description: 'Gardiens du secteur'
+      };
+      const triggered = handleSquareEvent(syntheticEv, posX, posY, true);
+      if (triggered) return;
       return;
     }
 

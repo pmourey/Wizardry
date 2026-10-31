@@ -123,17 +123,25 @@ export function shiftDeadHeroesToEnd(party: TCharacter[]): { changed: boolean; m
   return { changed: true, movedNames };
 }
 
-const rollDice = (d: { level: number; hpFac: number; hpMinAdd: number }): number => {
-  let total = d.hpMinAdd;
-  for (let i = 0; i < d.level; i++) total += Math.floor(Math.random() * d.hpFac) + 1;
-  return total;
+const rollDice = (d?: { level?: number; hpFac?: number; hpMinAdd?: number }): number => {
+  if (!d) return 1;
+  const count = d.level ?? 1;
+  const fac = d.hpFac ?? 1;
+  let total = d.hpMinAdd ?? 0;
+  for (let i = 0; i < count; i++) total += Math.floor(Math.random() * Math.max(1, fac)) + 1;
+  return Math.max(1, total);
 };
 
 const makeGroup = (monster: TMonster, forcedCount?: number): CombatGroup => {
-  const count = Math.max(1, Math.min(9, forcedCount ?? rollDice(monster.appear || { level: 1, hpFac: 1, hpMinAdd: 0 })));
+  const hpRec = monster.hp || {
+    level: monster.level || 1,
+    hpFac: (monster as any).hpFac || 8,
+    hpMinAdd: (monster as any).hpMinAdd || 4
+  };
+  const count = Math.max(1, Math.min(9, forcedCount ?? (monster.appear ? rollDice(monster.appear) : 1)));
   const instances: CombatMonsterInstance[] = [];
   for (let i = 0; i < count; i++) {
-    const hp = Math.max(1, rollDice(monster.hp));
+    const hp = Math.max(1, rollDice(hpRec));
     instances.push({ monsterId: monster.id, hpLeft: hp, maxHp: hp, status: 'OK', acMod: 0, silencedRounds: 0 });
   }
   return { monster, identified: false, count, aliveCount: count, instances };
@@ -706,11 +714,16 @@ function executeMonsterTurn(
   let totalDmg = 0;
   let hits = 0;
 
-  for (let a = 0; a < monster.attackCount; a++) {
+  const attackCount = monster.attackCount ?? (monster as any).swingCount ?? 1;
+  const attacksList = (monster.attacks && monster.attacks.length > 0)
+    ? monster.attacks
+    : [(monster as any).wepDamage || { level: 1, hpFac: 6, hpMinAdd: 1 }];
+
+  for (let a = 0; a < attackCount; a++) {
     const roll = Math.floor(Math.random() * 20) + 1;
     if (roll >= toHitThreshold) {
       hits++;
-      const attackSpec = monster.attacks[a] || { level: 1, hpFac: 6, hpMinAdd: 1 };
+      const attackSpec = attacksList[a] || attacksList[0];
       const dam = Math.max(1, rollDice(attackSpec));
       totalDmg += dam;
     }
