@@ -39,7 +39,6 @@ interface CombatViewProps {
   acModifier?: number;
   onSpellEffects?: (effects: CombatEffects) => void;
   onCombatEnd: (won: boolean, fled: boolean, alarmTriggered: boolean, effects?: CombatEffects) => void;
-  onPartyWipedOut?: () => void;
 }
 
 export const CombatView: React.FC<CombatViewProps> = ({
@@ -50,8 +49,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
   mazeLevel = 1,
   acModifier = 0,
   onSpellEffects,
-  onCombatEnd,
-  onPartyWipedOut
+  onCombatEnd
 }) => {
   const [pendingSpell, setPendingSpell] = useState<TSpell | null>(null);
   const acModifierRef = React.useRef(acModifier);
@@ -85,17 +83,6 @@ export const CombatView: React.FC<CombatViewProps> = ({
     const eff = Math.max(-10, base - spellBonus);
     return { base, spellBonus, eff };
   };
-
-  // If no heroes are alive at all (e.g. entered combat with 0 characters), immediately trigger defeat
-  useEffect(() => {
-    if (!party || party.length === 0 || !party.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0)) {
-      if (onPartyWipedOut) {
-        onPartyWipedOut();
-      } else {
-        onCombatEnd(false, false, false);
-      }
-    }
-  }, [party, onPartyWipedOut, onCombatEnd]);
 
   // Keep target group pointing to a living group
   useEffect(() => {
