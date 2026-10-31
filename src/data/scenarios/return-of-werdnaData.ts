@@ -85,31 +85,52 @@ export const RETURN_OF_WERDNA_ITEMS: TItem[] = [
   {"id":13,"name":"DRAGON'S CLAW","identifiedName":"DRAGON'S CLAW BLADE","itemType":"WEAPON","align":"EVIL","price":30000,"cursed":false,"ac":-4,"usableBy":["FIGHTER","SAMURAI","NINJA"],"weight":4,"swingCount":4,"wepDamage":{"level":3,"hpFac":10,"hpMinAdd":6},"hitMod":8,"healPts":0,"critHit":true,"boltacStock":1},
   {"id":14,"name":"TREBOR'S SEAL","identifiedName":"OVERLORD TREBOR'S IMPERIAL SEAL","itemType":"SPECIAL","align":"GOOD","price":50000,"cursed":false,"ac":-5,"usableBy":["LORD"],"weight":2,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":3,"critHit":false,"boltacStock":1},
   {"id":15,"name":"AMULET OF WERDNA","identifiedName":"THE AMULET OF WERDNA","itemType":"SPECIAL","align":"EVIL","price":100000,"cursed":false,"ac":-10,"usableBy":["MAGE"],"weight":1,"swingCount":2,"wepDamage":{"level":5,"hpFac":20,"hpMinAdd":10},"hitMod":10,"healPts":5,"critHit":true,"boltacStock":1},
-  {"id":16,"name":"BLADE CUSINART'","identifiedName":"BLADE CUSINART'","itemType":"WEAPON","align":"UNALIGN","price":15000,"cursed":false,"ac":-3,"usableBy":["FIGHTER","SAMURAI","LORD","NINJA"],"weight":4,"swingCount":4,"wepDamage":{"level":3,"hpFac":6,"hpMinAdd":6},"hitMod":6,"healPts":0,"critHit":true,"boltacStock":1}
+  {"id":16,"name":"BLADE CUSINART'","identifiedName":"BLADE CUSINART'","itemType":"WEAPON","align":"UNALIGN","price":15000,"cursed":false,"ac":-3,"usableBy":["FIGHTER","SAMURAI","LORD","NINJA"],"weight":4,"swingCount":4,"wepDamage":{"level":3,"hpFac":6,"hpMinAdd":6},"hitMod":6,"healPts":0,"critHit":true,"boltacStock":1},
+  {"id":17,"name":"OXYGEN MASK","identifiedName":"OXYGEN MASK OF DEPTHS","itemType":"SPECIAL","align":"UNALIGN","price":12000,"cursed":false,"ac":-1,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":18,"name":"CLEOPATRA'S NEEDLE","identifiedName":"CLEOPATRA'S POISONED NEEDLE","itemType":"WEAPON","align":"EVIL","price":8500,"cursed":false,"ac":-1,"usableBy":["THIEF","NINJA","MAGE"],"weight":1,"swingCount":2,"wepDamage":{"level":2,"hpFac":8,"hpMinAdd":3},"hitMod":5,"healPts":0,"critHit":true,"boltacStock":1},
+  {"id":19,"name":"DUMPING TICKET","identifiedName":"ST. TREBOR'S DUMPING TICKET","itemType":"MISC","align":"UNALIGN","price":500,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":20,"name":"LANDIS'S DIARY","identifiedName":"JOURNAL OF LANDIS THE WANDERER","itemType":"MISC","align":"UNALIGN","price":1500,"cursed":false,"ac":0,"usableBy":["MAGE","BISHOP"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":21,"name":"DIADEM OF MALOR","identifiedName":"DIADEM OF MALORIAN POWER","itemType":"HELMET","align":"EVIL","price":40000,"cursed":false,"ac":-4,"usableBy":["MAGE"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":2,"critHit":false,"boltacStock":1},
+  {"id":22,"name":"MORGUE KEY","identifiedName":"KEY TO THE CRYPT MORGUE","itemType":"MISC","align":"UNALIGN","price":500,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":23,"name":"WINGED BOOTS","identifiedName":"HERMES' WINGED BOOTS","itemType":"BOOTS","align":"UNALIGN","price":15000,"cursed":false,"ac":-3,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":2,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":24,"name":"CRYSTAL OF SCYLLA","identifiedName":"DARK CRYSTAL OF SCYLLA","itemType":"SPECIAL","align":"EVIL","price":22000,"cursed":false,"ac":-2,"usableBy":["MAGE"],"weight":2,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":1,"critHit":false,"boltacStock":1},
+  {"id":25,"name":"DEEP FREEZE KEY","identifiedName":"KEY OF FROZEN VAULT","itemType":"MISC","align":"UNALIGN","price":500,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":26,"name":"GOLDEN KEY","identifiedName":"ORNATE GOLDEN KEY","itemType":"MISC","align":"UNALIGN","price":2000,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":27,"name":"IRON KEY","identifiedName":"HEAVY IRON KEY","itemType":"MISC","align":"UNALIGN","price":500,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":28,"name":"BRONZE KEY","identifiedName":"ANCIENT BRONZE KEY","itemType":"MISC","align":"UNALIGN","price":800,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":29,"name":"EMERALD KEY","identifiedName":"GEM-ENCRUSTED EMERALD KEY","itemType":"MISC","align":"UNALIGN","price":3000,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":30,"name":"RUBY SLIPPERS","identifiedName":"GLOWING RUBY SLIPPERS","itemType":"BOOTS","align":"UNALIGN","price":25000,"cursed":false,"ac":-2,"usableBy":["MAGE","THIEF"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":2,"healPts":1,"critHit":false,"boltacStock":1},
+  {"id":31,"name":"DRINK ME POTION","identifiedName":"ENCHANTED DRINK ME ELIXIR","itemType":"POTION","align":"UNALIGN","price":1000,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":5,"critHit":false,"boltacStock":3},
+  {"id":32,"name":"BLUE RIBBON","identifiedName":"OFFICIAL TREBOR EXPEDITION BLUE RIBBON","itemType":"SPECIAL","align":"UNALIGN","price":10000,"cursed":false,"ac":-2,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":33,"name":"SILVER PENNY","identifiedName":"SILVER PENNY OF SHADOWS","itemType":"MISC","align":"UNALIGN","price":10,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":5},
+  {"id":34,"name":"GOLD PIECE","identifiedName":"ROYAL GOLD SOVEREIGN","itemType":"MISC","align":"UNALIGN","price":100,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":5},
+  {"id":35,"name":"MITHRIL COIN","identifiedName":"ANCIENT MITHRIL MEDALLION","itemType":"MISC","align":"UNALIGN","price":1000,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":2},
+  {"id":36,"name":"POTION OF HEALING","identifiedName":"POTION OF DIAL (HEAL 25 HP)","itemType":"POTION","align":"UNALIGN","price":500,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":3,"critHit":false,"boltacStock":4},
+  {"id":37,"name":"POTION OF LATUMOFIS","identifiedName":"POTION OF CURE POISON","itemType":"POTION","align":"UNALIGN","price":600,"cursed":false,"ac":0,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":3},
+  {"id":38,"name":"SCROLL OF KATINO","identifiedName":"PARCHMENT OF SLEEP (KATINO)","itemType":"SCROLL","align":"UNALIGN","price":800,"cursed":false,"ac":0,"usableBy":["MAGE","BISHOP"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":2},
+  {"id":39,"name":"SCROLL OF MAHALIKU","identifiedName":"PARCHMENT OF MAHALIKU BLAST","itemType":"SCROLL","align":"UNALIGN","price":2500,"cursed":false,"ac":0,"usableBy":["MAGE","BISHOP"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":2},
+  {"id":40,"name":"SCROLL OF TILTOWAIT","identifiedName":"ULTIMATE SCROLL OF TILTOWAIT","itemType":"SCROLL","align":"EVIL","price":35000,"cursed":false,"ac":0,"usableBy":["MAGE"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":41,"name":"RING OF REGEN","identifiedName":"RING OF VITAL REGENERATION","itemType":"RING","align":"UNALIGN","price":50000,"cursed":false,"ac":-2,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":3,"critHit":false,"boltacStock":1},
+  {"id":42,"name":"ROBE OF MIDNIGHT","identifiedName":"DARK ROBE OF MIDNIGHT","itemType":"ARMOR","align":"EVIL","price":28000,"cursed":false,"ac":-6,"usableBy":["MAGE","THIEF","NINJA"],"weight":2,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":2,"healPts":1,"critHit":false,"boltacStock":1},
+  {"id":43,"name":"STAFF OF GNILDA","identifiedName":"SACRED STAFF OF GNILDA","itemType":"WEAPON","align":"NEUTRAL","price":45000,"cursed":false,"ac":-4,"usableBy":["PRIEST","BISHOP","MAGE"],"weight":3,"swingCount":2,"wepDamage":{"level":3,"hpFac":8,"hpMinAdd":6},"hitMod":6,"healPts":2,"critHit":false,"boltacStock":1},
+  {"id":44,"name":"DRAGON SLAYER","identifiedName":"DRAGON SLAYER BROADSWORD","itemType":"WEAPON","align":"NEUTRAL","price":32000,"cursed":false,"ac":-2,"usableBy":["FIGHTER","SAMURAI","LORD"],"weight":4,"swingCount":3,"wepDamage":{"level":3,"hpFac":10,"hpMinAdd":4},"hitMod":7,"healPts":0,"critHit":true,"boltacStock":1},
+  {"id":45,"name":"MITHRIL CHAINMAIL","identifiedName":"ELVEN MITHRIL CHAINMAIL","itemType":"ARMOR","align":"UNALIGN","price":24000,"cursed":false,"ac":-7,"usableBy":["FIGHTER","PRIEST","SAMURAI","LORD"],"weight":4,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":46,"name":"CLOAK OF SHADOWS","identifiedName":"NETHER CLOAK OF SHADOWS","itemType":"ARMOR","align":"EVIL","price":16000,"cursed":false,"ac":-4,"usableBy":["MAGE","THIEF","NINJA"],"weight":2,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":3,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":47,"name":"HEAVY FLOPPY DISK","identifiedName":"AUTHENTIC 5.25 INCH FLOPPY DISK OF POWER","itemType":"SPECIAL","align":"UNALIGN","price":1987,"cursed":false,"ac":-1,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":48,"name":"CONE COLD WAND","identifiedName":"WAND OF DALTO ICY BLAST","itemType":"WEAPON","align":"UNALIGN","price":14000,"cursed":false,"ac":-1,"usableBy":["MAGE","BISHOP"],"weight":2,"swingCount":1,"wepDamage":{"level":2,"hpFac":8,"hpMinAdd":2},"hitMod":4,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":49,"name":"CRYSTAL BALL","identifiedName":"SCRYING CRYSTAL BALL","itemType":"SPECIAL","align":"UNALIGN","price":18000,"cursed":false,"ac":-2,"usableBy":["MAGE","BISHOP"],"weight":2,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":50,"name":"WAR HAMMER +2","identifiedName":"RUNIC WAR HAMMER +2","itemType":"WEAPON","align":"UNALIGN","price":9000,"cursed":false,"ac":-1,"usableBy":["FIGHTER","PRIEST","LORD"],"weight":3,"swingCount":2,"wepDamage":{"level":2,"hpFac":6,"hpMinAdd":4},"hitMod":4,"healPts":0,"critHit":false,"boltacStock":2},
+  {"id":51,"name":"SHORT SWORD +2","identifiedName":"SERPENT SHORT SWORD +2","itemType":"WEAPON","align":"UNALIGN","price":6000,"cursed":false,"ac":-1,"usableBy":["FIGHTER","THIEF","SAMURAI","NINJA"],"weight":2,"swingCount":2,"wepDamage":{"level":2,"hpFac":4,"hpMinAdd":3},"hitMod":4,"healPts":0,"critHit":false,"boltacStock":2},
+  {"id":52,"name":"LONG SWORD +3","identifiedName":"ROYAL KNIGHT'S LONG SWORD +3","itemType":"WEAPON","align":"UNALIGN","price":15000,"cursed":false,"ac":-2,"usableBy":["FIGHTER","SAMURAI","LORD"],"weight":3,"swingCount":3,"wepDamage":{"level":2,"hpFac":8,"hpMinAdd":5},"hitMod":6,"healPts":0,"critHit":true,"boltacStock":1},
+  {"id":53,"name":"SHIELD +2","identifiedName":"REINFORCED HEATER SHIELD +2","itemType":"SHIELD","align":"UNALIGN","price":7500,"cursed":false,"ac":-4,"usableBy":["FIGHTER","PRIEST","SAMURAI","LORD"],"weight":3,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":2},
+  {"id":54,"name":"HELM OF HARDINESS","identifiedName":"DWARVEN HELM OF HARDINESS","itemType":"HELMET","align":"UNALIGN","price":8000,"cursed":false,"ac":-3,"usableBy":["FIGHTER","PRIEST","LORD","SAMURAI"],"weight":2,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":1,"critHit":false,"boltacStock":1},
+  {"id":55,"name":"PLATE MAIL +2","identifiedName":"IMPERIAL FULL PLATE MAIL +2","itemType":"ARMOR","align":"UNALIGN","price":26000,"cursed":false,"ac":-8,"usableBy":["FIGHTER","LORD"],"weight":5,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":56,"name":"MAGE MASHER","identifiedName":"DAGGER MAGE MASHER","itemType":"WEAPON","align":"EVIL","price":11000,"cursed":false,"ac":-1,"usableBy":["THIEF","NINJA"],"weight":1,"swingCount":2,"wepDamage":{"level":2,"hpFac":4,"hpMinAdd":4},"hitMod":5,"healPts":0,"critHit":true,"boltacStock":1},
+  {"id":57,"name":"VAMPIRE CAPE","identifiedName":"BLOODSTAINED VAMPIRE CLOAK","itemType":"ARMOR","align":"EVIL","price":35000,"cursed":false,"ac":-5,"usableBy":["MAGE","NINJA"],"weight":2,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":2,"healPts":2,"critHit":false,"boltacStock":1},
+  {"id":58,"name":"RING OF DISPEL","identifiedName":"RING OF MYSTIC DISPELLING","itemType":"RING","align":"UNALIGN","price":18000,"cursed":false,"ac":-2,"usableBy":["FIGHTER","MAGE","PRIEST","THIEF","BISHOP","SAMURAI","LORD","NINJA"],"weight":1,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":0,"healPts":0,"critHit":false,"boltacStock":1},
+  {"id":59,"name":"DEMON TRIDENT","identifiedName":"DEMON LORD'S FORKED TRIDENT","itemType":"WEAPON","align":"EVIL","price":29000,"cursed":false,"ac":-3,"usableBy":["FIGHTER","SAMURAI","NINJA"],"weight":4,"swingCount":3,"wepDamage":{"level":3,"hpFac":6,"hpMinAdd":6},"hitMod":6,"healPts":0,"critHit":true,"boltacStock":1},
+  {"id":60,"name":"CROWN OF TREBOR","identifiedName":"ROYAL CROWN OF OVERLORD TREBOR","itemType":"HELMET","align":"GOOD","price":75000,"cursed":false,"ac":-6,"usableBy":["LORD"],"weight":2,"swingCount":0,"wepDamage":{"level":0,"hpFac":0,"hpMinAdd":0},"hitMod":3,"healPts":3,"critHit":false,"boltacStock":1}
 ];
-
-// Pad items to 101 records matching classic engine
-while (RETURN_OF_WERDNA_ITEMS.length <= 100) {
-  const i = RETURN_OF_WERDNA_ITEMS.length;
-  RETURN_OF_WERDNA_ITEMS.push({
-    id: i,
-    name: `RELIC #${i}`,
-    identifiedName: `RELIC OF WERDNA #${i}`,
-    itemType: i % 2 === 0 ? "ARMOR" : "WEAPON",
-    align: "UNALIGN",
-    price: i * 250,
-    cursed: false,
-    ac: -(i % 4),
-    usableBy: ["FIGHTER", "MAGE", "PRIEST", "THIEF", "BISHOP", "SAMURAI", "LORD", "NINJA"],
-    weight: 2,
-    swingCount: 1,
-    wepDamage: { level: 1, hpFac: 6, hpMinAdd: 2 },
-    hitMod: 2,
-    healPts: 0,
-    critHit: false,
-    boltacStock: 0
-  });
-}
 
 // Summonable monsters & Adventurer foes of Wizardry IV (Raw definitions)
 const RAW_WERDNA_MONSTERS: any[] = [
@@ -233,9 +254,9 @@ export const RETURN_OF_WERDNA_REWARDS: TReward[] = Array.from({ length: 24 }, (_
   id: idx,
   goldRange: `${(idx + 1) * 100}-${(idx + 1) * 500}`,
   itemChances: [
-    { chance: 50, itemRange: "1-10" },
-    { chance: 25, itemRange: "11-20" },
-    { chance: 10, itemRange: "21-50" }
+    { chance: 60, itemRange: "1-16" },
+    { chance: 35, itemRange: "17-35" },
+    { chance: 20, itemRange: "36-60" }
   ]
 }));
 

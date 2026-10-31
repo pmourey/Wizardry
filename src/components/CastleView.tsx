@@ -769,14 +769,32 @@ export const CastleView: React.FC<CastleViewProps> = ({
               <span className="sm:hidden">Triche</span>
             </button>
           )}
-          <button
-            onClick={onEnterMaze}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition shadow-md shadow-amber-950/30 active:scale-95"
-          >
-            <DoorOpen className="w-4 h-4" />
-            <span className="hidden sm:inline">Entrer dans le Donjon</span>
-            <span className="sm:hidden">Donjon</span>
-          </button>
+          {(() => {
+            const hasLivingHeroes = party.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0);
+            return (
+              <button
+                onClick={() => {
+                  if (!hasLivingHeroes) {
+                    sounds.playBump();
+                    setMessage("Impossible d'entrer dans le donjon : formez une escouade de vivants à la taverne d'abord !");
+                    return;
+                  }
+                  onEnterMaze();
+                }}
+                disabled={!hasLivingHeroes}
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition shadow-md ${
+                  hasLivingHeroes
+                    ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-950/30 active:scale-95'
+                    : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed opacity-60'
+                }`}
+                title={hasLivingHeroes ? "Entrer dans le donjon" : "Groupe vide ou décimé : formez une escouade à la taverne d'abord !"}
+              >
+                <DoorOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Entrer dans le Donjon</span>
+                <span className="sm:hidden">Donjon</span>
+              </button>
+            );
+          })()}
         </div>
       </div>
 

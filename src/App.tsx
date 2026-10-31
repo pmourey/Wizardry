@@ -57,8 +57,10 @@ import {
   Skull,
   Users,
   Library,
-  Keyboard
+  Keyboard,
+  Sparkles
 } from 'lucide-react';
+import { RETURN_OF_WERDNA_STARTER_PARTY } from './data/scenarios/return-of-werdnaData';
 
 export function getStorageKeysForScenario(scenarioId: string) {
   if (!scenarioId || scenarioId === 'proving-grounds') {
@@ -191,8 +193,13 @@ export default function App() {
   const sanitizeCharacterSpells = (chars: TCharacter[]): TCharacter[] =>
     chars.map(h => {
       const maxSp = getMaxCharacterSpells(h);
+      const cleanedPossessions = (h.possessions || []).filter(pos => {
+        const itm = ITEMS_DATABASE.find(i => i.id === pos.itemIndex);
+        return itm && !itm.name.startsWith('RELIC') && itm.name !== 'DUMMY';
+      });
       const copy: TCharacter = {
         ...h,
+        possessions: cleanedPossessions,
         mageSpells: (h.mageSpells || [0, 0, 0, 0, 0, 0, 0, 0]).map((v, i) => Math.min(v, maxSp.mageSpells[i] || 0)),
         priestSpells: (h.priestSpells || [0, 0, 0, 0, 0, 0, 0, 0]).map((v, i) => Math.min(v, maxSp.priestSpells[i] || 0)),
       };
@@ -268,7 +275,13 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(storageKeys.party);
       if (saved) {
-        try { return sanitizeCharacterSpells(JSON.parse(saved)); } catch (e) { /* ignore */ }
+        try {
+          const parsed = sanitizeCharacterSpells(JSON.parse(saved));
+          if (activeScenarioId === 'return-of-werdna' && (parsed.length === 0 || !parsed.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0))) {
+            return RETURN_OF_WERDNA_STARTER_PARTY.slice(0, 6);
+          }
+          return parsed;
+        } catch (e) { /* ignore */ }
       }
     }
     return getStarterPartyForScenario(activeScenarioId).slice(0, 6);
@@ -278,7 +291,13 @@ export default function App() {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(storageKeys.roster);
       if (saved) {
-        try { return sanitizeCharacterSpells(JSON.parse(saved)); } catch (e) { /* ignore */ }
+        try {
+          const parsed = sanitizeCharacterSpells(JSON.parse(saved));
+          if (activeScenarioId === 'return-of-werdna' && (parsed.length === 0 || !parsed.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0))) {
+            return RETURN_OF_WERDNA_STARTER_PARTY;
+          }
+          return parsed;
+        } catch (e) { /* ignore */ }
       }
     }
     return getStarterPartyForScenario(activeScenarioId);
@@ -418,11 +437,25 @@ export default function App() {
     if (typeof window !== 'undefined') {
       try {
         const rawP = localStorage.getItem(keys.party);
-        if (rawP) nextParty = sanitizeCharacterSpells(JSON.parse(rawP));
+        if (rawP) {
+          const parsed = sanitizeCharacterSpells(JSON.parse(rawP));
+          if (scenarioId === 'return-of-werdna' && (parsed.length === 0 || !parsed.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0))) {
+            nextParty = starter.slice(0, 6);
+          } else {
+            nextParty = parsed;
+          }
+        }
       } catch { /* ignore */ }
       try {
         const rawR = localStorage.getItem(keys.roster);
-        if (rawR) nextRoster = sanitizeCharacterSpells(JSON.parse(rawR));
+        if (rawR) {
+          const parsed = sanitizeCharacterSpells(JSON.parse(rawR));
+          if (scenarioId === 'return-of-werdna' && (parsed.length === 0 || !parsed.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0))) {
+            nextRoster = starter;
+          } else {
+            nextRoster = parsed;
+          }
+        }
       } catch { /* ignore */ }
       try {
         const rawS = localStorage.getItem(keys.session);
@@ -708,6 +741,50 @@ export default function App() {
       return true;
     }
     if (ev.type !== 'SCNMSG') return false;
+
+    // Wizardry IV: Mystical Pentagram Sanctuary (resting, healing & spell restoration)
+    const isPentagram = 
+      activeScenarioId === 'return-of-werdna' &&
+      ((ev.description && /pentagram/i.test(ev.description)) ||
+       (text && /pentagram/i.test(text)));
+
+    if (isPentagram) {
+      sounds.playFanfare();
+      setParty(prev => prev.map(hero => {
+        if (hero.status !== 'DEAD' && hero.status !== 'ASHES') {
+          const maxSp = getMaxCharacterSpells(hero);
+          return {
+            ...hero,
+            hpLeft: hero.hpMax,
+            status: 'OK',
+            poisonAmount: 0,
+            mageSpells: [...maxSp.mageSpells],
+            priestSpells: [...maxSp.priestSpells]
+          };
+        }
+        return hero;
+      }));
+
+      const pentagramLines = ev.message?.length
+        ? ev.message
+        : [
+            "Au centre brille un pentagramme d'invocation occulte.",
+            "Les runes rougeoyantes enveloppent l'Archi-Mage Werdna d'une énergie protectrice."
+          ];
+
+      announce(
+        "Sanctuaire du Pentagramme (Repos & Invocation)",
+        [
+          ...pentagramLines,
+          "✨ Points de Vie et Sorts magiques entièrement régénérés !",
+          "L'Archi-Mage Werdna et ses serviteurs sont parés pour l'assaut."
+        ],
+        undefined,
+        x,
+        y
+      );
+      return false;
+    }
 
     const onceOnly = ev.uses === 'ONCE';
     if (ev.uses === 'DISABLED') return false;
@@ -1503,6 +1580,25 @@ export default function App() {
             onClearAdventureEvents={() => setAdventureEvents([])}
             onAddAdventureEvent={addAdventureEvent}
             onEnterMaze={() => {
+              const livingHeroes = party.filter(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0);
+              if (livingHeroes.length === 0) {
+                if (activeScenarioId === 'return-of-werdna') {
+                  sounds.playFanfare();
+                  setParty(RETURN_OF_WERDNA_STARTER_PARTY.slice(0, 6));
+                  setAllCharacters(RETURN_OF_WERDNA_STARTER_PARTY);
+                } else {
+                  sounds.playBump();
+                  announce(
+                    "Donjon Inaccessible",
+                    [
+                      "Votre escouade est vide ou tous vos aventuriers sont décédés.",
+                      "Rendez-vous à la Taverne de Gilgamesh pour former une escouade de héros vivants avant de descendre dans le donjon !"
+                    ]
+                  );
+                  return;
+                }
+              }
+
               // Wizardry IV starts at level 10 (the Tomb of Werdna) at (10, 9), while scenarios 1-3 start at level 1 at (0, 0)
               const startLevel = activeScenarioId === 'return-of-werdna' ? 10 : 1;
               const startX = activeScenarioId === 'return-of-werdna' ? 10 : 0;
@@ -1577,57 +1673,146 @@ export default function App() {
           />
         )}
 
-        {/* GAME OVER CEMETERY SCREEN (WIZARDRY 1 AUTHENTIC BODY RECOVERY) */}
+        {/* GAME OVER SCREEN */}
         {!showScenarioMenu && location === 'GAME_OVER' && (
           <div className="flex flex-col items-center justify-center h-full p-6 text-center space-y-5 bg-black overflow-y-auto">
-            <div className="p-4 bg-red-950/80 border-2 border-red-700 rounded-full text-red-500 animate-pulse">
+            <div className={`p-4 rounded-full animate-pulse border-2 ${
+              activeScenarioId === 'return-of-werdna' 
+                ? 'bg-rose-950/80 border-rose-600 text-rose-500' 
+                : 'bg-red-950/80 border-red-700 text-red-500'
+            }`}>
               <Skull className="w-14 h-14" />
             </div>
             <div className="space-y-2 max-w-xl">
               <h2 className="text-2xl font-serif font-black text-white tracking-widest uppercase">
-                Escouade Décimée dans le Dédale
+                {activeScenarioId === 'return-of-werdna'
+                  ? "L'Archi-Mage Werdna a été Terrassé !"
+                  : "Escouade Décimée dans le Dédale"}
               </h2>
-              {lastWipeoutInfo ? (
-                <div className="p-3 bg-red-950/40 border border-red-900/60 rounded-xl text-xs text-red-300 space-y-1">
-                  <div className="font-bold text-red-200">
-                    Dernières coordonnées connues : Niveau {lastWipeoutInfo.level}, position ({lastWipeoutInfo.x}, {lastWipeoutInfo.y})
+
+              {activeScenarioId === 'return-of-werdna' ? (
+                <div className="p-4 bg-rose-950/40 border border-rose-900/60 rounded-xl text-xs text-rose-200 space-y-2">
+                  <div className="font-bold text-rose-100 text-sm">
+                    Fin de la Quête de Vengeance
                   </div>
-                  <div className="text-[11px] text-slate-400">
-                    Héros tombés : {lastWipeoutInfo.heroes.join(', ')}
-                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Les groupes d'aventuriers envoyés par l'Overlord Trebor ont percé vos défenses et détruit votre enveloppe charnelle.
+                    Dans <em>Wizardry IV</em>, vous êtes le maître du donjon : aucune garnison royale de Trebor ne viendra vous secourir !
+                  </p>
                 </div>
-              ) : null}
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Selon le code originel de Wizardry, un groupe d'aventuriers anéanti ne peut plus se déplacer, combattre ni regagner le château.
-                Leurs corps restent étendus dans le donjon à moins qu'une <strong>escouade de secours</strong> ne vienne les récupérer (chaque dépouille occupe un emplacement du groupe).
-              </p>
+              ) : (
+                <>
+                  {lastWipeoutInfo ? (
+                    <div className="p-3 bg-red-950/40 border border-red-900/60 rounded-xl text-xs text-red-300 space-y-1">
+                      <div className="font-bold text-red-200">
+                        Dernières coordonnées connues : Niveau {lastWipeoutInfo.level}, position ({lastWipeoutInfo.x}, {lastWipeoutInfo.y})
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Héros tombés : {lastWipeoutInfo.heroes.join(', ')}
+                      </div>
+                    </div>
+                  ) : null}
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Selon le code originel de Wizardry, un groupe d'aventuriers anéanti ne peut plus se déplacer, combattre ni regagner le château.
+                    Leurs corps restent étendus dans le donjon à moins qu'une <strong>escouade de secours</strong> ne vienne les récupérer (chaque dépouille occupe un emplacement du groupe).
+                  </p>
+                </>
+              )}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 max-w-lg w-full pt-2">
-              <button
-                onClick={() => {
-                  setLocation('CASTLE');
-                  setPosX(0);
-                  setPosY(0);
-                  setDirection(0);
-                }}
-                className="flex-1 py-3 px-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-2"
-                title="Former une escouade de secours à la taverne et s'aventurer dans le donjon"
-              >
-                <Users className="w-4 h-4" />
-                <span>Former une escouade de secours</span>
-              </button>
+            {activeScenarioId === 'return-of-werdna' ? (
+              <div className="flex flex-col sm:flex-row gap-3 max-w-lg w-full pt-2">
+                <button
+                  onClick={() => {
+                    sounds.playFanfare();
+                    const revivedWerdna: TCharacter = {
+                      ...RETURN_OF_WERDNA_STARTER_PARTY[0],
+                      status: 'OK',
+                      hpLeft: RETURN_OF_WERDNA_STARTER_PARTY[0].hpMax,
+                      mageSpells: [0, 4, 0, 0, 0, 0, 0, 0],
+                      priestSpells: [0, 0, 0, 0, 0, 0, 0, 0]
+                    };
+                    const starterMinions = RETURN_OF_WERDNA_STARTER_PARTY.slice(1).map(m => ({
+                      ...m,
+                      status: 'OK' as const,
+                      hpLeft: m.hpMax
+                    }));
+                    const newParty = [revivedWerdna, ...starterMinions];
+                    setParty(newParty);
+                    setAllCharacters(newParty);
+                    setDungeonLevel(10);
+                    const l10Maze = getMazeForFloor(10);
+                    setMaze(l10Maze);
+                    setPosX(10);
+                    setPosY(9);
+                    setDirection(0);
+                    setLocation('MAZE');
+                  }}
+                  className="flex-1 py-3 px-4 bg-rose-700 hover:bg-rose-600 text-white font-bold rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Ressusciter au Tombeau de Werdna (Niv. 10)</span>
+                </button>
 
-              <button
-                onClick={handleEmergencyGuardRetrieval}
-                className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-amber-600/40 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
-                title="Rapatrier les corps au château pour les ressusciter au Temple de Cant"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Rapatrier par les gardes de Trebor</span>
-              </button>
-            </div>
+                <button
+                  onClick={() => {
+                    sounds.playFanfare();
+                    const revivedWerdna: TCharacter = {
+                      ...RETURN_OF_WERDNA_STARTER_PARTY[0],
+                      status: 'OK',
+                      hpLeft: RETURN_OF_WERDNA_STARTER_PARTY[0].hpMax,
+                      mageSpells: [0, 4, 0, 0, 0, 0, 0, 0],
+                      priestSpells: [0, 0, 0, 0, 0, 0, 0, 0]
+                    };
+                    const starterMinions = RETURN_OF_WERDNA_STARTER_PARTY.slice(1).map(m => ({
+                      ...m,
+                      status: 'OK' as const,
+                      hpLeft: m.hpMax
+                    }));
+                    const newParty = [revivedWerdna, ...starterMinions];
+                    setParty(newParty);
+                    setAllCharacters(newParty);
+                    const lvlMaze = getMazeForFloor(dungeonLevel);
+                    setMaze(lvlMaze);
+                    const safeX = dungeonLevel === 10 ? 10 : (dungeonLevel === 9 ? 10 : (dungeonLevel % 2 === 0 ? 14 : 6));
+                    const safeY = dungeonLevel === 10 ? 9 : (dungeonLevel === 9 ? 18 : (dungeonLevel % 2 === 0 ? 14 : 6));
+                    setPosX(safeX);
+                    setPosY(safeY);
+                    setDirection(0);
+                    setLocation('MAZE');
+                  }}
+                  className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-white border border-rose-600/40 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Ressusciter au début du Niveau {dungeonLevel}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3 max-w-lg w-full pt-2">
+                <button
+                  onClick={() => {
+                    setLocation('CASTLE');
+                    setPosX(0);
+                    setPosY(0);
+                    setDirection(0);
+                  }}
+                  className="flex-1 py-3 px-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-2"
+                  title="Former une escouade de secours à la taverne et s'aventurer dans le donjon"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Former une escouade de secours</span>
+                </button>
 
+                <button
+                  onClick={handleEmergencyGuardRetrieval}
+                  className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-amber-600/40 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+                  title="Rapatrier les corps au château pour les ressusciter au Temple de Cant"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>Rapatrier par les gardes de Trebor</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 

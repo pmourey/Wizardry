@@ -71,10 +71,23 @@ export function generateChestReward(level: number): ChestReward {
   // Item reward (chance to get a drop)
   let itemFound: TItem | null = null;
   if (Math.random() * 100 < 65) {
-    // Pick appropriate tier item
-    const eligibleItems = ITEMS_DATABASE.filter(it => it.id > 0 && it.id !== 94 && it.price <= (level * 800 + 100));
+    // Pick appropriate tier item (strictly filter out RELIC placeholders, dummies, and unidentified tokens)
+    const isValidChestItem = (it: TItem) =>
+      it.id > 0 &&
+      it.id !== 94 &&
+      !it.name.startsWith('RELIC') &&
+      !it.identifiedName?.startsWith('RELIC') &&
+      it.name !== 'DUMMY' &&
+      it.name !== 'UNIDENTIFIED';
+
+    const eligibleItems = ITEMS_DATABASE.filter(it => isValidChestItem(it) && it.price <= (level * 800 + 100));
     if (eligibleItems.length > 0) {
       itemFound = eligibleItems[Math.floor(Math.random() * eligibleItems.length)];
+    } else {
+      const fallbackItems = ITEMS_DATABASE.filter(isValidChestItem);
+      if (fallbackItems.length > 0) {
+        itemFound = fallbackItems[Math.floor(Math.random() * fallbackItems.length)];
+      }
     }
   }
 

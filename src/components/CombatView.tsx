@@ -76,6 +76,13 @@ export const CombatView: React.FC<CombatViewProps> = ({
     return firstAlive >= 0 ? firstAlive : 0;
   });
 
+  // If no heroes are alive at all (e.g. entered combat with 0 characters), immediately trigger defeat
+  useEffect(() => {
+    if (!party || party.length === 0 || !party.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0)) {
+      onPartyWipedOut();
+    }
+  }, [party, onPartyWipedOut]);
+
   // Keep target group pointing to a living group
   useEffect(() => {
     const isCurrentTargetAlive = groups[selectedTargetGroupIdx]?.instances.some(
