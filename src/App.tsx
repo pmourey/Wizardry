@@ -330,6 +330,7 @@ export default function App() {
   // Combat & Chest State
   const [combatGroups, setCombatGroups] = useState<CombatGroup[]>(() => savedSession?.combatGroups || []);
   const [combatSurprise, setCombatSurprise] = useState<'PARTY' | 'MONSTERS' | 'NONE'>(() => savedSession?.combatSurprise || 'NONE');
+  const [combatFriendly, setCombatFriendly] = useState<boolean>(false);
   const [chestReward, setChestReward] = useState<ChestReward | null>(() => savedSession?.chestReward || null);
   const [pendingCombatEventKey, setPendingCombatEventKey] = useState<string | null>(null);
 
@@ -1051,6 +1052,7 @@ export default function App() {
     const encounter = initCombatEncounter(dungeonLevel, specialMonsterId, { enemyCalc: maze.enemyCalc }, party);
     setCombatGroups(encounter.groups);
     setCombatSurprise(encounter.surprise);
+    setCombatFriendly(encounter.friendly);
     setLocation('COMBAT');
   };
 
@@ -1672,10 +1674,22 @@ export default function App() {
             setParty={setParty}
             groups={combatGroups}
             surprise={combatSurprise}
+            friendly={combatFriendly}
             mazeLevel={dungeonLevel}
             acModifier={acModifier}
             onSpellEffects={handleCombatSpellEffects}
             onCombatEnd={handleCombatEnd}
+            onFriendlyLeave={() => {
+              addAdventureEvent(
+                'COMBAT',
+                'Rencontre pacifique salutaire',
+                'Votre escouade a salué des créatures amicales et a poursuivi son chemin sans effusion de sang.',
+                undefined,
+                dungeonLevel,
+                { x: posX, y: posY }
+              );
+              setLocation('MAZE');
+            }}
           />
         )}
 

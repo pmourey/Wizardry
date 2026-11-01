@@ -247,8 +247,27 @@ export function initCombatEncounter(
   if (surpriseRoll < 15) surprise = 'PARTY';
   else if (surpriseRoll > 85) surprise = 'MONSTERS';
 
-  // Friendly encounter roll
-  const friendly = Math.random() * 100 < 10 && primaryMonster.monsterClass === 0;
+  // Authentic Pascal FRIENDLY procedure (pascal_source/Wizardry1_UCSD_Pascal.pas l. 4077-4132):
+  // 1. Must have at least one GOOD character in the active party:
+  const hasGoodHero = party ? party.some(h => h.align === 'GOOD' && h.status !== 'DEAD' && h.status !== 'ASHES') : false;
+  let friendly = false;
+  if (hasGoodHero) {
+    const zero99 = Math.floor(Math.random() * 100);
+    let threshold = 50;
+    switch (primaryMonster.monsterClass) {
+      case 0: threshold = 60; break; // Fighter: 10%
+      case 1: threshold = 55; break; // Mage: 5%
+      case 2: threshold = 65; break; // Priest: 15%
+      case 3: threshold = 53; break; // Thief: 3%
+      case 4: threshold = 80; break; // Bishop / Little Old Man (Dink): 30%
+      case 7: threshold = 75; break; // Dragon: 25%
+      default: threshold = 50; break; // Other classes (Undead, Giant, Demon, etc.): 0%
+    }
+    if (zero99 >= 50 && zero99 < threshold) {
+      friendly = true;
+      surprise = 'NONE'; // Friendly monsters never trigger surprise attacks
+    }
+  }
 
   // Pascal FRIENDLY encounter (pascal_source/Wizardry1_UCSD_Pascal.pas l. 4109):
   // When an encounter is friendly, all groups are immediately identified.

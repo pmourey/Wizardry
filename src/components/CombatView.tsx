@@ -42,7 +42,10 @@ import {
   Target,
   FileText,
   FlaskConical,
-  Package
+  Package,
+  Trophy,
+  Handshake,
+  Check
 } from 'lucide-react';
 import { getActiveStatusEffects } from '../engine/statusSystem';
 
@@ -51,10 +54,12 @@ interface CombatViewProps {
   setParty: React.Dispatch<React.SetStateAction<TCharacter[]>>;
   groups: CombatGroup[];
   surprise: 'PARTY' | 'MONSTERS' | 'NONE';
+  friendly?: boolean;
   mazeLevel?: number;
   acModifier?: number;
   onSpellEffects?: (effects: CombatEffects) => void;
   onCombatEnd: (won: boolean, fled: boolean, alarmTriggered: boolean, effects?: CombatEffects) => void;
+  onFriendlyLeave?: () => void;
 }
 
 export const CombatView: React.FC<CombatViewProps> = ({
@@ -62,12 +67,17 @@ export const CombatView: React.FC<CombatViewProps> = ({
   setParty,
   groups,
   surprise,
+  friendly = false,
   mazeLevel = 1,
   acModifier = 0,
   onSpellEffects,
-  onCombatEnd
+  onCombatEnd,
+  onFriendlyLeave
 }) => {
   const [pendingSpell, setPendingSpell] = useState<TSpell | null>(null);
+  const [victoryPending, setVictoryPending] = useState<{ alarmTriggered: boolean } | null>(null);
+  const [isFriendlyEncounter, setIsFriendlyEncounter] = useState<boolean>(() => Boolean(friendly));
+  const [friendlyAlert, setFriendlyAlert] = useState<string | null>(null);
   const acModifierRef = React.useRef(acModifier);
   acModifierRef.current = acModifier;
 
@@ -209,7 +219,8 @@ export const CombatView: React.FC<CombatViewProps> = ({
 
     if (!result.monstersAlive) {
       sounds.playFanfare();
-      setTimeout(() => onCombatEnd(true, false, result.alarmTriggered), 2000);
+      setIsResolving(false);
+      setVictoryPending({ alarmTriggered: result.alarmTriggered });
       return;
     }
 
@@ -254,7 +265,8 @@ export const CombatView: React.FC<CombatViewProps> = ({
 
     if (!result.monstersAlive) {
       sounds.playFanfare();
-      setTimeout(() => onCombatEnd(true, false, result.alarmTriggered), 2000);
+      setIsResolving(false);
+      setVictoryPending({ alarmTriggered: result.alarmTriggered });
       return;
     }
 
@@ -264,6 +276,57 @@ export const CombatView: React.FC<CombatViewProps> = ({
       setCurrentHeroIdx(0);
       setIsResolving(false);
     }, 1200);
+  };
+
+  // Keyboard shortcut for Victory prompt (Enter, Space, C)
+  useEffect(() => {
+    if (!victoryPending) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        onCombatEnd(true, false, victoryPending.alarmTriggered);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [victoryPending, onCombatEnd]);
+
+  // Authentic Pascal FRIENDLY encounter handlers (COMBAT.TEXT l. 257-312)
+  const handleFriendlyLeave = () => {
+    // Sparing a friendly group: Evil party members have a 5% chance to reconsider and become Neutral
+    let anyAlignmentChanged = false;
+    const updatedParty = party.map(h => {
+      if (h.align === 'EVIL' && Math.random() < 0.05) {
+        anyAlignmentChanged = true;
+        return { ...h, align: 'NEUTRAL' as const };
+      }
+      return h;
+    });
+    if (anyAlignmentChanged) {
+      setParty(updatedParty);
+    }
+    if (onFriendlyLeave) {
+      onFriendlyLeave();
+    } else {
+      onCombatEnd(false, true, false);
+    }
+  };
+
+  const handleFriendlyFight = () => {
+    // Betraying a friendly group: Good party members risk corrupting their alignment to EVIL (10% chance)
+    const corrupted: string[] = [];
+    const updatedParty = party.map(h => {
+      if (h.align === 'GOOD' && Math.random() < 0.10) {
+        corrupted.push(h.name);
+        return { ...h, align: 'EVIL' as const };
+      }
+      return h;
+    });
+    if (corrupted.length > 0) {
+      setParty(updatedParty);
+      setFriendlyAlert(`⚠️ Trahison impardonnable ! Attaquer des créatures pacifiques a corrompu l'âme de : ${corrupted.join(', ')} (Alignement devenu MAUVAIS !)`);
+    }
+    setIsFriendlyEncounter(false);
   };
 
   // Learned combat spells for active hero
@@ -558,8 +621,72 @@ export const CombatView: React.FC<CombatViewProps> = ({
         </div>
       )}
 
+      {/* Friendly Encounter Banner (PROCEDURE FRIENDLY, COMBAT.TEXT l. 290-302) */}
+      {isFriendlyEncounter && !isResolving && (
+        <div className="bg-emerald-950/70 border border-emerald-500/70 p-4 sm:p-5 rounded-xl max-w-3xl mx-auto w-full text-center space-y-3 shadow-2xl">
+          <div className="text-sm sm:text-base font-bold text-emerald-300 flex items-center justify-center gap-2">
+            <Handshake className="w-5 h-5 text-emerald-400" />
+            <span>Rencontre Pacifique !</span>
+          </div>
+          <div className="text-xs sm:text-sm text-slate-200">
+            Un groupe amical de <strong className="text-amber-300">
+              {groups[0]?.monster.namePlural || groups[0]?.monster.name || 'créatures'}
+            </strong> s'approche pacifiquement.
+          </div>
+          <p className="text-xs text-emerald-200/90 italic max-w-lg mx-auto">
+            « Ils vous saluent cordialement et ne manifestent aucune hostilité. Vous pouvez les laisser en paix ou les attaquer ! »
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
+            <button
+              onClick={handleFriendlyLeave}
+              className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer"
+            >
+              <Check className="w-4 h-4" />
+              <span>(L) Les laisser en paix</span>
+            </button>
+            <button
+              onClick={handleFriendlyFight}
+              className="px-5 py-2.5 bg-red-800 hover:bg-red-700 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer"
+              title="Attaquer un groupe amical risque de corrompre l'alignement des héros Bons vers Mauvais !"
+            >
+              <Swords className="w-4 h-4" />
+              <span>(F) Attaquer sans pitié</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Friendly Betrayal Alert Banner */}
+      {friendlyAlert && (
+        <div className="bg-amber-950/80 border border-amber-600/80 p-3 rounded-xl max-w-3xl mx-auto w-full text-center text-xs text-amber-200 font-semibold shadow-lg">
+          {friendlyAlert}
+        </div>
+      )}
+
+      {/* Victory Prompt Panel (Replaces auto-timeout so player can review combat log) */}
+      {victoryPending && (
+        <div className="bg-emerald-950/80 border border-emerald-500/80 p-4 sm:p-5 rounded-xl max-w-3xl mx-auto w-full text-center space-y-3 shadow-2xl animate-fade-in">
+          <div className="text-sm sm:text-base font-bold text-emerald-300 flex items-center justify-center gap-2">
+            <Trophy className="w-5 h-5 text-amber-400 animate-bounce" />
+            <span>Tous les monstres ont été vaincus !</span>
+          </div>
+          <p className="text-xs sm:text-sm text-emerald-200/90 max-w-lg mx-auto">
+            Votre escouade triomphe de l'affrontement ! Prenez le temps de consulter le journal de combat ci-dessus avant de continuer.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={() => onCombatEnd(true, false, victoryPending.alarmTriggered)}
+              className="px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition transform active:scale-95 inline-flex items-center gap-2 cursor-pointer"
+            >
+              <span>Continuer vers les récompenses</span>
+              <kbd className="px-1.5 py-0.5 bg-black/30 border border-amber-300/40 rounded text-[10px] font-mono">Entrée ↵</kbd>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Command Panel for Active Hero */}
-      {!isResolving && currentSurprise !== 'MONSTERS' && !allHelpless && activeHero && (
+      {!isResolving && currentSurprise !== 'MONSTERS' && !allHelpless && !victoryPending && !isFriendlyEncounter && activeHero && (
         <div className="bg-slate-900/90 border border-slate-800 p-3 sm:p-5 rounded-xl space-y-3 sm:space-y-4 max-w-3xl mx-auto w-full shadow-lg">
           {(() => {
             const heroPartyIdx = party.findIndex(p => p.id === activeHero.id);
