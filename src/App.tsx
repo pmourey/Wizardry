@@ -1683,8 +1683,6 @@ export default function App() {
               sounds.playDoor();
             }}
             onOpenPySide6Export={isItchioBuild ? undefined : () => setShowPySide6Export(true)}
-            onCheatRestoreParty={isItchioBuild ? undefined : handleCheatRestoreParty}
-            onOpenCheatModal={isItchioBuild ? undefined : () => setShowCheatModal(true)}
           />
         )}
 
