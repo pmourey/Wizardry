@@ -110,7 +110,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
   // Determine size & dimensions based on variant & mode
   const { cellSize, svgWidth, svgHeight, startX, endX, startY, endY, cols, rows } = useMemo(() => {
     if (viewMode === 'radar') {
-      const size = variant === 'modal' ? 36 : 22;
+      const size = variant === 'modal' ? 36 : 30;
       const count = radarRadius * 2 + 1; // 7
       return {
         cellSize: size,
@@ -125,7 +125,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       };
     } else {
       // Full 20x20
-      const size = variant === 'modal' ? 18 : 10;
+      const size = variant === 'modal' ? 18 : 11;
       return {
         cellSize: size,
         svgWidth: 20 * size,
@@ -222,22 +222,20 @@ export const MiniMap: React.FC<MiniMapProps> = ({
         ? 'bg-slate-900 border border-slate-700 rounded-xl sm:rounded-2xl shadow-2xl p-2.5 sm:p-5 max-w-lg w-full max-h-[92vh] overflow-y-auto safe-top safe-bottom' 
         : variant === 'sidebar'
         ? 'bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-3'
-        : 'bg-slate-950/90 backdrop-blur-md border border-slate-800/90 rounded-xl shadow-2xl p-2 sm:p-3 w-auto'
+        : 'bg-slate-950/90 backdrop-blur-md border border-slate-800/90 rounded-xl shadow-2xl p-2 sm:p-3 w-[260px] sm:w-[280px]'
     }`}>
-      {/* Header bar */}
+      {/* Header bar: Title & Actions */}
       <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800/80 gap-1.5">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="p-1 bg-amber-500/10 border border-amber-500/30 rounded text-amber-400 shrink-0">
             <Compass className="w-3.5 h-3.5" />
           </div>
-          <div className="flex items-center gap-1.5 text-xs font-bold text-white min-w-0">
-            <span className="text-[10px] text-amber-400 bg-amber-950/50 px-1.5 py-0.2 rounded border border-amber-600/30 font-mono shrink-0">
-              Niv. {maze.level}
-            </span>
-            <span className="text-[11px] text-slate-300 font-mono truncate">
-              ({x},{y}) <strong className="text-amber-300">{dirNames[direction]}</strong>
-            </span>
-          </div>
+          <span className="text-xs font-bold text-white tracking-wide shrink-0">
+            Minicarte
+          </span>
+          <span className="text-[10px] text-amber-400 bg-amber-950/50 px-1.5 py-0.2 rounded border border-amber-600/30 font-mono font-bold shrink-0">
+            Niv. {maze.level}
+          </span>
         </div>
 
         {/* Toolbar Buttons */}
@@ -298,6 +296,29 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               <X className="w-3.5 h-3.5" />
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Position & Orientation Status Strip with Compass (Outside the map to never obstruct tiles or be truncated) */}
+      <div className="flex items-center justify-between px-2 py-1 bg-slate-900/90 border border-slate-800/90 rounded-lg text-xs font-mono mb-1.5 shadow-inner">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[10px] text-slate-400 uppercase font-semibold shrink-0">Pos :</span>
+          <span className="text-xs font-bold text-amber-300 font-mono bg-slate-950/90 px-1.5 py-0.5 rounded border border-slate-800 shrink-0">
+            ({x}, {y})
+          </span>
+          <span className="text-[11px] font-bold text-white font-mono truncate">
+            {dirNames[direction]}
+          </span>
+        </div>
+
+        {/* Orientation Compass Rose (N / O / E / S) */}
+        <div className="bg-slate-950/90 border border-slate-800/90 px-1.5 py-0.5 rounded text-[8px] font-mono flex flex-col items-center leading-none select-none shrink-0" title={`Orientation : ${dirNames[direction]}`}>
+          <span className={direction === 0 ? 'text-amber-400 font-bold' : 'text-slate-600'}>N</span>
+          <div className="flex gap-2.5 my-0.5">
+            <span className={direction === 3 ? 'text-amber-400 font-bold' : 'text-slate-600'}>O</span>
+            <span className={direction === 1 ? 'text-amber-400 font-bold' : 'text-slate-600'}>E</span>
+          </div>
+          <span className={direction === 2 ? 'text-amber-400 font-bold' : 'text-slate-600'}>S</span>
         </div>
       </div>
 
@@ -624,16 +645,6 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             </g>
           )}
         </svg>
-
-        {/* Orientation Compass Rose in top-right corner */}
-        <div className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-sm border border-slate-700/60 p-1 rounded-md text-[9px] font-mono text-center flex flex-col items-center">
-          <span className={direction === 0 ? 'text-amber-400 font-bold' : 'text-slate-500'}>N</span>
-          <div className="flex gap-2">
-            <span className={direction === 3 ? 'text-amber-400 font-bold' : 'text-slate-500'}>O</span>
-            <span className={direction === 1 ? 'text-amber-400 font-bold' : 'text-slate-500'}>E</span>
-          </div>
-          <span className={direction === 2 ? 'text-amber-400 font-bold' : 'text-slate-500'}>S</span>
-        </div>
       </div>
 
       {/* Legend Drawer / Strip */}
