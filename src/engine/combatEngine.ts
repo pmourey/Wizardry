@@ -181,17 +181,21 @@ const rollDice = (d?: { level?: number; hpFac?: number; hpMinAdd?: number }): nu
   return Math.max(1, total);
 };
 
-const makeGroup = (monster: TMonster, forcedCount?: number): CombatGroup => {
+const makeMonsterInstance = (monster: TMonster): CombatMonsterInstance => {
   const hpRec = monster.hp || {
     level: monster.level || 1,
     hpFac: (monster as any).hpFac || 8,
     hpMinAdd: (monster as any).hpMinAdd || 4
   };
+  const hp = Math.max(1, rollDice(hpRec));
+  return { monsterId: monster.id, hpLeft: hp, maxHp: hp, status: 'OK', acMod: 0, silencedRounds: 0 };
+};
+
+const makeGroup = (monster: TMonster, forcedCount?: number): CombatGroup => {
   const count = Math.max(1, Math.min(9, forcedCount ?? (monster.appear ? rollDice(monster.appear) : 1)));
   const instances: CombatMonsterInstance[] = [];
   for (let i = 0; i < count; i++) {
-    const hp = Math.max(1, rollDice(hpRec));
-    instances.push({ monsterId: monster.id, hpLeft: hp, maxHp: hp, status: 'OK', acMod: 0, silencedRounds: 0 });
+    instances.push(makeMonsterInstance(monster));
   }
   return { monster, identified: false, count, aliveCount: count, instances };
 };
@@ -774,7 +778,16 @@ function executeMonsterTurn(
   parryingHeroIds: Set<string> = new Set()
 ) {
   const monster = group.monster;
-  const monsterName = group.identified ? monster.name : monster.nameUnknown;
+  const monsterName = group.identified 
+    ? (group.aliveCount > 1 ? (monster.namePlural || monster.name) : monster.name)
+    : (group.aliveCount > 1 ? (monster.nameUnknownPlural || monster.nameUnknown) : monster.nameUnknown);
+
+  // 0. Passive HP Regeneration (HEALPTS, Pascal COMBAT3.TEXT l. 53)
+  if (monster.healPts > 0 && inst.hpLeft > 0 && inst.hpLeft < inst.maxHp) {
+    const healed = Math.min(monster.healPts, inst.maxHp - inst.hpLeft);
+    inst.hpLeft += healed;
+    log.push(`💚 ${monsterName} régénère ses chairs blessées (+${healed} PV) !`);
+  }
 
   // Conscious living heroes
   const livingHeroes = party
@@ -783,27 +796,8 @@ function executeMonsterTurn(
 
   if (livingHeroes.length === 0) return;
 
-  // 1. Dragon breath weapon check
-  if (monster.breathe > 0 && Math.random() * 100 < 50) {
-    const breathDmg = Math.floor(inst.hpLeft / 2);
-    log.push(`🔥 ${monsterName} souffle un cône de feu incandescent !`);
-    livingHeroes.forEach(({ hero }) => {
-      // Save vs breath using Luck
-      const saved = Math.random() * 20 < hero.luckSkill[3];
-      const actualDmg = saved ? Math.floor(breathDmg / 2) : breathDmg;
-      hero.hpLeft -= actualDmg;
-      log.push(`${hero.name} subit ${actualDmg} dégâts de souffle${saved ? ' (jet de sauvegarde réussi)' : ''} !`);
-      if (hero.hpLeft <= 0) {
-        hero.status = 'DEAD';
-        hero.hpLeft = 0;
-        log.push(`💀 ${hero.name} succombe aux flammes du dragon !`);
-      }
-    });
-    return;
-  }
-
-  // 2. Monster Spellcasting check (Blocked if monster is silenced)
-  if ((monster.mageSpells > 0 || monster.priestSpells > 0) && Math.random() * 100 < 60 && inst.silencedRounds === 0) {
+  // 1. Monster Spellcasting check (ENEMYSPL, Pascal COMBAT2.TEXT l. 605)
+  if ((monster.mageSpells > 0 || monster.priestSpells > 0) && Math.random() * 100 < 75 && inst.silencedRounds === 0) {
     const spellRoll = Math.random() * 100;
     const target = livingHeroes[Math.floor(Math.random() * livingHeroes.length)].hero;
 
@@ -828,11 +822,33 @@ function executeMonsterTurn(
       return;
     }
 
-    // Direct damage spell
-    log.push(`⚡ ${monsterName} incante un trait ténébreux !`);
-    const spellDmg = Math.floor(Math.random() * 12) + 4;
+    // Direct damage spell (tier-based)
+    const spellTier = Math.max(monster.mageSpells, monster.priestSpells);
+    let spellDmg = Math.floor(Math.random() * 12) + 4;
+    let spellName = 'HALITO';
+    if (spellTier >= 7) {
+      spellName = 'TILTOWAI';
+      spellDmg = rollDice({ level: 10, hpFac: 15, hpMinAdd: 0 });
+      log.push(`💥 ${monsterName} déchaîne l'apocalypse de TILTOWAI sur toute l'escouade !`);
+      livingHeroes.forEach(({ hero: h }) => {
+        const saved = Math.random() * 20 < (h.luckSkill?.[3] ?? 10);
+        const actualDmg = saved ? Math.floor(spellDmg / 2) : spellDmg;
+        h.hpLeft -= actualDmg;
+        log.push(`${h.name} subit ${actualDmg} dégâts dévastateurs (${h.hpLeft}/${h.hpMax} PV) !`);
+        if (h.hpLeft <= 0) { h.status = 'DEAD'; h.hpLeft = 0; log.push(`💀 ${h.name} est désintégré !`); }
+      });
+      return;
+    } else if (spellTier >= 5) {
+      spellName = 'MADALTO';
+      spellDmg = rollDice({ level: 8, hpFac: 8, hpMinAdd: 0 });
+    } else if (spellTier >= 3) {
+      spellName = 'MAHALITO';
+      spellDmg = rollDice({ level: 4, hpFac: 6, hpMinAdd: 0 });
+    }
+
+    log.push(`⚡ ${monsterName} incante ${spellName} !`);
     target.hpLeft -= spellDmg;
-    log.push(`${target.name} est frappé pour ${spellDmg} dégâts (${target.hpLeft}/${target.hpMax} PV) !`);
+    log.push(`${target.name} est frappé de plein fouet pour ${spellDmg} dégâts (${target.hpLeft}/${target.hpMax} PV) !`);
     if (target.hpLeft <= 0) {
       target.status = 'DEAD';
       target.hpLeft = 0;
@@ -841,10 +857,64 @@ function executeMonsterTurn(
     return;
   }
 
-  // 3. Physical Melee Attack against hero
-  // According to Pascal Wizardry 1 (line 4840: CHARX := CHARX MOD 3):
-  // Only the first 3 characters (front rank) can be attacked in physical melee.
-  // If all front rank characters are dead or fallen, the front line collapses and remaining living heroes are reached.
+  // 2. Dragon breath weapon check (BREATHES, Pascal COMBAT2.TEXT l. 633)
+  if (monster.breathe > 0 && Math.random() * 100 < 60) {
+    const breathDmg = Math.max(1, Math.floor(inst.hpLeft / 2));
+    log.push(`🔥 ${monsterName} souffle un cône d'énergie destructrice !`);
+    livingHeroes.forEach(({ hero }) => {
+      // Save vs breath using Luck
+      const saved = Math.random() * 20 < (hero.luckSkill?.[3] ?? 10);
+      const actualDmg = saved ? Math.floor(breathDmg / 2) : breathDmg;
+      hero.hpLeft -= actualDmg;
+      log.push(`${hero.name} subit ${actualDmg} dégâts${saved ? ' (jet de sauvegarde réussi)' : ''} !`);
+      if (hero.hpLeft <= 0) {
+        hero.status = 'DEAD';
+        hero.hpLeft = 0;
+        log.push(`💀 ${hero.name} succombe au souffle mortel !`);
+      }
+    });
+    return;
+  }
+
+  // 3. Call for help check (YELLHELP, Pascal COMBAT2.TEXT l. 612 & COMBAT5.TEXT l. 441)
+  if (monster.specialPower?.callHelp) {
+    if (group.aliveCount < 9) {
+      // Pascal condition: (RANDOM MOD 200) <= 10 * LEVEL
+      // For level 100 (FUZZBALL), 10 * 100 = 1000 >= 200 -> 100% success rate!
+      const callRoll = Math.floor(Math.random() * 200);
+      if (callRoll <= 10 * (monster.level || 1)) {
+        group.instances.push(makeMonsterInstance(monster));
+        group.aliveCount = group.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length;
+        group.count = group.instances.length;
+        log.push(`📢 ${monsterName} pousse un cri strident d'appel à l'aide... et des renforts surgissent (+1 ${monsterName}) !`);
+        return;
+      } else {
+        log.push(`📢 ${monsterName} appelle désespérément à l'aide, mais aucun renfort ne répond !`);
+        return;
+      }
+    }
+  }
+
+  // 4. Monster flee check (RUNENMY, Pascal COMBAT2.TEXT l. 622 & COMBAT5.TEXT l. 464)
+  if (monster.specialPower?.fleeChance) {
+    // For DINK (or cowardly monsters), high chance to flee
+    if (Math.random() * 100 < 65) {
+      inst.status = 'DEAD';
+      inst.hpLeft = 0;
+      group.aliveCount = group.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length;
+      log.push(`💨 Pris de panique, ${monsterName} prend ses jambes à son cou et s'enfuit du donjon !`);
+      return;
+    }
+  }
+
+  // 5. Physical Melee Attack against hero (DOFIGHT)
+  // If monster has 0 attacks (e.g. FUZZBALL), it cannot execute melee attacks
+  const attackCount = monster.attackCount ?? 0;
+  if (attackCount === 0 || !monster.attacks || monster.attacks.length === 0) {
+    log.push(`${monsterName} frétille sur place mais ne dispose d'aucune attaque physique.`);
+    return;
+  }
+
   const frontRankCandidates = livingHeroes.filter(item => item.index < 3);
   const eligibleMeleeTargets = frontRankCandidates.length > 0 ? frontRankCandidates : livingHeroes;
   const chosenTarget = eligibleMeleeTargets[Math.floor(Math.random() * eligibleMeleeTargets.length)].hero;
@@ -857,16 +927,11 @@ function executeMonsterTurn(
   let totalDmg = 0;
   let hits = 0;
 
-  const attackCount = monster.attackCount ?? (monster as any).swingCount ?? 1;
-  const attacksList = (monster.attacks && monster.attacks.length > 0)
-    ? monster.attacks
-    : [(monster as any).wepDamage || { level: 1, hpFac: 6, hpMinAdd: 1 }];
-
   for (let a = 0; a < attackCount; a++) {
     const roll = Math.floor(Math.random() * 20) + 1;
     if (roll >= toHitThreshold) {
       hits++;
-      const attackSpec = attacksList[a] || attacksList[0];
+      const attackSpec = monster.attacks[a] || monster.attacks[0];
       const dam = Math.max(1, rollDice(attackSpec));
       totalDmg += dam;
     }
@@ -876,7 +941,7 @@ function executeMonsterTurn(
     log.push(`${monsterName} tente d'attaquer ${chosenTarget.name} mais manque.`);
   } else {
     chosenTarget.hpLeft -= totalDmg;
-    log.push(`${monsterName} frappe ${chosenTarget.name} pour ${totalDmg} dégâts (${chosenTarget.hpLeft}/${chosenTarget.hpMax} PV) !`);
+    log.push(`${monsterName} frappe ${chosenTarget.name} ${hits > 1 ? `(${hits} coups)` : ''} pour ${totalDmg} dégâts (${chosenTarget.hpLeft}/${chosenTarget.hpMax} PV) !`);
 
     // Waking up if sleeping and took damage
     if (chosenTarget.status === 'ASLEEP' && chosenTarget.hpLeft > 0) {
@@ -884,31 +949,61 @@ function executeMonsterTurn(
       log.push(`⚡ La douleur du coup réveille brutalement ${chosenTarget.name} !`);
     }
 
-    // Special status effects (Drain Level, Poison, Paralyze, Sleep)
+    // Authentic Pascal Special Attack Status Effects (CASEDAMG, Pascal COMBAT5.TEXT l. 220-235)
+    // A. Drain Energy Levels
     if (monster.drainAmount > 0) {
       chosenTarget.charLevel = Math.max(1, chosenTarget.charLevel - monster.drainAmount);
       log.push(`⚠️ ATTENTION ! ${chosenTarget.name} se fait aspirer son énergie vitale (-${monster.drainAmount} NIVEAU) !`);
     }
 
-    if (monster.specialPower.poison && Math.random() * 100 < 45) {
-      chosenTarget.poisonAmount = (chosenTarget.poisonAmount || 0) + 1;
-      log.push(`☣️ ${chosenTarget.name} a été empoisonné (Toxine Niv. ${chosenTarget.poisonAmount}) !`);
+    // B. Critical Hit (Decapitation)
+    if (monster.specialPower?.criticalHit && chosenTarget.status !== 'DEAD' && chosenTarget.status !== 'ASHES') {
+      const critChance = Math.min(50, monster.level * 2);
+      if (Math.random() * 100 < critChance) {
+        chosenTarget.status = 'DEAD';
+        chosenTarget.hpLeft = 0;
+        log.push(`⚡ COUP CRITIQUE MORTEL ! ${monsterName} décapite ${chosenTarget.name} d'un coup impitoyable !`);
+        return;
+      }
     }
 
-    if (monster.specialPower.paralyze && Math.random() * 100 < 35 && chosenTarget.status === 'OK') {
-      chosenTarget.status = 'PLYZE';
-      log.push(`⚡ ${chosenTarget.name} est paralysé de stupeur !`);
+    // C. Petrification (STONE)
+    if (monster.specialPower?.stone && chosenTarget.status === 'OK') {
+      const luckSave = Math.random() * 20 < (chosenTarget.luckSkill?.[2] ?? 10);
+      if (!luckSave) {
+        chosenTarget.status = 'STONED';
+        log.push(`🗿 PÉTRIFICATION ! Le contact de ${monsterName} pétrifie ${chosenTarget.name} en pierre froide !`);
+      }
     }
 
-    if (monster.specialPower.sleep && Math.random() * 100 < 35 && chosenTarget.status === 'OK') {
+    // D. Paralysis
+    if (monster.specialPower?.paralyze && chosenTarget.status === 'OK') {
+      const luckSave = Math.random() * 20 < (chosenTarget.luckSkill?.[1] ?? 10);
+      if (!luckSave) {
+        chosenTarget.status = 'PLYZE';
+        log.push(`⚡ ${chosenTarget.name} est frappé de paralysie par ${monsterName} !`);
+      }
+    }
+
+    // E. Poison
+    if (monster.specialPower?.poison) {
+      const luckSave = Math.random() * 20 < (chosenTarget.luckSkill?.[0] ?? 10);
+      if (!luckSave) {
+        chosenTarget.poisonAmount = (chosenTarget.poisonAmount || 0) + 1;
+        log.push(`☣️ ${chosenTarget.name} a été empoisonné (Toxine Niv. ${chosenTarget.poisonAmount}) !`);
+      }
+    }
+
+    // F. Sleep attack
+    if (monster.specialPower?.sleep && chosenTarget.status === 'OK') {
       chosenTarget.status = 'ASLEEP';
-      log.push(`💤 Le coup de ${monsterName} plonge ${chosenTarget.name} dans un sommeil magique !`);
+      log.push(`💤 Le coup de ${monsterName} plonge ${chosenTarget.name} dans un sommeil catatonique !`);
     }
 
     if (chosenTarget.hpLeft <= 0) {
       chosenTarget.status = 'DEAD';
       chosenTarget.hpLeft = 0;
-      log.push(`💀 ${chosenTarget.name} s’écroule, mort au combat !`);
+      log.push(`💀 ${chosenTarget.name} succombe aux blessures et s'effondre sans vie !`);
     }
   }
 }

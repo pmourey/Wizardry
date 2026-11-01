@@ -148,7 +148,7 @@ export function castCombatSpell(
     case 'KATINO':
       if (group) {
         let n = 0;
-        if (group.monster.specialPower.sleepResist) {
+        if (!group.monster.specialPower.sleepResist && rand(100) >= (group.monster.magicResistance || 0)) {
           group.instances.filter(i => i.status === 'OK' && isAlive(i)).forEach(i => {
             if (rand(100) >= 20 * group.monster.level) { i.status = 'ASLEEP'; n++; }
           });
@@ -159,27 +159,33 @@ export function castCombatSpell(
     case 'MANIFO':
       if (group) {
         let n = 0;
-        group.instances.filter(i => i.status === 'OK' && isAlive(i)).forEach(i => {
-          if (rand(100) >= 50 + 5 * group.monster.level) { i.status = 'PLYZE'; n++; }
-        });
+        if (rand(100) >= (group.monster.magicResistance || 0)) {
+          group.instances.filter(i => i.status === 'OK' && isAlive(i)).forEach(i => {
+            if (rand(100) >= 50 + 5 * group.monster.level) { i.status = 'PLYZE'; n++; }
+          });
+        }
         log.push(`⚡ MANIFO paralyse ${n} ${nameOf(group)}.`);
       }
       break;
     case 'MONTINO':
       if (group) {
         let n = 0;
-        group.instances.filter(isAlive).forEach(i => {
-          if (rand(100) >= 10 * group.monster.level) { i.silencedRounds = rand(4) + 2; n++; }
-        });
+        if (rand(100) >= (group.monster.magicResistance || 0)) {
+          group.instances.filter(isAlive).forEach(i => {
+            if (rand(100) >= 10 * group.monster.level) { i.silencedRounds = rand(4) + 2; n++; }
+          });
+        }
         log.push(`🔇 MONTINO réduit ${n} ${nameOf(group)} au silence.`);
       }
       break;
     case 'LAKANITO':
       if (group) {
         let n = 0;
-        group.instances.filter(isAlive).forEach(i => {
-          if (rand(100) >= 6 * group.monster.level) { kill(group, i); n++; }
-        });
+        if (rand(100) >= (group.monster.magicResistance || 0)) {
+          group.instances.filter(isAlive).forEach(i => {
+            if (rand(100) >= 6 * group.monster.level) { kill(group, i); n++; }
+          });
+        }
         log.push(`LAKANITO étouffe ${n} ${nameOf(group)}.`);
       }
       break;
