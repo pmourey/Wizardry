@@ -1489,7 +1489,6 @@ export function isItemUsable(itm?: TItem | null): boolean {
   if (!itm) return false;
   return Boolean(
     (itm.spellPower && itm.spellPower > 0) ||
-    (itm.healPts && itm.healPts > 0) ||
     itm.objType === 'SPECIAL' ||
     itm.name.toUpperCase().includes('POTION') ||
     itm.name.toUpperCase().includes('SCROLL')

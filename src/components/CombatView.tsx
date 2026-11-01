@@ -82,7 +82,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
   });
   const [selectingSpell, setSelectingSpell] = useState<boolean>(false);
   const [selectingItem, setSelectingItem] = useState<boolean>(false);
-  const [pendingItemAction, setPendingItemAction] = useState<{ sIdx: number; itm: TItem } | null>(null);
+  const [pendingItemAction, setPendingItemAction] = useState<{ sIdx: number; itm: TItem; targetType: 'ALLY' | 'ENEMY_GROUP' } | null>(null);
   const [inspectedHeroIndex, setInspectedHeroIndex] = useState<number | null>(null);
   const [isResolving, setIsResolving] = useState<boolean>(false);
   // Mutable round surprise state: surprise only lasts for Round 1!
@@ -720,40 +720,104 @@ export const CombatView: React.FC<CombatViewProps> = ({
                           </button>
                         </div>
                         {pendingItemAction && (
-                          <div className="p-2.5 bg-slate-900 border border-emerald-700 rounded-lg space-y-2">
-                            <div className="text-xs font-bold text-emerald-300">{pendingItemAction.itm.name} : choisissez la cible alliée</div>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                              {party.map((p, idx) => (
-                                <button
-                                  key={p.id}
-                                  onClick={() => {
-                                    handleSelectAction('USE_ITEM', undefined, undefined, idx, pendingItemAction.sIdx);
-                                    setPendingItemAction(null);
-                                    setSelectingItem(false);
-                                  }}
-                                  className="p-2 min-h-[44px] bg-slate-800 hover:bg-emerald-950/50 border border-slate-700 hover:border-emerald-500 rounded-lg text-left text-xs transition active:scale-95"
-                                >
-                                  <div className="font-bold text-white">{idx + 1}. {p.name}</div>
-                                  <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} PV{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
-                                </button>
-                              ))}
+                          <div className={`p-2.5 bg-slate-900 border rounded-lg space-y-2 ${
+                            pendingItemAction.targetType === 'ALLY' ? 'border-emerald-700' : 'border-amber-600'
+                          }`}>
+                            <div className={`text-xs font-bold flex items-center justify-between ${
+                              pendingItemAction.targetType === 'ALLY' ? 'text-emerald-300' : 'text-amber-300'
+                            }`}>
+                              <span>
+                                {pendingItemAction.targetType === 'ALLY'
+                                  ? `✨ ${pendingItemAction.itm.name} : choisissez la cible alliée`
+                                  : `⚡ ${pendingItemAction.itm.name} : choisissez le groupe ennemi ciblé`}
+                              </span>
+                              <button
+                                onClick={() => setPendingItemAction(null)}
+                                className="text-[10px] text-slate-400 hover:text-white"
+                              >
+                                Annuler
+                              </button>
                             </div>
+
+                            {pendingItemAction.targetType === 'ALLY' ? (
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {party.map((p, idx) => (
+                                  <button
+                                    key={p.id}
+                                    onClick={() => {
+                                      handleSelectAction('USE_ITEM', undefined, undefined, idx, pendingItemAction.sIdx);
+                                      setPendingItemAction(null);
+                                      setSelectingItem(false);
+                                    }}
+                                    className="p-2 min-h-[44px] bg-slate-800 hover:bg-emerald-950/50 border border-slate-700 hover:border-emerald-500 rounded-lg text-left text-xs transition active:scale-95"
+                                  >
+                                    <div className="font-bold text-white">{idx + 1}. {p.name}</div>
+                                    <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} PV{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                {groups.map((grp, gIdx) => {
+                                  const isAlive = grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
+                                  if (!isAlive) return null;
+                                  const mName = grp.identified 
+                                    ? (grp.aliveCount > 1 ? (grp.monster.namePlural || grp.monster.name) : grp.monster.name) 
+                                    : (grp.aliveCount > 1 ? (grp.monster.nameUnknownPlural || grp.monster.nameUnknown) : grp.monster.nameUnknown);
+                                  const aliveCount = grp.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length;
+
+                                  return (
+                                    <button
+                                      key={gIdx}
+                                      onClick={() => {
+                                        handleSelectAction('USE_ITEM', undefined, gIdx, undefined, pendingItemAction.sIdx);
+                                        setPendingItemAction(null);
+                                        setSelectingItem(false);
+                                      }}
+                                      className="p-2 min-h-[44px] bg-slate-800 hover:bg-amber-950/50 border border-slate-700 hover:border-amber-500 rounded-lg text-left text-xs transition active:scale-95"
+                                    >
+                                      <div className="font-bold text-white flex items-center justify-between">
+                                        <span>Groupe #{gIdx + 1} : {mName}</span>
+                                        <span className="text-[11px] text-amber-400 font-mono">({aliveCount})</span>
+                                      </div>
+                                      <div className="text-[11px] text-slate-400">
+                                        {grp.identified ? `Niveau ${grp.monster.level} · CA ${grp.monster.ac}` : 'Statistiques inconnues'}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         )}
                         {!pendingItemAction && (
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                             {usableItems.map(({ slot, sIdx, itm }) => {
                               const sp = itm.spellPower > 0 ? SPELLS.find(s => s.id === itm.spellPower) : null;
-                              const isSingleAlly = (sp && isFriendlySingleSpell(sp.name)) || itm.healPts > 0 || itm.name.toUpperCase().includes('POISON') || itm.name.toUpperCase().includes('LATUMOFIS');
+                              const isSingleAlly = Boolean(
+                                (sp && sp.target === 'PERSON' && isFriendlySingleSpell(sp.name)) ||
+                                (!sp && (itm.name.toUpperCase().includes('POTION') || itm.name.toUpperCase().includes('LATUMOFIS')))
+                              );
+                              const isEnemyTarget = Boolean(
+                                sp && (sp.target === 'GROUP' || (sp.target === 'PERSON' && !isFriendlySingleSpell(sp.name)))
+                              );
 
                               return (
                                 <button
                                   key={sIdx}
                                   onClick={() => {
                                     if (isSingleAlly) {
-                                      setPendingItemAction({ sIdx, itm });
-                                    } else if (sp && sp.target === 'GROUP') {
-                                      handleSelectAction('USE_ITEM', undefined, selectedTargetGroupIdx, undefined, sIdx);
+                                      setPendingItemAction({ sIdx, itm, targetType: 'ALLY' });
+                                    } else if (isEnemyTarget) {
+                                      const aliveGroups = groups
+                                        .map((g, idx) => ({ g, idx }))
+                                        .filter(({ g }) => g.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0));
+                                      if (aliveGroups.length > 1) {
+                                        setPendingItemAction({ sIdx, itm, targetType: 'ENEMY_GROUP' });
+                                      } else {
+                                        const targetG = aliveGroups[0]?.idx ?? selectedTargetGroupIdx;
+                                        handleSelectAction('USE_ITEM', undefined, targetG, undefined, sIdx);
+                                      }
                                     } else {
                                       handleSelectAction('USE_ITEM', undefined, undefined, undefined, sIdx);
                                     }
@@ -765,7 +829,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                                     {sp && <span className="text-[10px] text-purple-400 font-mono">{sp.name}</span>}
                                   </div>
                                   <div className="text-[11px] text-slate-400 line-clamp-1">
-                                    {sp ? sp.description : itm.healPts > 0 ? `Restaure des points de vie (+${itm.healPts * 6} PV)` : 'Objet magique'}
+                                    {sp ? sp.description : itm.healPts > 0 ? `Régénération passive (+${itm.healPts} PV/tour)` : 'Objet magique'}
                                   </div>
                                 </button>
                               );

@@ -17,7 +17,7 @@ export interface SpellContext {
   acModifier: number;
 }
 
-const FRIENDLY_SPELLS = new Set(['DIOS', 'DIAL', 'DIALMA', 'MADI', 'DIALKO', 'LATUMOFI']);
+const FRIENDLY_SPELLS = new Set(['DIOS', 'DIAL', 'DIALMA', 'MADI', 'DIALKO', 'LATUMOFI', 'LATUMOFIS', 'DI', 'KADORTO']);
 export const isFriendlySingleSpell = (name: string) => FRIENDLY_SPELLS.has(name);
 
 const rand = (n: number) => Math.floor(Math.random() * n);
@@ -85,15 +85,17 @@ export function castCombatSpell(
   ctx: SpellContext,
   effects: CombatEffects
 ) {
-  if (hero.silencedRounds && hero.silencedRounds > 0) {
-    log.push(`🔇 ${hero.name} est réduit au silence et ne peut incanter !`);
-    return;
-  }
+  if (action.actionType === 'SPELL') {
+    if (hero.silencedRounds && hero.silencedRounds > 0) {
+      log.push(`🔇 ${hero.name} est réduit au silence et ne peut incanter !`);
+      return;
+    }
 
-  if (spell.spellType === 'MAGE') {
-    hero.mageSpells[spell.tier] = Math.max(0, (hero.mageSpells[spell.tier] || 0) - 1);
-  } else {
-    hero.priestSpells[spell.tier] = Math.max(0, (hero.priestSpells[spell.tier] || 0) - 1);
+    if (spell.spellType === 'MAGE') {
+      hero.mageSpells[spell.tier] = Math.max(0, (hero.mageSpells[spell.tier] || 0) - 1);
+    } else {
+      hero.priestSpells[spell.tier] = Math.max(0, (hero.priestSpells[spell.tier] || 0) - 1);
+    }
   }
 
   const group = groups[action.targetGroupIndex ?? 0];

@@ -940,13 +940,15 @@ export default function App() {
         }
         setPosX(sqrDef.aux2);
         setPosY(sqrDef.aux1);
-        addAdventureEvent(
-          'DISCOVERY',
+        announce(
           'Téléportation magique mystique',
-          `Un tourbillon arcanique a instantanément projeté l'escouade aux coordonnées (${sqrDef.aux2}, ${sqrDef.aux1}).`,
-          undefined,
-          dungeonLevel,
-          { x: sqrDef.aux2, y: sqrDef.aux1 }
+          [
+            'Un souffle arcanique invisible déforme l\'espace !',
+            'L\'escouade a été mystérieusement téléportée !'
+          ],
+          `Coordonnées actuelles : (E${sqrDef.aux2}, N${sqrDef.aux1})`,
+          sqrDef.aux2,
+          sqrDef.aux1
         );
         return;
       }
