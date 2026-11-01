@@ -618,41 +618,43 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   </div>
                 </div>
 
-                {/* Target Group Selector for Current Order */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs pt-1 border-t border-slate-800/80">
-                  <span className="font-bold text-slate-400 flex items-center gap-1 shrink-0 text-[11px] sm:text-xs">
-                    <Target className="w-3.5 h-3.5 text-amber-400" />
-                    Cible :
-                  </span>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {groups.map((grp, gIdx) => {
-                      const isAlive = grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
-                      if (!isAlive) return null;
-                      const isSel = selectedTargetGroupIdx === gIdx;
-                      const mName = grp.identified 
-                        ? (grp.aliveCount > 1 ? (grp.monster.namePlural || grp.monster.name) : grp.monster.name) 
-                        : (grp.aliveCount > 1 ? (grp.monster.nameUnknownPlural || grp.monster.nameUnknown) : grp.monster.nameUnknown);
+                {/* Target Group Selector for Current Order (only if more than 1 living monster group) */}
+                {groups.filter(grp => grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0)).length > 1 && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs pt-1 border-t border-slate-800/80">
+                    <span className="font-bold text-slate-400 flex items-center gap-1 shrink-0 text-[11px] sm:text-xs">
+                      <Target className="w-3.5 h-3.5 text-amber-400" />
+                      Cible :
+                    </span>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {groups.map((grp, gIdx) => {
+                        const isAlive = grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
+                        if (!isAlive) return null;
+                        const isSel = selectedTargetGroupIdx === gIdx;
+                        const mName = grp.identified 
+                          ? (grp.aliveCount > 1 ? (grp.monster.namePlural || grp.monster.name) : grp.monster.name) 
+                          : (grp.aliveCount > 1 ? (grp.monster.nameUnknownPlural || grp.monster.nameUnknown) : grp.monster.nameUnknown);
 
-                      return (
-                        <button
-                          key={gIdx}
-                          type="button"
-                          onClick={() => {
-                            setSelectedTargetGroupIdx(gIdx);
-                            sounds.playTurn();
-                          }}
-                          className={`px-2.5 py-1.5 sm:py-1 rounded-lg text-xs font-semibold border min-h-[36px] flex items-center transition ${
-                            isSel 
-                              ? 'bg-amber-600/30 border-amber-500 text-amber-300 shadow-sm' 
-                              : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          #{gIdx + 1} {mName} ({grp.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length})
-                        </button>
-                      );
-                    })}
+                        return (
+                          <button
+                            key={gIdx}
+                            type="button"
+                            onClick={() => {
+                              setSelectedTargetGroupIdx(gIdx);
+                              sounds.playTurn();
+                            }}
+                            className={`px-2.5 py-1.5 sm:py-1 rounded-lg text-xs font-semibold border min-h-[36px] flex items-center transition ${
+                              isSel 
+                                ? 'bg-amber-600/30 border-amber-500 text-amber-300 shadow-sm' 
+                                : 'bg-slate-800/80 border-slate-700/80 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            #{gIdx + 1} {mName} ({grp.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length})
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Active Hero Silence Alert */}
                 {activeHero.silencedRounds && activeHero.silencedRounds > 0 && (
@@ -827,8 +829,18 @@ export const CombatView: React.FC<CombatViewProps> = ({
                                     if (isTargetAlly) {
                                       setPendingItemAction({ sIdx, itm, targetType: 'ALLY' });
                                     } else if (isAttackPower) {
-                                      // Propose the group of monsters to target
-                                      setPendingItemAction({ sIdx, itm, targetType: 'ENEMY_GROUP' });
+                                      const aliveGroups = groups
+                                        .map((grp, idx) => ({ grp, idx }))
+                                        .filter(({ grp }) => grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0));
+
+                                      if (aliveGroups.length > 1) {
+                                        // Multiple living monster groups: ask the player which group to target
+                                        setPendingItemAction({ sIdx, itm, targetType: 'ENEMY_GROUP' });
+                                      } else {
+                                        // Only 1 group: directly target without proposing redundant choice
+                                        const targetG = aliveGroups[0]?.idx ?? selectedTargetGroupIdx;
+                                        handleSelectAction('USE_ITEM', undefined, targetG, undefined, sIdx);
+                                      }
                                     } else {
                                       // Defensive party or self buff (e.g. MATU, MOGREF, MAPORFIC)
                                       handleSelectAction('USE_ITEM', undefined, undefined, undefined, sIdx);
