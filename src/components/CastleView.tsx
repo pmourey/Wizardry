@@ -79,6 +79,7 @@ interface CastleViewProps {
   onEnterMaze: () => void;
   onOpenPySide6Export?: () => void;
   onCheatRestoreParty?: () => void;
+  onOpenCheatModal?: () => void;
 }
 
 type CastleTab = 'COURTYARD' | 'TAVERN' | 'INN' | 'BOLTAC' | 'TEMPLE' | 'TRAINING' | 'JOURNAL';
@@ -94,7 +95,8 @@ export const CastleView: React.FC<CastleViewProps> = ({
   onAddAdventureEvent,
   onEnterMaze,
   onOpenPySide6Export,
-  onCheatRestoreParty
+  onCheatRestoreParty,
+  onOpenCheatModal
 }) => {
   const [lang] = useLanguage();
   const t = UI_TEXT[lang];
@@ -825,7 +827,17 @@ export const CastleView: React.FC<CastleViewProps> = ({
               Code PySide6 (.py)
             </button>
           )}
-          {onCheatRestoreParty && (
+          {onOpenCheatModal ? (
+            <button
+              onClick={onOpenCheatModal}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-500/40 rounded-lg text-xs font-semibold transition active:scale-95 shadow-sm"
+              title="Console de triche : XP pour l'Auberge, Or, Clés d'ascenseurs"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current text-rose-400" />
+              <span className="hidden sm:inline">Menu Triche</span>
+              <span className="sm:hidden">Triche</span>
+            </button>
+          ) : onCheatRestoreParty ? (
             <button
               onClick={() => {
                 if (window.confirm('Triche : soigner et ressusciter tous les personnages ?')) {
@@ -840,7 +852,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
               <span className="hidden sm:inline">Triche : restaurer</span>
               <span className="sm:hidden">Triche</span>
             </button>
-          )}
+          ) : null}
           {(() => {
             const hasLivingHeroes = party.some(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.hpLeft > 0);
             return (

@@ -29,6 +29,7 @@ import { ChestView } from './components/ChestView';
 import { PySide6Exporter } from './components/PySide6Exporter';
 import { ScenarioMenuView } from './components/ScenarioMenuView';
 import { ManualsModal } from './components/ManualsModal';
+import { CheatModal } from './components/CheatModal';
 import { WIZARDRY_SCENARIOS, getLocalizedScenario } from './data/scenariosCatalog';
 import { useLanguage, UI_TEXT } from './utils/language';
 import { 
@@ -60,7 +61,8 @@ import {
   Library,
   Keyboard,
   Sparkles,
-  BookOpen
+  BookOpen,
+  Zap
 } from 'lucide-react';
 import { RETURN_OF_WERDNA_STARTER_PARTY } from './data/scenarios/return-of-werdnaData';
 
@@ -342,6 +344,7 @@ export default function App() {
     (typeof window !== 'undefined' &&
       (window.location.hostname.includes('itch.zone') || window.location.hostname.includes('itch.io')));
   const [showPySide6Export, setShowPySide6Export] = useState<boolean>(false);
+  const [showCheatModal, setShowCheatModal] = useState<boolean>(false);
   const [showManualsModal, setShowManualsModal] = useState<boolean>(false);
   const [manualsScenarioTarget, setManualsScenarioTarget] = useState<string | undefined>(undefined);
   const [soundOn, setSoundOn] = useState<boolean>(true);
@@ -671,6 +674,19 @@ export default function App() {
       music.playTrack('02-castle');
     }
   }, [showScenarioMenu, location, dungeonLevel, combatGroups]);
+
+  // Global Cheat Key shortcut (F2 or Ctrl+Shift+C on GitHub Pages)
+  useEffect(() => {
+    if (isItchioBuild) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F2' || (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c'))) {
+        e.preventDefault();
+        setShowCheatModal(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isItchioBuild]);
 
   // Per-square usage counters for scenario events (key: level:x:y)
   const [scenarioMessage, setScenarioMessage] = useState<{ title: string; lines: string[]; details?: string } | null>(null);
@@ -1582,6 +1598,17 @@ export default function App() {
 
           {!isItchioBuild && (
             <button
+              onClick={() => setShowCheatModal(true)}
+              className="flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-600/40 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition shadow-sm"
+              title="Console de triche (GitHub Pages) : XP pour l'Auberge, Or, Clés d'ascenseurs Wizardry 1"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current text-rose-400" />
+              <span className="hidden sm:inline">Triche</span>
+            </button>
+          )}
+
+          {!isItchioBuild && (
+            <button
               onClick={() => setShowPySide6Export(true)}
               className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition"
             >
@@ -1657,6 +1684,7 @@ export default function App() {
             }}
             onOpenPySide6Export={isItchioBuild ? undefined : () => setShowPySide6Export(true)}
             onCheatRestoreParty={isItchioBuild ? undefined : handleCheatRestoreParty}
+            onOpenCheatModal={isItchioBuild ? undefined : () => setShowCheatModal(true)}
           />
         )}
 
@@ -1931,6 +1959,20 @@ export default function App() {
         onClose={() => setShowManualsModal(false)}
         initialScenarioId={manualsScenarioTarget}
       />
+
+      {/* Standalone Cheat Console Modal (GitHub Pages only) */}
+      {!isItchioBuild && (
+        <CheatModal
+          isOpen={showCheatModal}
+          onClose={() => setShowCheatModal(false)}
+          activeScenarioId={activeScenarioId}
+          party={party}
+          setParty={setParty}
+          allCharacters={allCharacters}
+          setAllCharacters={setAllCharacters}
+          onRestoreAllHeroes={handleCheatRestoreParty}
+        />
+      )}
     </div>
   );
 }
