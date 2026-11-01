@@ -91,6 +91,55 @@ export function attemptPartyRun(
   return Math.floor(Math.random() * 100) <= temp;
 }
 
+/**
+ * Authentic Pascal monster identification in combat
+ * (pascal_source/Wizardry1_UCSD_Pascal.pas, l. 5268-5274):
+ * At turn preparation / party status display (DSPPARTY) in each combat round,
+ * every conscious living party member (status OK or AFRAID) rolls:
+ *   (RANDOM MOD 99) < (IQ + PIETY + CHARLEV)
+ * On success, an enemy group slot ((RANDOM MOD 4) + 1) has its true identity revealed.
+ */
+export function checkMonsterIdentification(
+  party: TCharacter[],
+  groups: CombatGroup[],
+  log?: string[]
+): { newlyIdentifiedCount: number } {
+  let newlyIdentifiedCount = 0;
+
+  // Living conscious heroes who can observe the battlefield
+  const activeHeroes = party.filter(
+    h => (h.status === 'OK' || h.status === 'AFRAID') && h.hpLeft > 0
+  );
+
+  for (const hero of activeHeroes) {
+    const iq = hero.attrib?.IQ ?? 10;
+    const piety = hero.attrib?.PIETY ?? 10;
+    const lev = hero.charLevel ?? 1;
+    const chance = iq + piety + lev;
+    const roll = Math.floor(Math.random() * 99);
+
+    if (roll < chance) {
+      // Pick a group slot (0..3 matching (RANDOM MOD 4) + 1 in Pascal)
+      const targetSlot = Math.floor(Math.random() * Math.max(4, groups.length));
+      if (targetSlot < groups.length) {
+        const targetGroup = groups[targetSlot];
+        if (targetGroup && !targetGroup.identified && targetGroup.aliveCount > 0) {
+          targetGroup.identified = true;
+          newlyIdentifiedCount++;
+          const trueName = targetGroup.aliveCount > 1 
+            ? (targetGroup.monster.namePlural || targetGroup.monster.name) 
+            : targetGroup.monster.name;
+          if (log) {
+            log.push(`🔍 ${hero.name} observe attentivement l'ennemi et identifie : ${trueName} !`);
+          }
+        }
+      }
+    }
+  }
+
+  return { newlyIdentifiedCount };
+}
+
 export interface EncounterOptions {
   enemyCalc?: { minEnemy: number; multWorse: number; worse01: number; range0n: number; percWorse: number }[];
   fixedMonsterIds?: number[];
@@ -163,7 +212,12 @@ function pickRandomMonsterId(level: number, calc?: EncounterOptions['enemyCalc']
   return Math.min(MONSTERS_DATABASE.length - 1, Math.max(0, id));
 }
 
-export function initCombatEncounter(level: number, specialEnemyId?: number, options: EncounterOptions = {}): {
+export function initCombatEncounter(
+  level: number, 
+  specialEnemyId?: number, 
+  options: EncounterOptions = {},
+  party?: TCharacter[]
+): {
   groups: CombatGroup[];
   surprise: 'PARTY' | 'MONSTERS' | 'NONE';
   friendly: boolean;
@@ -195,6 +249,15 @@ export function initCombatEncounter(level: number, specialEnemyId?: number, opti
 
   // Friendly encounter roll
   const friendly = Math.random() * 100 < 10 && primaryMonster.monsterClass === 0;
+
+  // Pascal FRIENDLY encounter (pascal_source/Wizardry1_UCSD_Pascal.pas l. 4109):
+  // When an encounter is friendly, all groups are immediately identified.
+  if (friendly) {
+    groups.forEach(g => { g.identified = true; });
+  } else if (party && party.length > 0) {
+    // Initial round 1 turn preparation identification check (pascal_source l. 5268-5274)
+    checkMonsterIdentification(party, groups);
+  }
 
   return { groups, surprise, friendly };
 }
@@ -419,7 +482,10 @@ export function executeCombatRound(
         // Dispell undead ability for Priest, Bishop, Lord
         const targetGroup = groups[action.targetGroupIndex ?? 0];
         if (targetGroup && targetGroup.aliveCount > 0) {
-          log.push(`${hero.name} brandit son symbole sacré et exorcise ${targetGroup.monster.nameUnknownPlural} !`);
+          const groupName = targetGroup.identified
+            ? (targetGroup.aliveCount > 1 ? (targetGroup.monster.namePlural || targetGroup.monster.name) : targetGroup.monster.name)
+            : (targetGroup.aliveCount > 1 ? (targetGroup.monster.nameUnknownPlural || targetGroup.monster.nameUnknown) : targetGroup.monster.nameUnknown);
+          log.push(`${hero.name} brandit son symbole sacré et exorcise ${groupName} !`);
           if (targetGroup.monster.monsterClass === 10) { // Undead
             let dispelledCount = 0;
             targetGroup.instances.forEach(inst => {
@@ -592,6 +658,11 @@ export function executeCombatRound(
 
   const partyAlive = party.some(p => p.status !== 'DEAD' && p.status !== 'ASHES' && p.hpLeft > 0);
   const monstersAlive = groups.some(g => g.aliveCount > 0);
+
+  // Turn preparation / Monster identification check for next round (pascal_source DSPPARTY l. 5268-5274)
+  if (partyAlive && monstersAlive && !fled) {
+    checkMonsterIdentification(party, groups, log);
+  }
 
   let expGainedPerSurvivor = 0;
   if (!monstersAlive && partyAlive && !fled && !effects.malor && !effects.loktofeit) {

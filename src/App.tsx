@@ -1046,7 +1046,7 @@ export default function App() {
 
   const triggerBattleEncounter = (specialMonsterId?: number) => {
     sounds.playHit();
-    const encounter = initCombatEncounter(dungeonLevel, specialMonsterId, { enemyCalc: maze.enemyCalc });
+    const encounter = initCombatEncounter(dungeonLevel, specialMonsterId, { enemyCalc: maze.enemyCalc }, party);
     setCombatGroups(encounter.groups);
     setCombatSurprise(encounter.surprise);
     setLocation('COMBAT');

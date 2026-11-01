@@ -28,7 +28,11 @@ const roll = (n: number, s: number) => {
 };
 
 const isAlive = (i: CombatMonsterInstance) => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0;
-const nameOf = (g: CombatGroup) => (g.identified ? g.monster.name : g.monster.nameUnknown);
+const nameOf = (g: CombatGroup) => (
+  g.identified
+    ? (g.aliveCount > 1 ? (g.monster.namePlural || g.monster.name) : g.monster.name)
+    : (g.aliveCount > 1 ? (g.monster.nameUnknownPlural || g.monster.nameUnknown) : g.monster.nameUnknown)
+);
 
 function kill(g: CombatGroup, inst: CombatMonsterInstance) {
   inst.status = 'DEAD';
@@ -210,6 +214,18 @@ export function castCombatSpell(
       effects.lightMax = true;
       log.push('Une lumière éclatante emplit le dédale.');
       break;
+    case 'LATUMAPI':
+    case 'LATUMAPIC': {
+      let newlyIdentified = 0;
+      groups.forEach(g => {
+        if (!g.identified) {
+          g.identified = true;
+          newlyIdentified++;
+        }
+      });
+      log.push(`✨ LATUMAPIC dissipe les illusions : tous les monstres présents sont formellement identifiés !`);
+      break;
+    }
     case 'DIOS':
     case 'DIAL':
     case 'DIALMA': {

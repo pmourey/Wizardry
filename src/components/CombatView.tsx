@@ -69,7 +69,17 @@ export const CombatView: React.FC<CombatViewProps> = ({
 
   const [currentHeroIdx, setCurrentHeroIdx] = useState<number>(0);
   const [actions, setActions] = useState<PlayerCombatAction[]>([]);
-  const [roundLog, setRoundLog] = useState<string[]>([]);
+  const [roundLog, setRoundLog] = useState<string[]>(() => {
+    const initialMsgs: string[] = [];
+    const identified = groups.filter(g => g.identified);
+    if (identified.length > 0) {
+      identified.forEach(g => {
+        const name = g.count > 1 ? (g.monster.namePlural || g.monster.name) : g.monster.name;
+        initialMsgs.push(`🔍 L'escouade a immédiatement identifié : ${name} !`);
+      });
+    }
+    return initialMsgs;
+  });
   const [selectingSpell, setSelectingSpell] = useState<boolean>(false);
   const [selectingItem, setSelectingItem] = useState<boolean>(false);
   const [pendingItemAction, setPendingItemAction] = useState<{ sIdx: number; itm: TItem } | null>(null);
@@ -330,14 +340,27 @@ export const CombatView: React.FC<CombatViewProps> = ({
                     {getMonsterPictureUrl(grp.monster.picId) ? (
                       <MonsterPicture picId={grp.monster.picId} alt={grp.identified ? grp.monster.name : grp.monster.nameUnknown} className="w-full h-full object-contain" />
                     ) : (
-                      <span className="text-amber-400 text-xl sm:text-2xl font-serif font-bold">{grp.monster.name[0]}</span>
+                      <span className="text-amber-400 text-xl sm:text-2xl font-serif font-bold">
+                        {(grp.identified ? grp.monster.name : grp.monster.nameUnknown)[0]}
+                      </span>
                     )}
                   </div>
-                  <div className="font-bold text-xs sm:text-sm text-white truncate" title={grp.identified ? grp.monster.name : grp.monster.nameUnknown}>
-                    {grp.identified ? grp.monster.name : grp.monster.nameUnknown}
+                  <div 
+                    className="font-bold text-xs sm:text-sm text-white truncate" 
+                    title={grp.identified 
+                      ? (grp.count > 1 ? (grp.monster.namePlural || grp.monster.name) : grp.monster.name) 
+                      : (grp.count > 1 ? (grp.monster.nameUnknownPlural || grp.monster.nameUnknown) : grp.monster.nameUnknown)}
+                  >
+                    {grp.identified 
+                      ? (grp.count > 1 ? (grp.monster.namePlural || grp.monster.name) : grp.monster.name) 
+                      : (grp.count > 1 ? (grp.monster.nameUnknownPlural || grp.monster.nameUnknown) : grp.monster.nameUnknown)}
                   </div>
-                  <div className="text-[10px] sm:text-xs text-slate-400">
-                    Niv.{grp.monster.level} · CA {grp.monster.ac}
+                  <div className="text-[10px] sm:text-xs">
+                    {grp.identified ? (
+                      <span className="text-emerald-400 font-semibold">Niv.{grp.monster.level} · CA {grp.monster.ac}</span>
+                    ) : (
+                      <span className="text-amber-500/80 font-mono">Niv.?? · CA ??</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -595,7 +618,9 @@ export const CombatView: React.FC<CombatViewProps> = ({
                       const isAlive = grp.instances.some(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
                       if (!isAlive) return null;
                       const isSel = selectedTargetGroupIdx === gIdx;
-                      const mName = grp.identified ? grp.monster.name : grp.monster.nameUnknown;
+                      const mName = grp.identified 
+                        ? (grp.aliveCount > 1 ? (grp.monster.namePlural || grp.monster.name) : grp.monster.name) 
+                        : (grp.aliveCount > 1 ? (grp.monster.nameUnknownPlural || grp.monster.nameUnknown) : grp.monster.nameUnknown);
 
                       return (
                         <button
