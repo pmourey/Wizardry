@@ -25,27 +25,6 @@ export const MANUALS_CATALOG: ManualItem[] = [
   // --- OPUS 1 : PROVING GROUNDS OF THE MAD OVERLORD ---
   // ==========================================
   {
-    id: 'wiz1-manual-pdf-en',
-    scenarioId: 'proving-grounds',
-    category: 'OFFICIAL',
-    title: 'Wizardry I: Proving Grounds of the Mad Overlord — Manuel Officiel (EN)',
-    subtitle: 'Règles de jeu, création de personnage, exploration & combat au tour par tour',
-    author: 'Andrew Greenberg & Robert Woodhead (Sir-Tech)',
-    year: '1981',
-    format: 'PDF',
-    pages: '48 pages',
-    language: 'EN',
-    descriptionFr: 'Le manuel original complet de Wizardry I (édition 2e révisée). Décrit en détail les 8 classes, les 6 caractéristiques (STR, I.Q., PIE, VIT, AGI, LUC), la gestion du repos à l’Auberge, le combat et la survie dans le labyrinthe de Trebor.',
-    descriptionEn: 'The complete original official manual for Wizardry I (2nd revised edition). Covers all 8 classes, primary attributes, inn resting, turn-based combat, and survival rules in Trebor’s 10-floor proving grounds.',
-    primaryUrl: 'https://www.zimlab.com/wizardry/files/wiz1-manual-2nd-edition.pdf',
-    primaryLabelFr: 'Télécharger le Manuel PDF (Zimlab, 15 Mo)',
-    primaryLabelEn: 'Download Manual PDF (Zimlab, 15 MB)',
-    secondaryUrl: 'https://www.mocagh.org/sir-tech/wiz1-manual.pdf',
-    secondaryLabelFr: 'Miroir PDF (Mocagh)',
-    secondaryLabelEn: 'Mirror PDF (Mocagh)',
-    badge: 'Classique 1981'
-  },
-  {
     id: 'wiz1-manual-pdf-fr',
     scenarioId: 'proving-grounds',
     category: 'OFFICIAL',
@@ -56,15 +35,33 @@ export const MANUALS_CATALOG: ManualItem[] = [
     format: 'PDF',
     pages: '44 pages',
     language: 'FR',
-    descriptionFr: 'Le manuel historique complet traduit en français par Ediciel pour la sortie francophone de Wizardry I. Scanné en haute résolution avec reconnaissance optique de caractères (OCR).',
+    descriptionFr: 'Le manuel historique complet traduit en français par Ediciel pour la sortie francophone de Wizardry I. Scanné en haute résolution avec reconnaissance optique de caractères (OCR). Comprend les classes, attributs, tables de sorts et système de combat.',
     descriptionEn: 'The historical French manual translated by Ediciel for the French release of Wizardry I. High-resolution OCR scan provided by Snafaru.',
     primaryUrl: 'https://www.zimlab.com/wizardry/files/ediciel_sorcellerie1_manuel_ocr.pdf',
     primaryLabelFr: 'Télécharger le Manuel en Français (PDF)',
     primaryLabelEn: 'Download French Manual (PDF)',
-    secondaryUrl: 'https://www.zimlab.com/wizardry/files/wiz1-manual-1st-edition.pdf',
-    secondaryLabelFr: 'Version Anglaise 1st Ed. (PDF)',
-    secondaryLabelEn: 'English 1st Ed. (PDF)',
-    badge: 'Français Intégral'
+    badge: '🇫🇷 Manuel Français'
+  },
+  {
+    id: 'wiz1-manual-pdf-en',
+    scenarioId: 'proving-grounds',
+    category: 'OFFICIAL',
+    title: 'Wizardry I: Proving Grounds of the Mad Overlord — Official Manual (EN)',
+    subtitle: 'Original Sir-Tech player rulebook, character creation, maze exploration & combat',
+    author: 'Andrew Greenberg & Robert Woodhead (Sir-Tech)',
+    year: '1981',
+    format: 'PDF',
+    pages: '48 pages',
+    language: 'EN',
+    descriptionFr: 'Le manuel original officiel en anglais de Wizardry I (édition 2e révisée). Décrit en détail les 8 classes, les 6 caractéristiques (STR, I.Q., PIE, VIT, AGI, LUC), la gestion du repos à l’Auberge, le combat au tour par tour et la survie dans le labyrinthe de Trebor.',
+    descriptionEn: 'The complete original official manual in English for Wizardry I (2nd revised edition). Covers all 8 classes, primary attributes, inn resting, turn-based combat, and survival rules in Trebor’s 10-floor proving grounds.',
+    primaryUrl: 'https://www.zimlab.com/wizardry/files/wiz1-manual-2nd-edition.pdf',
+    primaryLabelFr: 'Télécharger le Manuel en Anglais (PDF, 15 Mo)',
+    primaryLabelEn: 'Download English Manual (PDF, 15 MB)',
+    secondaryUrl: 'https://www.mocagh.org/sir-tech/wiz1-manual.pdf',
+    secondaryLabelFr: 'Miroir HD (Mocagh)',
+    secondaryLabelEn: 'HD Mirror (Mocagh)',
+    badge: '🇬🇧 English Manual'
   },
   {
     id: 'wiz1-spells-pdf',
@@ -75,8 +72,8 @@ export const MANUALS_CATALOG: ManualItem[] = [
     author: 'Sir-Tech / Snafaru',
     year: '1981',
     format: 'PDF',
-    pages: 'Document PDF',
-    language: 'EN',
+    pages: 'Fiche PDF',
+    language: 'MULTI',
     descriptionFr: 'Fiche de référence complète et exhaustive recensant chaque sort du jeu (Halito, Mahalito, Lahalito, Tiltowait, Dios, Dialko, Madi, Badios...) avec leur niveau, portée et coût en PM.',
     descriptionEn: 'Complete spellbook detailing all mage and priest spells across all 7 circles (Halito, Mahalito, Lahalito, Tiltowait, Dios, Dialko, Madi, Badios...) with level, target and SP costs.',
     primaryUrl: 'https://www.zimlab.com/wizardry/files/Wizardry_I_Spells_Lists.pdf',
@@ -84,14 +81,35 @@ export const MANUALS_CATALOG: ManualItem[] = [
     primaryLabelEn: 'Download Spells PDF',
     secondaryUrl: 'https://www.zimlab.com/wizardry/maps/pgmaps.htm',
     secondaryLabelFr: 'Cartes des 10 Étages (Zimlab)',
-    secondaryLabelEn: '10-Floor Maps (Zimlab)'
+    secondaryLabelEn: '10-Floor Maps (Zimlab)',
+    badge: 'Grimoire des Sorts'
   },
   {
-    id: 'wiz1-walkthrough',
+    id: 'wiz1-plans-equip-fr',
     scenarioId: 'proving-grounds',
     category: 'OFFICIAL',
-    title: 'Wizardry I — Solution Complète & Guide du Labyrinthe',
-    subtitle: 'Cheminement pas à pas des 10 étages du donjon, énigmes et antre de Werdna',
+    title: 'Sorcellerie 1 — Plans du Labyrinthe & Équipements (FR)',
+    subtitle: 'Cartes annotées des 10 sous-sols et catalogue des armes/armures en français',
+    author: 'Snafaru / Zimlab',
+    year: '2022',
+    format: 'WEB',
+    language: 'FR',
+    descriptionFr: 'Plans détaillés en français des 10 étages du labyrinthe de Trebor et liste complète de l’arsenal du magasin de Boltac (armes, armures, boucliers et reliques avec leurs statistiques traduites).',
+    descriptionEn: 'Detailed French maps of Trebor’s 10 dungeon levels and complete equipment list translated from Boltac’s Trading Post.',
+    primaryUrl: 'https://www.zimlab.com/wizardry/maps/sorcellerie-1-plans-labyrinthe.htm',
+    primaryLabelFr: 'Consulter les Plans en Français',
+    primaryLabelEn: 'View French Maps',
+    secondaryUrl: 'https://www.zimlab.com/wizardry/walk/sorcellerie-1-equipement.htm',
+    secondaryLabelFr: 'Catalogue d’Équipement (FR)',
+    secondaryLabelEn: 'Equipment Catalog (FR)',
+    badge: '🇫🇷 Guides Français'
+  },
+  {
+    id: 'wiz1-walkthrough-en',
+    scenarioId: 'proving-grounds',
+    category: 'OFFICIAL',
+    title: 'Wizardry I — Complete Walkthrough & Clue Book (EN)',
+    subtitle: '10-floor comprehensive guide, elevator puzzles, and Werdna confrontation',
     author: 'Snafaru (Zimlab)',
     year: '2022',
     format: 'WEB',
@@ -99,37 +117,17 @@ export const MANUALS_CATALOG: ManualItem[] = [
     descriptionFr: 'Guide d’exploration exhaustif étape par étape : passage des ascenseurs, clés d’argent et de bronze, localisation de la statuette d’ours et de grenouille, ruban bleu et tactique contre l’Archimage Werdna.',
     descriptionEn: 'Complete 10-floor walkthrough: elevator puzzles, bronze & silver keys, frog & bear statuettes, blue ribbon, and master strategy to defeat Werdna.',
     primaryUrl: 'https://www.zimlab.com/wizardry/walk/w1/1/wizardry-1-walkthrough-1.htm',
-    primaryLabelFr: 'Consulter la Solution Complète (Zimlab)',
-    primaryLabelEn: 'View Walkthrough (Zimlab)',
+    primaryLabelFr: 'Consulter la Solution Complète (EN)',
+    primaryLabelEn: 'View Full Walkthrough (EN)',
     secondaryUrl: 'https://www.zimlab.com/wizardry/maps/pgmaps.htm',
     secondaryLabelFr: 'Plans des Niveaux 1 à 10',
-    secondaryLabelEn: 'Floors 1-10 Maps'
+    secondaryLabelEn: 'Floors 1-10 Maps',
+    badge: '🇬🇧 Soluce EN'
   },
 
   // ==========================================
   // --- OPUS 2 : THE KNIGHT OF DIAMONDS ---
   // ==========================================
-  {
-    id: 'wiz2-manual-pdf-en',
-    scenarioId: 'knight-of-diamonds',
-    category: 'OFFICIAL',
-    title: 'Wizardry II: The Knight of Diamonds — Manuel Officiel (EN)',
-    subtitle: 'Règles du Scénario 2, armures magiques de Gnilda et importation des vétérans',
-    author: 'Andrew Greenberg & Robert Woodhead (Sir-Tech)',
-    year: '1982',
-    format: 'PDF',
-    pages: '32 pages',
-    language: 'EN',
-    descriptionFr: 'Le manuel officiel du Chevalier de Diamant. Explique le transfert de personnages de niveau 13+ depuis le Scénario I, les cinq reliques sacrées de l’armure de Diamant (Épée Hrathnir, Cuirasse, Bouclier, Casque, Gantelets) et le bâton de Gnilda.',
-    descriptionEn: 'Official Knight of Diamonds manual. Details hero importing (level 13+), the 5 pieces of the legendary Diamond armor (Hrathnir, Mail, Shield, Helm, Gauntlets), and the sacred staff of Gnilda.',
-    primaryUrl: 'https://www.zimlab.com/wizardry/files/wiz2-manual.pdf',
-    primaryLabelFr: 'Télécharger le Manuel PDF (Zimlab)',
-    primaryLabelEn: 'Download Manual PDF (Zimlab)',
-    secondaryUrl: 'https://www.mocagh.org/sir-tech/wiz2-manual.pdf',
-    secondaryLabelFr: 'Miroir PDF (Mocagh)',
-    secondaryLabelEn: 'Mirror PDF (Mocagh)',
-    badge: 'Scénario II'
-  },
   {
     id: 'wiz2-manual-pdf-fr',
     scenarioId: 'knight-of-diamonds',
@@ -141,19 +139,60 @@ export const MANUALS_CATALOG: ManualItem[] = [
     format: 'PDF',
     pages: 'Document PDF',
     language: 'FR',
-    descriptionFr: 'Le manuel de Wizardry II entièrement en français publié par Ediciel. Traite de la cité de Llylgamyn, de la malédiction de Davalpus et de la quête des reliques.',
+    descriptionFr: 'Le manuel de Wizardry II entièrement en français publié par Ediciel. Traite de la cité de Llylgamyn, de la malédiction de Davalpus, des 5 pièces de l’armure magique de Gnilda et du transfert de personnages.',
     descriptionEn: 'Complete French edition manual published by Ediciel for Wizardry II: Knight of Diamonds.',
     primaryUrl: 'https://www.zimlab.com/wizardry/files/ediciel_sorcellerie2_manuel_ocr.pdf',
     primaryLabelFr: 'Télécharger le Manuel en Français (PDF)',
     primaryLabelEn: 'Download French Manual (PDF)',
-    badge: 'Français Intégral'
+    badge: '🇫🇷 Manuel Français'
   },
   {
-    id: 'wiz2-walkthrough',
+    id: 'wiz2-manual-pdf-en',
     scenarioId: 'knight-of-diamonds',
     category: 'OFFICIAL',
-    title: 'Wizardry II — Solution Complète & Guide des 5 Reliques',
-    subtitle: 'Guide des 6 niveaux souterrains et énigmes du temple de Gnilda',
+    title: 'Wizardry II: The Knight of Diamonds — Official Manual (EN)',
+    subtitle: 'Scenario 2 rules, Gnilda relics, and veteran hero import instructions',
+    author: 'Andrew Greenberg & Robert Woodhead (Sir-Tech)',
+    year: '1982',
+    format: 'PDF',
+    pages: '32 pages',
+    language: 'EN',
+    descriptionFr: 'Le manuel officiel du Chevalier de Diamant en version anglaise. Explique le transfert de personnages de niveau 13+ depuis le Scénario I, les cinq reliques sacrées de l’armure de Diamant (Épée Hrathnir, Cuirasse, Bouclier, Casque, Gantelets) et le bâton de Gnilda.',
+    descriptionEn: 'Official Knight of Diamonds manual. Details hero importing (level 13+), the 5 pieces of the legendary Diamond armor (Hrathnir, Mail, Shield, Helm, Gauntlets), and the sacred staff of Gnilda.',
+    primaryUrl: 'https://www.zimlab.com/wizardry/files/wiz2-manual.pdf',
+    primaryLabelFr: 'Télécharger le Manuel en Anglais (PDF)',
+    primaryLabelEn: 'Download English Manual (PDF)',
+    secondaryUrl: 'https://www.mocagh.org/sir-tech/wiz2-manual.pdf',
+    secondaryLabelFr: 'Miroir HD (Mocagh)',
+    secondaryLabelEn: 'HD Mirror (Mocagh)',
+    badge: '🇬🇧 English Manual'
+  },
+  {
+    id: 'wiz2-plans-fin-fr',
+    scenarioId: 'knight-of-diamonds',
+    category: 'OFFICIAL',
+    title: 'Sorcellerie 2 — Plans du Temple & Épilogue (FR)',
+    subtitle: 'Plans des 6 niveaux du temple de Gnilda et récit de dénouement en français',
+    author: 'Snafaru / Zimlab',
+    year: '2022',
+    format: 'WEB',
+    language: 'FR',
+    descriptionFr: 'Plans des 6 niveaux du sanctuaire de Gnilda en français et texte intégral traduit de la fin victorieuse du Chevalier de Diamant.',
+    descriptionEn: 'French floor plans for the 6 levels of Gnilda’s temple and translated endgame epilogue.',
+    primaryUrl: 'https://www.zimlab.com/wizardry/maps/sorcellerie-2-plans-labyrinthe.htm',
+    primaryLabelFr: 'Consulter les Plans du Temple (FR)',
+    primaryLabelEn: 'View Temple Plans (FR)',
+    secondaryUrl: 'https://www.zimlab.com/wizardry/walk/sorcellerie-2-fin.htm',
+    secondaryLabelFr: 'Récit de Fin (FR)',
+    secondaryLabelEn: 'Endgame Text (FR)',
+    badge: '🇫🇷 Guides Français'
+  },
+  {
+    id: 'wiz2-walkthrough-en',
+    scenarioId: 'knight-of-diamonds',
+    category: 'OFFICIAL',
+    title: 'Wizardry II — Full Walkthrough & Relics Guide (EN)',
+    subtitle: 'Step-by-step guide to all 6 levels, Knight’s armors and Gnilda puzzles',
     author: 'Snafaru (Zimlab)',
     year: '2022',
     format: 'WEB',
@@ -161,34 +200,14 @@ export const MANUALS_CATALOG: ManualItem[] = [
     descriptionFr: 'Guide détaillé des 6 étages pour retrouver les 5 pièces de l’armure du Chevalier, franchir les portails magiques et purifier la cité sacrée.',
     descriptionEn: 'Step-by-step walkthrough covering the 6 dungeon levels to recover the 5 pieces of the Diamond armor and cleanse the city.',
     primaryUrl: 'https://www.zimlab.com/wizardry/walk/w2/1/wizardry-2-walkthrough-1.htm',
-    primaryLabelFr: 'Consulter la Solution Complète (Zimlab)',
-    primaryLabelEn: 'View Walkthrough (Zimlab)'
+    primaryLabelFr: 'Consulter la Solution Complète (EN)',
+    primaryLabelEn: 'View Full Walkthrough (EN)',
+    badge: '🇬🇧 Soluce EN'
   },
 
   // ==========================================
   // --- OPUS 3 : LEGACY OF LLYLGAMYN ---
   // ==========================================
-  {
-    id: 'wiz3-manual-pdf-en',
-    scenarioId: 'legacy-of-llylgamyn',
-    category: 'OFFICIAL',
-    title: 'Wizardry III: Legacy of Llylgamyn — Manuel Officiel (EN)',
-    subtitle: 'Règles de descendance dynastique, dualité Bien / Mal et l’Orbe d’Erythran',
-    author: 'Andrew Greenberg & Robert Woodhead (Sir-Tech)',
-    year: '1983',
-    format: 'PDF',
-    pages: '36 pages',
-    language: 'EN',
-    descriptionFr: 'Le manuel officiel du Scénario 3. Présente la mécanique de transmission héréditaire (nouveaux héros niveau 1 descendants de leurs ancêtres), les voies séparées selon l’alignement et le dragon doré L’Kbreth.',
-    descriptionEn: 'Official manual for Legacy of Llylgamyn. Introduces the lineage mechanics (level 1 descendants inheriting ancestral glory), alignment-restricted dungeon paths, and L’Kbreth the golden dragon.',
-    primaryUrl: 'https://www.zimlab.com/wizardry/files/wiz3-manual.pdf',
-    primaryLabelFr: 'Télécharger le Manuel PDF (Zimlab)',
-    primaryLabelEn: 'Download Manual PDF (Zimlab)',
-    secondaryUrl: 'https://www.mocagh.org/sir-tech/wiz3-manual.pdf',
-    secondaryLabelFr: 'Miroir PDF (Mocagh)',
-    secondaryLabelEn: 'Mirror PDF (Mocagh)',
-    badge: 'Scénario III'
-  },
   {
     id: 'wiz3-manual-pdf-fr',
     scenarioId: 'legacy-of-llylgamyn',
@@ -200,19 +219,60 @@ export const MANUALS_CATALOG: ManualItem[] = [
     format: 'PDF',
     pages: 'Document PDF',
     language: 'FR',
-    descriptionFr: 'Le manuel de Wizardry III en version française officielle Ediciel : création des descendants, règles d’alignement et ascension de la montagne mystique.',
+    descriptionFr: 'Le manuel de Wizardry III en version française officielle Ediciel : création des descendants niveau 1 héritant de leurs ancêtres, règles d’alignement Bien / Mal et ascension de la montagne mystique.',
     descriptionEn: 'Complete French edition manual published by Ediciel for Wizardry III: Legacy of Llylgamyn.',
     primaryUrl: 'https://www.zimlab.com/wizardry/files/ediciel_sorcellerie3_manuel_ocr.pdf',
     primaryLabelFr: 'Télécharger le Manuel en Français (PDF)',
     primaryLabelEn: 'Download French Manual (PDF)',
-    badge: 'Français Intégral'
+    badge: '🇫🇷 Manuel Français'
   },
   {
-    id: 'wiz3-walkthrough',
+    id: 'wiz3-manual-pdf-en',
     scenarioId: 'legacy-of-llylgamyn',
     category: 'OFFICIAL',
-    title: 'Wizardry III — Solution Complète & Guide de la Montagne',
-    subtitle: 'Solution des 6 niveaux d’ascension et obtention de l’Orbe de Clarté',
+    title: 'Wizardry III: Legacy of Llylgamyn — Official Manual (EN)',
+    subtitle: 'Dynastic lineage rules, Good vs. Evil duality, and the Orb of Clairvoyance',
+    author: 'Andrew Greenberg & Robert Woodhead (Sir-Tech)',
+    year: '1983',
+    format: 'PDF',
+    pages: '36 pages',
+    language: 'EN',
+    descriptionFr: 'Le manuel officiel du Scénario 3 en version originale anglaise. Présente la mécanique de transmission héréditaire, les voies séparées selon l’alignement et le dragon doré L’Kbreth.',
+    descriptionEn: 'Official manual for Legacy of Llylgamyn. Introduces the lineage mechanics (level 1 descendants inheriting ancestral glory), alignment-restricted dungeon paths, and L’Kbreth the golden dragon.',
+    primaryUrl: 'https://www.zimlab.com/wizardry/files/wiz3-manual.pdf',
+    primaryLabelFr: 'Télécharger le Manuel en Anglais (PDF)',
+    primaryLabelEn: 'Download English Manual (PDF)',
+    secondaryUrl: 'https://www.mocagh.org/sir-tech/wiz3-manual.pdf',
+    secondaryLabelFr: 'Miroir HD (Mocagh)',
+    secondaryLabelEn: 'HD Mirror (Mocagh)',
+    badge: '🇬🇧 English Manual'
+  },
+  {
+    id: 'wiz3-plans-fin-fr',
+    scenarioId: 'legacy-of-llylgamyn',
+    category: 'OFFICIAL',
+    title: 'Sorcellerie 3 — Plans de la Montagne & Épilogue (FR)',
+    subtitle: 'Plans des 6 niveaux ascensionnels et récit de fin en français',
+    author: 'Snafaru / Zimlab',
+    year: '2022',
+    format: 'WEB',
+    language: 'FR',
+    descriptionFr: 'Cartes des 6 niveaux de la montagne magique en français et dénouement narratif traduit de la quête de l’Orbe d’Erythran.',
+    descriptionEn: 'French mountain maps across 6 levels and translated ending narrative for the Orb of Clairvoyance.',
+    primaryUrl: 'https://www.zimlab.com/wizardry/maps/sorcellerie-3-plans-labyrinthe.htm',
+    primaryLabelFr: 'Consulter les Plans de la Montagne (FR)',
+    primaryLabelEn: 'View Mountain Plans (FR)',
+    secondaryUrl: 'https://www.zimlab.com/wizardry/walk/sorcellerie-3-fin.htm',
+    secondaryLabelFr: 'Récit de Fin (FR)',
+    secondaryLabelEn: 'Endgame Text (FR)',
+    badge: '🇫🇷 Guides Français'
+  },
+  {
+    id: 'wiz3-walkthrough-en',
+    scenarioId: 'legacy-of-llylgamyn',
+    category: 'OFFICIAL',
+    title: 'Wizardry III — Complete Mountain Walkthrough (EN)',
+    subtitle: 'Climb the 6 mountain floors, pirate ship riddles, and the golden dragon',
     author: 'Snafaru (Zimlab)',
     year: '2022',
     format: 'WEB',
@@ -220,37 +280,38 @@ export const MANUALS_CATALOG: ManualItem[] = [
     descriptionFr: 'Cheminement détaillé des 6 étages : passage du navire pirate, énigme des miroirs, portails d’alignement Bien / Mal et sanctuaire de L’Kbreth.',
     descriptionEn: 'Comprehensive guide to the mountain climb: pirate ship passage, mirror puzzles, alignment gates, and claiming the Orb of Clairvoyance.',
     primaryUrl: 'https://www.zimlab.com/wizardry/walk/w3/1/wizardry-3-walkthrough-1.htm',
-    primaryLabelFr: 'Consulter la Solution Complète (Zimlab)',
-    primaryLabelEn: 'View Walkthrough (Zimlab)'
+    primaryLabelFr: 'Consulter la Solution Complète (EN)',
+    primaryLabelEn: 'View Full Walkthrough (EN)',
+    badge: '🇬🇧 Soluce EN'
   },
 
   // ==========================================
   // --- OPUS 4 : THE RETURN OF WERDNA ---
   // ==========================================
   {
-    id: 'wiz4-manual-pdf',
+    id: 'wiz4-manual-pdf-en',
     scenarioId: 'return-of-werdna',
     category: 'OFFICIAL',
-    title: 'Wizardry IV: The Return of Werdna — Manuel Officiel (PDF)',
-    subtitle: 'Incarnez l’Archimage Déchu, invoquez des monstres et évadez-vous vers la surface',
+    title: 'Wizardry IV: The Return of Werdna — Official Manual (EN)',
+    subtitle: 'Play as the fallen Archmage, summon monsters, and escape back to the surface',
     author: 'Roe R. Adams III & Robert Woodhead (Sir-Tech)',
     year: '1987',
     format: 'PDF',
     pages: '44 pages',
     language: 'EN',
-    descriptionFr: 'Le manuel mythique du jeu de rôle le plus diabolique de l’histoire. Vous incarnez Werdna emprisonné au fond de son propre donjon (Niveau 10) et devez remonter vers la lumière en affrontant les groupes d’aventuriers envoyés par Trebor !',
+    descriptionFr: 'Le manuel officiel du jeu de rôle le plus diabolique de l’histoire. Vous incarnez Werdna emprisonné au fond de son propre donjon (Niveau 10) et devez remonter vers la surface en affrontant les groupes d’aventuriers envoyés par Trebor !',
     descriptionEn: 'The official manual for the most notoriously challenging RPG ever made. Play as the evil wizard Werdna at the bottom of his dungeon (Level 10) and summon monsters to break out to the surface.',
     primaryUrl: 'https://www.mocagh.org/sir-tech/wiz4-manual.pdf',
-    primaryLabelFr: 'Télécharger le Manuel PDF (Mocagh, 6 Mo)',
-    primaryLabelEn: 'Download Manual PDF (Mocagh, 6 MB)',
-    badge: 'Expert / Werdna'
+    primaryLabelFr: 'Télécharger le Manuel en Anglais (PDF, 6 Mo)',
+    primaryLabelEn: 'Download English Manual (PDF, 6 MB)',
+    badge: '🇬🇧 English Manual'
   },
   {
     id: 'wiz4-oracle-cluebook',
     scenarioId: 'return-of-werdna',
     category: 'OFFICIAL',
-    title: 'Wizardry IV — The Personal Oracle & Guide Stratégique',
-    subtitle: 'Le livre d’indices officiel et solution intégrale des énigmes de Werdna (PDF 16 Mo)',
+    title: 'Wizardry IV — The Personal Oracle & Guide Stratégique (PDF 16 Mo)',
+    subtitle: 'Le livre d’indices officiel et solution intégrale des énigmes de Werdna',
     author: 'Sir-Tech Software / Snafaru',
     year: '1987',
     format: 'PDF',
@@ -261,9 +322,27 @@ export const MANUALS_CATALOG: ManualItem[] = [
     primaryUrl: 'https://www.zimlab.com/wizardry/files/Wizardry-4-The-Personal-Oracle.pdf',
     primaryLabelFr: 'Télécharger The Personal Oracle (PDF, 16 Mo)',
     primaryLabelEn: 'Download The Personal Oracle (PDF, 16 MB)',
+    badge: 'Oracle & Clue Book'
+  },
+  {
+    id: 'wiz4-guide-fr',
+    scenarioId: 'return-of-werdna',
+    category: 'OFFICIAL',
+    title: 'Wizardry IV : Guide & Présentation de Werdna (FR)',
+    subtitle: 'Fiche détaillée des mécaniques uniques, gestion des sauvegardes et fins multiples',
+    author: 'Abandonware France',
+    year: '2023',
+    format: 'WEB',
+    language: 'FR',
+    descriptionFr: 'Dossier complet en français expliquant le fonctionnement singulier du Retour de Werdna : le piège des sauvegardes qui ressuscitent les ennemis, l’invocation des monstres aux pentagrammes et les différentes fins du jeu.',
+    descriptionEn: 'Comprehensive French guide detailing the unique mechanics of Return of Werdna: monster summoning at pentagrams, reload mechanics, and multiple endings.',
+    primaryUrl: 'https://www.abandonware-france.org/ltf_abandon/ltf_jeu.php?id=1214',
+    primaryLabelFr: 'Consulter le Guide en Français (Abandonware FR)',
+    primaryLabelEn: 'View French Guide (Abandonware FR)',
     secondaryUrl: 'https://www.zimlab.com/wizardry/walk/w4/1/wizardry-4-walkthrough-1.htm',
-    secondaryLabelFr: 'Solution Web en Ligne (Zimlab)',
-    secondaryLabelEn: 'Online Walkthrough (Zimlab)'
+    secondaryLabelFr: 'Solution Web Intégrale (EN)',
+    secondaryLabelEn: 'Full Walkthrough (EN)',
+    badge: '🇫🇷 Dossier Français'
   },
 
   // ==========================================
@@ -305,7 +384,8 @@ export const MANUALS_CATALOG: ManualItem[] = [
     primaryLabelEn: 'View Game Engine Calculations (Zimlab)',
     secondaryUrl: 'https://www.zimlab.com/wizardry/walk/wizardry-123-items-list.htm',
     secondaryLabelFr: 'Table des Objets Wiz 1-2-3',
-    secondaryLabelEn: 'Items Table Wiz 1-2-3'
+    secondaryLabelEn: 'Items Table Wiz 1-2-3',
+    badge: 'Formules Moteur'
   },
 
   // ==========================================
@@ -347,7 +427,8 @@ export const MANUALS_CATALOG: ManualItem[] = [
     primaryLabelEn: 'DragonQuest Page & Download (Zimlab)',
     secondaryUrl: 'https://www.zimlab.com/wizardry/maps/dqmaps.htm',
     secondaryLabelFr: 'Cartes du Donjon DragonQuest',
-    secondaryLabelEn: 'DragonQuest Dungeon Maps'
+    secondaryLabelEn: 'DragonQuest Dungeon Maps',
+    badge: 'Scénario Fan'
   },
   {
     id: 'fan-black-stone-guide',
@@ -366,7 +447,8 @@ export const MANUALS_CATALOG: ManualItem[] = [
     primaryLabelEn: 'The Black Stone Page & Download (Zimlab)',
     secondaryUrl: 'https://www.zimlab.com/wizardry/maps/bsmaps.htm',
     secondaryLabelFr: 'Cartes des 8 Étages (Zimlab)',
-    secondaryLabelEn: '8-Floor Maps (Zimlab)'
+    secondaryLabelEn: '8-Floor Maps (Zimlab)',
+    badge: 'Scénario Fan'
   },
   {
     id: 'fan-atomic-wasteland-guide',
@@ -385,7 +467,8 @@ export const MANUALS_CATALOG: ManualItem[] = [
     primaryLabelEn: 'Atomic Wasteland 2098 Page (Zimlab)',
     secondaryUrl: 'https://www.zimlab.com/wizardry/maps/awmaps.htm',
     secondaryLabelFr: 'Cartes Atomic Wasteland',
-    secondaryLabelEn: 'Atomic Wasteland Maps'
+    secondaryLabelEn: 'Atomic Wasteland Maps',
+    badge: 'Scénario Fan'
   },
   {
     id: 'fan-oconnors-mine-guide',
@@ -401,7 +484,8 @@ export const MANUALS_CATALOG: ManualItem[] = [
     descriptionEn: 'Official download page and documentation for the O’Connor’s Mine community scenario.',
     primaryUrl: 'https://www.zimlab.com/wizardry/mods/oconnors-mine.htm',
     primaryLabelFr: 'Page O’Connor’s Mine (Zimlab)',
-    primaryLabelEn: 'O’Connor’s Mine Page (Zimlab)'
+    primaryLabelEn: 'O’Connor’s Mine Page (Zimlab)',
+    badge: 'Scénario Fan'
   },
   {
     id: 'fan-catacombs-vlad-guide',
@@ -417,7 +501,8 @@ export const MANUALS_CATALOG: ManualItem[] = [
     descriptionEn: 'Official page and documentation for the gothic campaign Catacombs of Vlad.',
     primaryUrl: 'https://www.zimlab.com/wizardry/mods/catacombs-of-vlad.htm',
     primaryLabelFr: 'Page Catacombs of Vlad (Zimlab)',
-    primaryLabelEn: 'Catacombs of Vlad Page (Zimlab)'
+    primaryLabelEn: 'Catacombs of Vlad Page (Zimlab)',
+    badge: 'Scénario Fan'
   },
 
   // ==========================================
