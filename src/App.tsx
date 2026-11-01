@@ -28,6 +28,7 @@ import { CombatView } from './components/CombatView';
 import { ChestView } from './components/ChestView';
 import { PySide6Exporter } from './components/PySide6Exporter';
 import { ScenarioMenuView } from './components/ScenarioMenuView';
+import { ManualsModal } from './components/ManualsModal';
 import { WIZARDRY_SCENARIOS, getLocalizedScenario } from './data/scenariosCatalog';
 import { useLanguage, UI_TEXT } from './utils/language';
 import { 
@@ -58,7 +59,8 @@ import {
   Users,
   Library,
   Keyboard,
-  Sparkles
+  Sparkles,
+  BookOpen
 } from 'lucide-react';
 import { RETURN_OF_WERDNA_STARTER_PARTY } from './data/scenarios/return-of-werdnaData';
 
@@ -340,6 +342,8 @@ export default function App() {
     (typeof window !== 'undefined' &&
       (window.location.hostname.includes('itch.zone') || window.location.hostname.includes('itch.io')));
   const [showPySide6Export, setShowPySide6Export] = useState<boolean>(false);
+  const [showManualsModal, setShowManualsModal] = useState<boolean>(false);
+  const [manualsScenarioTarget, setManualsScenarioTarget] = useState<string | undefined>(undefined);
   const [soundOn, setSoundOn] = useState<boolean>(true);
   const [musicOn, setMusicOn] = useState<boolean>(() => music.isEnabled());
   const [lastWipeoutInfo, setLastWipeoutInfo] = useState<{ x: number; y: number; level: number; heroes: string[] } | null>(
@@ -1534,6 +1538,19 @@ export default function App() {
           </button>
 
           <button
+            onClick={() => {
+              setManualsScenarioTarget(activeScenarioId);
+              setShowManualsModal(true);
+            }}
+            className="flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30"
+            title={t.manualsTooltip}
+          >
+            <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">{t.manualsBtn}</span>
+            <span className="sm:hidden">Docs</span>
+          </button>
+
+          <button
             onClick={() => { toggleKeyboardLayout(); sounds.playTurn(); }}
             className="flex items-center gap-1 px-2 md:px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-mono font-bold whitespace-nowrap shrink-0 transition"
             title={t.keyboardLayoutTitle(keyboardLayout)}
@@ -1582,6 +1599,10 @@ export default function App() {
             activeScenarioId={activeScenarioId}
             onSelectScenario={handleSelectScenario}
             getStorageKeysForScenario={getStorageKeysForScenario}
+            onOpenManuals={(scenId) => {
+              setManualsScenarioTarget(scenId);
+              setShowManualsModal(true);
+            }}
           />
         ) : null}
 
@@ -1903,6 +1924,13 @@ export default function App() {
       {!isItchioBuild && showPySide6Export && (
         <PySide6Exporter onClose={() => setShowPySide6Export(false)} />
       )}
+
+      {/* Manuals & Documentation Modal */}
+      <ManualsModal
+        isOpen={showManualsModal}
+        onClose={() => setShowManualsModal(false)}
+        initialScenarioId={manualsScenarioTarget}
+      />
     </div>
   );
 }

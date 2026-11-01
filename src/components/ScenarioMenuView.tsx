@@ -14,7 +14,8 @@ import {
   CheckCircle2,
   Cpu,
   Languages,
-  ShieldAlert
+  ShieldAlert,
+  BookOpen
 } from 'lucide-react';
 
 interface ScenarioLocalSummary {
@@ -36,12 +37,14 @@ interface ScenarioMenuViewProps {
     visited: string;
     usedEvents: string;
   };
+  onOpenManuals?: (scenarioId?: string) => void;
 }
 
 export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
   activeScenarioId,
   onSelectScenario,
-  getStorageKeysForScenario
+  getStorageKeysForScenario,
+  onOpenManuals
 }) => {
   const [lang, setLang] = useLanguage();
   const t = UI_TEXT[lang];
@@ -308,6 +311,17 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                 <span>{t.importJson}</span>
                 <input type="file" accept=".json" onChange={handleImportAllSaves} className="hidden" />
               </label>
+
+              {onOpenManuals && (
+                <button
+                  onClick={() => onOpenManuals()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/40 text-xs font-semibold text-amber-300 transition"
+                  title={lang === 'fr' ? 'Consulter les manuels originaux et archives Zimlab' : 'Browse original manuals & Zimlab archives'}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>{lang === 'fr' ? '📚 Manuels & Guides PDF' : '📚 Manuals & PDF Guides'}</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -534,6 +548,21 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                       : `This scenario uses its own isolated local save on the Wizardry v3.2 engine. Extraction of its ${selectedScenario.diskFileName} disk via scripts/extract_pgmo.py loads its dedicated maps, monsters, and items.`}
                   </span>
                 </div>
+              )}
+
+              {/* Manual & Guides button for selected scenario */}
+              {onOpenManuals && (
+                <button
+                  onClick={() => onOpenManuals(selectedScenario.id)}
+                  className="w-full py-2.5 px-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-amber-600/40 text-amber-300 text-xs font-semibold flex items-center justify-center gap-2 transition"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                  <span>
+                    {lang === 'fr'
+                      ? `📖 Consulter le Manuel & Guides de ce Scénario`
+                      : `📖 View Manual & Guides for this Scenario`}
+                  </span>
+                </button>
               )}
 
               {/* Launch Button */}

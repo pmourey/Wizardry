@@ -732,9 +732,16 @@ function executeHeroAttack(
       // 1.5x bonus damage against helpless target
       totalDamage += isHelpless ? Math.floor(dam * 1.5) : dam;
 
-      // Ninja critical hit decapitation check
-      if (hero.critHit && (Math.random() * 100 < hero.charLevel * 3)) {
-        criticalHit = true;
+      // Authentic Pascal Critical Hit Decapitation (COMBAT5.TEXT l. 389-400):
+      // Active for NINJA class or any hero wielding a critical-hit weapon (critHit === true)
+      if (hero.critHit) {
+        const critChance = Math.min(50, (hero.charLevel || 1) * 2);
+        if (Math.random() * 100 < critChance) {
+          // Monster level decapitation resistance: (RANDOM MOD 35) > MONSTER_LEVEL + 10
+          if (Math.floor(Math.random() * 35) > ((monster.level || 1) + 10)) {
+            criticalHit = true;
+          }
+        }
       }
     }
   }

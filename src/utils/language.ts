@@ -54,6 +54,8 @@ export const UI_TEXT = {
     sfxMute: 'Mute sound effects (SFX)',
     sfxUnmute: 'Enable sound effects (SFX)',
     exportPySide6: 'Export PySide6',
+    manualsBtn: 'Manuals & Guides',
+    manualsTooltip: 'Download official manuals & Zimlab clue books',
 
     // ScenarioMenuView
     badgeAnthology: (count: number) => `WIZARDRY ENGINE ANTHOLOGY v3.3 — ${count} SCENARIOS`,
@@ -130,6 +132,8 @@ export const UI_TEXT = {
     sfxMute: 'Couper les bruitages (SFX)',
     sfxUnmute: 'Activer les bruitages (SFX)',
     exportPySide6: 'Export PySide6',
+    manualsBtn: 'Manuels & Guides',
+    manualsTooltip: 'Télécharger les manuels officiels & guides Zimlab',
 
     // ScenarioMenuView
     badgeAnthology: (count: number) => `ANTHOLOGIE WIZARDRY ENGINE v3.3 — ${count} SCÉNARIOS`,
