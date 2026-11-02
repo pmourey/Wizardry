@@ -20,6 +20,7 @@ import {
 } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { music } from '../utils/musicManager';
+import { useLanguage, UI_TEXT } from '../utils/language';
 import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
 import { MiniMap, loadMiniMapPrefs, saveMiniMapPrefs } from './MiniMap';
 import { CharacterSheetModal } from './CharacterSheetModal';
@@ -118,6 +119,8 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   onTakeStairs,
   onTriggerEncounter
 }) => {
+  const [lang] = useLanguage();
+  const t = UI_TEXT[lang] || UI_TEXT.fr;
   const [wireframeMode, setWireframeMode] = useState<boolean>(() => loadMiniMapPrefs().wireframeMode);
   const [showMinimap, setShowMinimap] = useState<boolean>(false);
   const [hudMinimapVisible, setHudMinimapVisible] = useState<boolean>(() => loadMiniMapPrefs().hudVisible);
@@ -785,15 +788,15 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         <div className="flex items-center gap-2 md:gap-3 min-w-0">
           <div className="flex items-center gap-1 font-bold text-amber-400 whitespace-nowrap">
             <Compass className="w-3.5 h-3.5 md:w-4 md:h-4" />
-            <span>Niv. {maze.level}</span>
+            <span>{lang === 'en' ? `Lvl ${maze.level}` : `Niv. ${maze.level}`}</span>
           </div>
           <span className="text-slate-600 hidden sm:inline">·</span>
           <span className="text-slate-300 text-[11px] md:text-xs truncate">
-            ({x},{y}) · <strong className="text-white">{['NORD', 'EST', 'SUD', 'OUEST'][direction]}</strong>
+            ({x},{y}) · <strong className="text-white">{lang === 'en' ? ['NORTH', 'EAST', 'SOUTH', 'WEST'][direction] : ['NORD', 'EST', 'SUD', 'OUEST'][direction]}</strong>
           </span>
           {sqrType === 'STAIRS' && (
             <span className="bg-amber-950/70 text-amber-300 border border-amber-600/40 px-1.5 md:px-2 py-0.5 rounded text-[10px] md:text-[11px] font-bold shrink-0">
-              Escalier
+              {t.dungeonStairsTag}
             </span>
           )}
         </div>
@@ -803,13 +806,13 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           {lightLevel > 0 && (
             <div className="flex items-center gap-1 text-amber-400 font-bold text-[11px] md:text-xs" title="Lumière magique Milwa/Lomilwa active">
               <Flame className="w-3 h-3 md:w-3.5 md:h-3.5 animate-pulse" />
-              <span className="hidden sm:inline">Lumière</span> <span>({lightLevel > 999 ? '∞' : lightLevel})</span>
+              <span className="hidden sm:inline">{t.dungeonLightTag}</span> <span>({lightLevel > 999 ? '∞' : lightLevel})</span>
             </div>
           )}
           {acModifier > 0 && (
-            <div className="flex items-center gap-1 text-blue-400 font-bold text-[11px] md:text-xs" title="Protection Maporfic">
+            <div className="flex items-center gap-1 text-blue-400 font-bold text-[11px] md:text-xs" title={t.dungeonShieldTooltip}>
               <ShieldCheck className="w-3 h-3 md:w-3.5 md:h-3.5" />
-              <span className="hidden sm:inline">Bouclier</span>
+              <span className="hidden sm:inline">{t.dungeonShieldMaporfic}</span>
             </div>
           )}
 
@@ -820,10 +823,10 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 ? 'bg-amber-950 text-amber-300 border-amber-600/50' 
                 : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'
             }`}
-            title="Afficher/masquer la minicarte HUD (M)"
+            title={t.dungeonMapTooltip}
           >
             <Map className="w-3 h-3 md:w-3.5 md:h-3.5" />
-            <span className="hidden sm:inline">Carte {hudMinimapVisible ? 'Active' : ''}</span>
+            <span className="hidden sm:inline">{t.dungeonMapBtn} {hudMinimapVisible ? t.dungeonMapActive : ''}</span>
           </button>
 
           <button
@@ -833,10 +836,10 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 ? 'bg-emerald-950/90 text-emerald-400 border-emerald-500/60 hover:bg-emerald-900/80' 
                 : 'bg-amber-950/90 text-amber-300 border-amber-600/60 hover:bg-amber-900/80'
             }`}
-            title="Basculer entre le rendu 3D Donjon Pierre et le Rétro Vectoriel Apple II"
+            title={t.dungeonRenderTooltip}
           >
-            <span className="sm:hidden text-[10px]">{wireframeMode ? 'Fil de Fer' : 'Pierre 3D'}</span>
-            <span className="hidden sm:inline">Rendu : <strong>{wireframeMode ? 'Rétro Vectoriel (1981)' : '3D Donjon Pierre'}</strong></span>
+            <span className="sm:hidden text-[10px]">{wireframeMode ? t.dungeonRenderShortWireframe : t.dungeonRenderShortStone}</span>
+            <span className="hidden sm:inline">{t.dungeonRenderModeLabel} <strong>{wireframeMode ? t.dungeonRenderWireframe : t.dungeonRenderStone}</strong></span>
           </button>
         </div>
       </div>
@@ -864,36 +867,38 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             <div className="absolute top-4 left-4 z-20 max-w-sm bg-red-950/90 border-2 border-red-600/80 rounded-xl p-3.5 shadow-2xl backdrop-blur-md text-xs space-y-2.5 animate-fadeIn">
               <div className="flex items-center gap-2 font-bold text-red-200">
                 <Skull className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
-                <span className="tracking-wide uppercase">Corps d'aventuriers découverts !</span>
+                <span className="tracking-wide uppercase">{t.dungeonFallenFoundTitle}</span>
               </div>
               <p className="text-red-200/90 text-[11px] leading-relaxed">
-                Les dépouilles de vos anciens compagnons gisent ici dans la poussière du donjon :
+                {t.dungeonFallenFoundDesc}
               </p>
               <div className="space-y-1.5">
                 {fallenHeroesHere.map(fallen => (
                   <div key={fallen.id} className="flex items-center justify-between bg-black/60 border border-red-900/60 p-2 rounded-lg gap-2">
                     <div>
                       <span className="font-bold text-white">{fallen.name}</span>
-                      <span className="text-[10px] text-slate-400 ml-1.5">({fallen.race} {fallen.class} Niv.{fallen.charLevel})</span>
+                      <span className="text-[10px] text-slate-400 ml-1.5">({fallen.race} {fallen.class} {lang === 'en' ? `Lvl ${fallen.charLevel}` : `Niv.${fallen.charLevel}`})</span>
                     </div>
                     <button
                       onClick={() => handleRecoverBody(fallen.id)}
                       disabled={party.length >= 6}
                       className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 disabled:opacity-50 text-white font-bold rounded text-[11px] transition shrink-0"
-                      title={party.length >= 6 ? 'Groupe complet (6/6)' : 'Prendre le corps dans le groupe'}
+                      title={party.length >= 6 ? t.dungeonPartyFullBtn : t.dungeonRecoverBodyBtn}
                     >
-                      {party.length >= 6 ? 'Groupe 6/6' : 'Hisser le corps'}
+                      {party.length >= 6 ? t.dungeonPartyFullBtn : t.dungeonRecoverBodyBtn}
                     </button>
                   </div>
                 ))}
               </div>
               {party.length >= 6 ? (
                 <div className="text-[10px] text-amber-400 italic">
-                  ⚠️ Votre escouade est au complet (6/6). Vous devez avoir au moins 1 emplacement libre pour transporter une dépouille.
+                  {t.dungeonPartyFullWarning}
                 </div>
               ) : (
                 <div className="text-[10px] text-emerald-400">
-                  ✓ Hisser le corps occupe 1 emplacement dans votre escouade ({party.length}/6). Ramenez-le au Temple de Cant !
+                  {lang === 'en' 
+                    ? `✓ Recovering body takes 1 party slot (${party.length}/6). Bring them to the Temple of Cant!`
+                    : `✓ Hisser le corps occupe 1 emplacement dans votre escouade (${party.length}/6). Ramenez-le au Temple de Cant !`}
                 </div>
               )}
             </div>
@@ -935,16 +940,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               <Layers className="w-4 h-4 text-amber-400 animate-bounce" />
               <span className="text-xs font-bold text-amber-300">
                 {stairsTargetLvl === 0 
-                  ? 'Escalier montant vers le Château' 
+                  ? (lang === 'en' ? 'Stairs leading up to Castle' : 'Escalier montant vers le Château')
                   : stairsTargetLvl > maze.level 
-                    ? `Escalier descendant vers le Niveau ${stairsTargetLvl}` 
-                    : `Escalier montant vers le Niveau ${stairsTargetLvl}`}
+                    ? (lang === 'en' ? `Stairs leading down to Level ${stairsTargetLvl}` : `Escalier descendant vers le Niveau ${stairsTargetLvl}`) 
+                    : (lang === 'en' ? `Stairs leading up to Level ${stairsTargetLvl}` : `Escalier montant vers le Niveau ${stairsTargetLvl}`)}
               </span>
               <button
                 onClick={handleExecuteTakeStairs}
                 className="ml-2 px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-full text-xs shadow transition active:scale-95 cursor-pointer"
               >
-                Emprunter (Y)
+                {lang === 'en' ? 'Take (Y)' : 'Emprunter (Y)'}
               </button>
             </div>
           )}
@@ -958,20 +963,20 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 </div>
                 <h3 className="text-lg font-black text-amber-300 tracking-wide">
                   {stairsTargetLvl === 0 
-                    ? "Escalier vers le Château" 
+                    ? (lang === 'en' ? "Stairs to the Castle" : "Escalier vers le Château")
                     : stairsTargetLvl > maze.level 
-                      ? `Escalier Descendant (Niveau ${stairsTargetLvl})` 
-                      : `Escalier Montant (Niveau ${stairsTargetLvl})`}
+                      ? (lang === 'en' ? `Descending Stairs (Level ${stairsTargetLvl})` : `Escalier Descendant (Niveau ${stairsTargetLvl})`) 
+                      : (lang === 'en' ? `Ascending Stairs (Level ${stairsTargetLvl})` : `Escalier Montant (Niveau ${stairsTargetLvl})`)}
                 </h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
                   {stairsTargetLvl === 0
-                    ? "Un large perron de pierre remonte vers la cour et la sécurité du Château."
+                    ? (lang === 'en' ? "A broad flight of stone stairs leads up to the courtyard and safety of the Castle." : "Un large perron de pierre remonte vers la cour et la sécurité du Château.")
                     : stairsTargetLvl > maze.level
-                      ? `Un escalier en colimaçon taillé dans la roche brute s'enfonce dans les profondeurs vers le Niveau ${stairsTargetLvl}. L'air y est plus froid, et les rugissements des créatures résonnent plus près.`
-                      : `Un escalier de pierre taillée remonte vers les couloirs du Niveau ${stairsTargetLvl}.`}
+                      ? (lang === 'en' ? `A spiral staircase carved into raw rock descends into the depths towards Level ${stairsTargetLvl}. The air is colder, and creature roars echo closer.` : `Un escalier en colimaçon taillé dans la roche brute s'enfonce dans les profondeurs vers le Niveau ${stairsTargetLvl}. L'air y est plus froid, et les rugissements des créatures résonnent plus près.`)
+                      : (lang === 'en' ? `A carved stone staircase leads up to the corridors of Level ${stairsTargetLvl}.` : `Un escalier de pierre taillée remonte vers les couloirs du Niveau ${stairsTargetLvl}.`)}
                 </p>
                 <div className="text-amber-200/90 font-bold text-xs pt-1">
-                  Voulez-vous emprunter cet escalier ?
+                  {lang === 'en' ? "Do you wish to take these stairs?" : "Voulez-vous emprunter cet escalier ?"}
                 </div>
                 <div className="flex items-center justify-center gap-3 pt-2">
                   <button
@@ -979,16 +984,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                     className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl text-xs font-black shadow-lg transition active:scale-95 cursor-pointer"
                   >
                     {stairsTargetLvl === 0 
-                      ? 'Remonter au Château (Y)' 
+                      ? (lang === 'en' ? 'Return to Castle (Y)' : 'Remonter au Château (Y)')
                       : stairsTargetLvl > maze.level 
-                        ? `Descendre au Niveau ${stairsTargetLvl} (Y)` 
-                        : `Monter au Niveau ${stairsTargetLvl} (Y)`}
+                        ? (lang === 'en' ? `Descend to Level ${stairsTargetLvl} (Y)` : `Descendre au Niveau ${stairsTargetLvl} (Y)`) 
+                        : (lang === 'en' ? `Ascend to Level ${stairsTargetLvl} (Y)` : `Monter au Niveau ${stairsTargetLvl} (Y)`)}
                   </button>
                   <button
                     onClick={() => setShowStairsPrompt(false)}
                     className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
                   >
-                    Rester ici (N)
+                    {lang === 'en' ? 'Stay Here (N)' : 'Rester ici (N)'}
                   </button>
                 </div>
               </div>
@@ -1041,7 +1046,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 className="py-2 px-1 bg-slate-800 active:bg-slate-700 border border-slate-700/60 rounded-lg flex flex-col items-center justify-center text-slate-200 font-semibold transition active:scale-95"
               >
                 <Tent className="w-4 h-4 text-emerald-400" />
-                <span className="text-[10px] truncate mt-0.5">Camp (C)</span>
+                <span className="text-[10px] truncate mt-0.5">{lang === 'en' ? 'Camp (C)' : 'Camp (C)'}</span>
               </button>
 
               <button
@@ -1049,7 +1054,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 className="py-2 px-1 bg-slate-800 active:bg-slate-700 border border-slate-700/60 rounded-lg flex flex-col items-center justify-center text-slate-200 font-semibold transition active:scale-95"
               >
                 <Map className="w-4 h-4 text-blue-400" />
-                <span className="text-[10px] truncate mt-0.5">Carte (M)</span>
+                <span className="text-[10px] truncate mt-0.5">{lang === 'en' ? 'Map (M)' : 'Carte (M)'}</span>
               </button>
 
               <button
@@ -1057,7 +1062,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 className="py-2 px-1 bg-slate-800 active:bg-slate-700 border border-slate-700/60 rounded-lg flex flex-col items-center justify-center text-slate-200 font-semibold transition active:scale-95"
               >
                 <Eye className="w-4 h-4 text-amber-400" />
-                <span className="text-[10px] truncate mt-0.5">Chercher</span>
+                <span className="text-[10px] truncate mt-0.5">{lang === 'en' ? 'Search' : 'Chercher'}</span>
               </button>
             </div>
 
@@ -1070,20 +1075,20 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 <Layers className="w-3.5 h-3.5" />
                 <span className="truncate">
                   {stairsTargetLvl === 0 
-                    ? 'Château (Y)' 
+                    ? (lang === 'en' ? 'Castle (Y)' : 'Château (Y)') 
                     : stairsTargetLvl > maze.level 
-                      ? `Niveau ${stairsTargetLvl} ↓` 
-                      : `Niveau ${stairsTargetLvl} ↑`}
+                      ? (lang === 'en' ? `Level ${stairsTargetLvl} ↓` : `Niveau ${stairsTargetLvl} ↓`) 
+                      : (lang === 'en' ? `Level ${stairsTargetLvl} ↑` : `Niveau ${stairsTargetLvl} ↑`)}
                 </span>
               </button>
             ) : (
               <button
                 onClick={() => { onRotate(2); if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10); }}
                 className="w-full py-1.5 px-2 bg-slate-800/80 active:bg-slate-700 border border-slate-700/50 rounded-lg text-slate-300 text-[11px] font-medium flex items-center justify-center gap-1 transition"
-                title="Faire demi-tour (180°)"
+                title={lang === 'en' ? "Turn around (180°)" : "Faire demi-tour (180°)"}
               >
                 <RotateCcw className="w-3 h-3 text-amber-400" />
-                <span>Demi-tour 180°</span>
+                <span>{lang === 'en' ? 'Turnaround 180°' : 'Demi-tour 180°'}</span>
               </button>
             )}
           </div>
@@ -1094,13 +1099,13 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Commandes d'Exploration
+                {lang === 'en' ? 'Exploration Controls' : "Commandes d'Exploration"}
               </div>
               {onToggleKeyboardLayout && (
                 <button
                   onClick={() => { onToggleKeyboardLayout(); sounds.playTurn(); }}
-                  className="flex items-center gap-1 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 border border-amber-500/40 rounded text-[10px] font-mono font-bold text-amber-300 transition"
-                  title="Changer la disposition du clavier pour les déplacements (AZERTY: Z/Q/D · QWERTY: W/A/D)"
+                  className="flex items-center gap-1 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 border border-amber-500/40 rounded-lg text-[10px] font-mono font-bold text-amber-300 transition"
+                  title={lang === 'en' ? "Toggle movement keyboard layout (AZERTY: Z/Q/D · QWERTY: W/A/D)" : "Changer la disposition du clavier pour les déplacements (AZERTY: Z/Q/D · QWERTY: W/A/D)"}
                 >
                   <Keyboard className="w-3 h-3" />
                   <span>{keyboardLayout}</span>
@@ -1114,7 +1119,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               <button
                 onClick={() => tryMoveForward(false)}
                 className="p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex flex-col items-center justify-center transition shadow-sm active:scale-95"
-                title={`Avancer (${forwardKeyLabel} / F / Flèche Haut)`}
+                title={lang === 'en' ? `Move Forward (${forwardKeyLabel} / Up Arrow)` : `Avancer (${forwardKeyLabel} / F / Flèche Haut)`}
               >
                 <ArrowUp className="w-4 h-4 text-amber-400" />
                 <span className="text-[9px] font-mono text-amber-300 font-bold mt-0.5">{forwardKeyLabel}</span>
@@ -1124,7 +1129,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               <button
                 onClick={() => onRotate(3)}
                 className="p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex flex-col items-center justify-center transition shadow-sm active:scale-95"
-                title={`Pivoter à Gauche (${leftKeyLabel} / L / Flèche Gauche)`}
+                title={lang === 'en' ? `Turn Left (${leftKeyLabel} / Left Arrow)` : `Pivoter à Gauche (${leftKeyLabel} / L / Flèche Gauche)`}
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-[9px] font-mono text-slate-300 font-bold mt-0.5">{leftKeyLabel}</span>
@@ -1132,15 +1137,15 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               <button
                 onClick={() => onKickDoor()}
                 className="p-2 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-600/40 text-amber-300 rounded-lg flex flex-col items-center justify-center text-[10px] font-bold transition active:scale-95"
-                title="Enfoncer / Ouvrir Porte (K)"
+                title={lang === 'en' ? "Kick / Open Door (K)" : "Enfoncer / Ouvrir Porte (K)"}
               >
                 <DoorClosed className="w-3.5 h-3.5 mb-0.5" />
-                Porte (K)
+                {lang === 'en' ? 'Door (K)' : 'Porte (K)'}
               </button>
               <button
                 onClick={() => onRotate(1)}
                 className="p-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg flex flex-col items-center justify-center transition shadow-sm active:scale-95"
-                title={`Pivoter à Droite (${rightKeyLabel} / R / Flèche Droite)`}
+                title={lang === 'en' ? `Turn Right (${rightKeyLabel} / Right Arrow)` : `Pivoter à Droite (${rightKeyLabel} / R / Flèche Droite)`}
               >
                 <ArrowRight className="w-4 h-4" />
                 <span className="text-[9px] font-mono text-slate-300 font-bold mt-0.5">{rightKeyLabel}</span>
@@ -1154,7 +1159,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 className="w-full p-2.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-lg flex items-center gap-2 text-slate-200 font-semibold transition"
               >
                 <Tent className="w-4 h-4 text-emerald-400" />
-                <span>Monter le Camp (C)</span>
+                <span>{lang === 'en' ? 'Set Camp (C)' : 'Monter le Camp (C)'}</span>
               </button>
 
               <button
@@ -1162,7 +1167,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 className="w-full p-2.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-lg flex items-center gap-2 text-slate-200 font-semibold transition"
               >
                 <Map className="w-4 h-4 text-blue-400" />
-                <span>Consulter la Carte (M)</span>
+                <span>{lang === 'en' ? 'View Map (M)' : 'Consulter la Carte (M)'}</span>
               </button>
 
               <button
@@ -1170,7 +1175,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 className="w-full p-2.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-lg flex items-center gap-2 text-slate-200 font-semibold transition"
               >
                 <Eye className="w-4 h-4 text-amber-400" />
-                <span>Inspecter les lieux (I)</span>
+                <span>{lang === 'en' ? 'Inspect Area (I)' : 'Inspecter les lieux (I)'}</span>
               </button>
             </div>
           </div>
@@ -1184,10 +1189,10 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               <Layers className="w-4 h-4" />
               <span>
                 {stairsTargetLvl === 0 
-                  ? 'Remonter au Château (Y)' 
+                  ? (lang === 'en' ? 'Return to Castle (Y)' : 'Remonter au Château (Y)') 
                   : stairsTargetLvl > maze.level 
-                    ? `Descendre au Niveau ${stairsTargetLvl} (Y)` 
-                    : `Monter au Niveau ${stairsTargetLvl} (Y)`}
+                    ? (lang === 'en' ? `Descend to Level ${stairsTargetLvl} (Y)` : `Descendre au Niveau ${stairsTargetLvl} (Y)`) 
+                    : (lang === 'en' ? `Ascend to Level ${stairsTargetLvl} (Y)` : `Monter au Niveau ${stairsTargetLvl} (Y)`)}
               </span>
             </button>
           )}

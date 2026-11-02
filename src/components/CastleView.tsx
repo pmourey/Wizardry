@@ -337,11 +337,12 @@ export const CastleView: React.FC<CastleViewProps> = ({
     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
     if (!itm) return;
 
-    if (!slot.cursed || !slot.equipped) {
-      setMessage(`Cet objet n'est pas un équipement maudit verrouillé.`);
+    if (!slot.cursed) {
+      setMessage(`Cet objet n'est pas maudit.`);
       return;
     }
 
+    // Authentic Pascal Wizardry (SHOPS.TEXT l. 498): fee is full item purchase price
     const fee = Math.max(20, itm.price);
     if (selectedHero.gold < fee) {
       sounds.playBump();
@@ -349,13 +350,21 @@ export const CastleView: React.FC<CastleViewProps> = ({
       return;
     }
 
+    const isEquipped = slot.equipped;
+    const confirmText = isEquipped
+      ? `Boltac demande ${fee} PO pour briser le sortilège et enlever définitivement "${itm.name}" scellé sur ${selectedHero.name}.\nL'objet maudit sera retiré (règle originale UCSD Pascal U)NCURSE).\n\nConfirmer le désenvoûtement ?`
+      : `Boltac demande ${fee} PO pour purifier et détruire l'objet maudit "${itm.name}".\n\nConfirmer ?`;
+
+    if (!window.confirm(confirmText)) return;
+
     sounds.playSpellCast();
     selectedHero.gold -= fee;
-    slot.cursed = false;
-    slot.equipped = false;
+    // Authentic Pascal Wizardry (SHOPS.TEXT l. 504-511): Boltac takes and removes the cursed item completely
+    selectedHero.possessions.splice(slotIdx, 1);
     recalculateCharacterCombatStats(selectedHero);
     setParty([...party]);
-    setMessage(`✨ Boltac brise la malédiction de ${itm.name} et le retire de votre équipement ! (-${fee} PO).`);
+    setAllCharacters(prev => prev.map(c => c.id === selectedHero.id ? { ...selectedHero } : c));
+    setMessage(`✨ Boltac brise la malédiction de ${itm.name} et l'enlève ${isEquipped ? 'de votre équipement' : 'de vos possessions'} ! (-${fee} PO).`);
   };
 
   const handleSellItem = (slotIdx: number) => {
@@ -364,8 +373,10 @@ export const CastleView: React.FC<CastleViewProps> = ({
     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
     if (!itm) return;
 
-    if (slot.cursed && slot.equipped) {
-      setMessage(`Impossible de vendre un objet maudit actuellement équipé ! Faites-le désenvoûter.`);
+    // Authentic Pascal Wizardry (SHOPS.TEXT l. 478): "WE DONT BUY CURSED ITEMS"
+    if (slot.cursed) {
+      sounds.playBump();
+      setMessage(`Boltac refuse d'acheter un objet maudit ! Utilisez l'option "Enlever" pour le faire désenvoûter (Option originale U)NCURSE).`);
       return;
     }
 
@@ -1139,7 +1150,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900/80 border border-slate-800 p-3 sm:p-4 rounded-xl">
               <div>
                 <h2 className="text-base sm:text-lg font-serif font-bold text-white">Comptoir de Boltac</h2>
-                <p className="text-[11px] sm:text-xs text-slate-400">Armes, protections et artefacts magiques.</p>
+                <p className="text-[11px] sm:text-xs text-slate-400">Armes, protections, identification (I) et désenvoûtement d'équipements maudits (U)NCURSE.</p>
               </div>
               <button
                 onClick={handlePoolGold}
@@ -1149,6 +1160,21 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 <span>Mettre tout l'or sur {selectedHero?.name}</span>
               </button>
             </div>
+
+            {/* Authentic U)NCURSE Notice if cursed item is equipped on selected hero */}
+            {selectedHero?.possessions.some(p => p.cursed && p.equipped) && (
+              <div className="bg-red-950/80 border-2 border-red-600/80 rounded-xl p-3 sm:p-4 text-xs space-y-2 shadow-xl animate-fadeIn">
+                <div className="flex items-center gap-2 font-bold text-red-200">
+                  <Skull className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
+                  <span className="tracking-wide uppercase">
+                    Équipement maudit scellé sur {selectedHero.name} !
+                  </span>
+                </div>
+                <p className="text-red-200/90 text-[11px] leading-relaxed">
+                  Le moteur original de Wizardry interdit de retirer soi-même un équipement maudit. Seul Boltac peut briser le sortilège et enlever l'objet grâce à l'option originale <strong>U)NCURSE</strong> (pour le prix d'achat de l'objet).
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Buy catalog */}
@@ -1192,10 +1218,10 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 </div>
               </div>
 
-              {/* Player Inventory (Sell) */}
+              {/* Player Inventory (Sell, Identify, Uncurse) */}
               <div className="bg-slate-900/60 border border-slate-800 p-3 sm:p-4 rounded-xl space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                  Inventaire de {selectedHero?.name} (Vendre)
+                  Inventaire de {selectedHero?.name} (Vendre, Identifier & Désenvoûter)
                 </h3>
                 <div className="space-y-2 max-h-[340px] sm:max-h-[380px] overflow-y-auto pr-1">
                   {selectedHero?.possessions.length === 0 && (
@@ -1225,7 +1251,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
                             {slot.identified && !isProficient && <span className="text-[9px] sm:text-[10px] text-rose-400 font-bold shrink-0">[Incompatible]</span>}
                           </div>
                           <div className="text-[10px] sm:text-[11px] text-slate-400">
-                            Revente : {sellPrice} PO {!slot.identified && '(tarif non identifié : 1 PO)'}
+                            {slot.cursed 
+                              ? `Maudit · Coût désenvoûtement : ${uncurseFee} PO` 
+                              : `Revente : ${sellPrice} PO ${!slot.identified ? '(tarif non identifié : 1 PO)' : ''}`}
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -1239,22 +1267,23 @@ export const CastleView: React.FC<CastleViewProps> = ({
                               <span className="text-[10px] text-purple-200 font-mono">({identifyFee} PO)</span>
                             </button>
                           )}
-                          {slot.cursed && slot.equipped && (
+                          {slot.cursed ? (
                             <button
                               onClick={() => handleBoltacUncurse(sIdx)}
-                              className="px-2.5 py-1.5 min-h-[32px] bg-red-800 hover:bg-red-700 text-white rounded text-xs font-semibold transition active:scale-95 flex items-center gap-1 shadow-sm"
-                              title={`Faire briser la malédiction par Boltac pour ${uncurseFee} PO`}
+                              className="px-2.5 py-1.5 min-h-[32px] bg-red-800 hover:bg-red-700 text-white rounded text-xs font-bold transition active:scale-95 flex items-center gap-1.5 shadow-sm border border-red-500/60"
+                              title={`Faire briser la malédiction et enlever cet objet par Boltac pour ${uncurseFee} PO (Option originale U)NCURSE)`}
                             >
-                              <span>Désenvoûter</span>
-                              <span className="text-[10px] text-red-200 font-mono">({uncurseFee} PO)</span>
+                              <Skull className="w-3.5 h-3.5 text-red-200 shrink-0" />
+                              <span>Enlever ({uncurseFee} PO)</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleSellItem(sIdx)}
+                              className="px-3 py-1.5 min-h-[32px] bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-semibold transition shrink-0 active:scale-95"
+                            >
+                              Vendre
                             </button>
                           )}
-                          <button
-                            onClick={() => handleSellItem(sIdx)}
-                            className="px-3 py-1.5 min-h-[32px] bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-semibold transition shrink-0 active:scale-95"
-                          >
-                            Vendre
-                          </button>
                         </div>
                       </div>
                     );
