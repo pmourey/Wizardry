@@ -1995,19 +1995,17 @@ export default function App() {
         initialScenarioId={manualsScenarioTarget}
       />
 
-      {/* Standalone Cheat Console Modal (GitHub Pages only) */}
-      {!isItchioBuild && (
-        <CheatModal
-          isOpen={showCheatModal}
-          onClose={() => setShowCheatModal(false)}
-          activeScenarioId={activeScenarioId}
-          party={party}
-          setParty={setParty}
-          allCharacters={allCharacters}
-          setAllCharacters={setAllCharacters}
-          onRestoreAllHeroes={handleCheatRestoreParty}
-        />
-      )}
+      {/* Standalone Cheat Console Modal */}
+      <CheatModal
+        isOpen={showCheatModal}
+        onClose={() => setShowCheatModal(false)}
+        activeScenarioId={activeScenarioId}
+        party={party}
+        setParty={setParty}
+        allCharacters={allCharacters}
+        setAllCharacters={setAllCharacters}
+        onRestoreAllHeroes={handleCheatRestoreParty}
+      />
     </div>
   );
 }
