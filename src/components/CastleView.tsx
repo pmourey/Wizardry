@@ -237,13 +237,13 @@ export const CastleView: React.FC<CastleViewProps> = ({
       const statsNote = statChanges.length > 0
         ? ` (${statChanges.join(', ')})`
         : '';
-      levelUpMsg = ` 🌟 NIVEAU SUPÉRIEUR ! ${selectedHero.name} atteint le Niveau ${selectedHero.charLevel} (+${hpGain} PV Max${statsNote})${spellsNote}`;
+      levelUpMsg = ` 🌟 NIVEAU SUPÉRIEUR ! ${selectedHero.name} atteint le Niveau ${selectedHero.charLevel} (+${hpGain} PV / PV Max${statsNote})${spellsNote}`;
       sounds.playFanfare();
       onAddAdventureEvent?.(
         'CASTLE',
         `Montée de Niveau : ${selectedHero.name} (Niveau ${selectedHero.charLevel})`,
-        `Après son séjour à l'Auberge de l'Aventurier, ${selectedHero.name} passe au Niveau ${selectedHero.charLevel} (+${hpGain} PV Max${statsNote}).${spellsNote}`,
-        `Niveau : ${selectedHero.charLevel} · PV Max : ${selectedHero.hpMax}${learnedSpells.length > 0 ? ` · Sorts : ${learnedSpells.join(', ')}` : ''}`
+        `Après son séjour à l'Auberge de l'Aventurier, ${selectedHero.name} passe au Niveau ${selectedHero.charLevel} (+${hpGain} PV / PV Max${statsNote}).${spellsNote}`,
+        `Niveau : ${selectedHero.charLevel} · PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}${learnedSpells.length > 0 ? ` · Sorts : ${learnedSpells.join(', ')}` : ''}`
       );
     } else {
       const expMissing = expNeeded - selectedHero.exp;
@@ -257,10 +257,10 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setAllCharacters(prev => prev.map(c => c.id === selectedHero.id ? { ...selectedHero } : c));
 
     const healNote = roomType === 'STABLES'
-      ? `a dormi aux Écuries (sorts restaurés, PV inchangés : ${selectedHero.hpLeft}/${selectedHero.hpMax}).`
+      ? (levelUpMsg ? `a dormi aux Écuries (sorts restaurés, PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}).` : `a dormi aux Écuries (sorts restaurés, PV inchangés : ${selectedHero.hpLeft}/${selectedHero.hpMax}).`)
       : weeksRested > 0
       ? `s'est reposé ${weeksRested} sem. (-${totalGoldSpent} PO, +${hpHealed} PV, PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}) et a restauré ses sorts.`
-      : `a restauré ses sorts (PV déjà au maximum : ${selectedHero.hpLeft}/${selectedHero.hpMax}).`;
+      : `a restauré ses sorts (PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}).`;
 
     setMessage(`${selectedHero.name} ${healNote}${levelUpMsg}`);
   };

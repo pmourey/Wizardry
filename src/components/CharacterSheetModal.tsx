@@ -43,7 +43,8 @@ import {
   Skull,
   Flame,
   ShieldAlert,
-  FlaskConical
+  FlaskConical,
+  Trash2
 } from 'lucide-react';
 import { getActiveStatusEffects, TActiveStatusEffect } from '../engine/statusSystem';
 
@@ -306,6 +307,36 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
     setHero(updated);
     setFeedbackMessage(msg);
     if (onUpdateCharacter) onUpdateCharacter(updated);
+  };
+
+  const handleDropItem = (slotIdx: number) => {
+    const slot = hero.possessions[slotIdx];
+    if (!slot) return;
+    const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+    const displayName = slot.identified ? (itm?.name || 'Objet') : (itm?.nameUnknown || 'Objet non identifié');
+
+    if (slot.equipped && slot.cursed) {
+      setFeedbackMessage(`💀 Impossible de jeter ${displayName} : cet objet maudit est scellé sur votre corps !`);
+      sounds.playBump();
+      return;
+    }
+
+    const confirmMsg = `Êtes-vous sûr de vouloir jeter définitivement "${displayName}" ?\nCet objet sera perdu et ne pourra plus être récupéré.`;
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    if (slot.equipped) {
+      slot.equipped = false;
+    }
+    hero.possessions.splice(slotIdx, 1);
+    recalculateCharacterCombatStats(hero);
+
+    const updated = { ...hero };
+    setHero(updated);
+    if (onUpdateCharacter) onUpdateCharacter(updated);
+    sounds.playTurn();
+    setFeedbackMessage(`🗑️ ${displayName} a été jeté et retiré de l'inventaire.`);
   };
 
   const statusInfo = STATUS_CONFIG[hero.status] || STATUS_CONFIG.OK;
@@ -733,6 +764,15 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 </div>
               </div>
 
+              {hero.possessions.length >= 8 && (
+                <div className="p-2.5 bg-amber-950/60 border border-amber-600/50 rounded-lg flex items-center gap-2 text-amber-200 text-xs">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    <strong>Sac plein (8/8) !</strong> Vous pouvez jeter des objets encombrants ou inutiles pour libérer de la place.
+                  </span>
+                </div>
+              )}
+
               {hero.possessions.length === 0 ? (
                 <div className="p-8 text-center bg-slate-950/40 border border-slate-800 rounded-xl text-slate-500 text-xs italic">
                   Aucun objet dans l'inventaire. Visitez le Comptoir de Boltac pour acheter des pièces d'équipement.
@@ -865,6 +905,14 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                                 <span>Utiliser</span>
                               </button>
                             )}
+                            <button
+                              onClick={() => handleDropItem(idx)}
+                              className="px-2.5 py-1 bg-slate-800 hover:bg-red-950/80 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-700/50 rounded text-xs font-semibold transition flex items-center gap-1 shadow-sm active:scale-95"
+                              title="Jeter définitivement cet objet avec confirmation"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Jeter</span>
+                            </button>
                           </div>
                           <span className="text-[10px] text-slate-500">
                             Revente : {sellPrice} PO

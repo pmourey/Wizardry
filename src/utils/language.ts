@@ -61,7 +61,7 @@ export const UI_TEXT = {
     badgeAnthology: (count: number) => `WIZARDRY ENGINE ANTHOLOGY v3.3 — ${count} SCENARIOS`,
     chooseScenario: 'CHOOSE YOUR ADVENTURE SCENARIO',
     heroDescription:
-      'Explore the official classic trilogy (#1 Proving Grounds of the Mad Overlord, #2 Knight of Diamonds, #3 The Legacy of Llylgamyn) or one of the 9 alternative campaigns from the Zimlab / Snafaru collection. Each scenario features its own isolated save in your browser local storage (localStorage).',
+      'Explore the official classic quadrilogy (#1 Proving Grounds of the Mad Overlord, #2 Knight of Diamonds, #3 The Legacy of Llylgamyn, #4 The Return of Werdna) or one of the 9 alternative campaigns from the Zimlab / Snafaru collection. Each scenario features its own isolated save in your browser local storage (localStorage).',
     storageLabel: 'Storage: Browser (Local)',
     exportSaves: 'Export Saves',
     exportSavesTooltip: 'Export all your local saves to JSON',
@@ -139,7 +139,7 @@ export const UI_TEXT = {
     badgeAnthology: (count: number) => `ANTHOLOGIE WIZARDRY ENGINE v3.3 — ${count} SCÉNARIOS`,
     chooseScenario: 'CHOISISSEZ VOTRE SCÉNARIO D’AVENTURE',
     heroDescription:
-      'Explorez la trilogie classique officielle (#1 Proving Grounds of the Mad Overlord, #2 Knight of Diamonds, #3 The Legacy of Llylgamyn) ou l’une des 9 campagnes alternatives de la collection Zimlab / Snafaru. Chaque scénario dispose de sa propre sauvegarde isolée dans le stockage local de votre navigateur (localStorage).',
+      'Explorez la quadrilogie classique officielle (#1 Proving Grounds of the Mad Overlord, #2 Knight of Diamonds, #3 The Legacy of Llylgamyn, #4 The Return of Werdna) ou l’une des 9 campagnes alternatives de la collection Zimlab / Snafaru. Chaque scénario dispose de sa propre sauvegarde isolée dans le stockage local de votre navigateur (localStorage).',
     storageLabel: 'Stockage : Navigateur (Local)',
     exportSaves: 'Exporter Sauvegardes',
     exportSavesTooltip: 'Exporter toutes vos sauvegardes locales en JSON',

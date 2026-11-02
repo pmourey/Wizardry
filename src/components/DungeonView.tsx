@@ -53,7 +53,9 @@ import {
   Swords,
   Keyboard,
   FileText,
-  FlaskConical
+  FlaskConical,
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 
 interface DungeonViewProps {
@@ -525,6 +527,33 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     setTransferringSlotIdx(null);
     setParty([...party]);
     setCampMessage(`📦 ${slot.identified ? itm.name : itm.nameUnknown} a été donné à ${targetHero.name} (${targetHero.possessions.length}/8) !`);
+  };
+
+  const handleCampDropItem = (slotIdx: number) => {
+    const slot = activeCampHero.possessions[slotIdx];
+    if (!slot) return;
+    const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+    const displayName = slot.identified ? (itm?.name || 'Objet') : (itm?.nameUnknown || 'Objet non identifié');
+
+    if (slot.equipped && slot.cursed) {
+      setCampMessage(`💀 Impossible de jeter ${displayName} : cet objet maudit est scellé sur votre corps !`);
+      sounds.playBump();
+      return;
+    }
+
+    const confirmMsg = `Êtes-vous sûr de vouloir jeter définitivement "${displayName}" ?\nCet objet sera perdu dans le dédale et ne pourra plus être récupéré.`;
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    if (slot.equipped) {
+      slot.equipped = false;
+    }
+    activeCampHero.possessions.splice(slotIdx, 1);
+    recalculateCharacterCombatStats(activeCampHero);
+    setParty([...party]);
+    sounds.playTurn();
+    setCampMessage(`🗑️ ${displayName} a été jeté dans le dédale.`);
   };
 
   const handleRecoverBody = (fallenId: string) => {
@@ -1464,8 +1493,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
               {/* Inventory & Equipment */}
               <div className="space-y-2">
-                <div className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
-                  Équipement & Sac ({activeCampHero.possessions.length}/8) :
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
+                    Équipement & Sac ({activeCampHero.possessions.length}/8) :
+                  </div>
+                  {activeCampHero.possessions.length >= 8 && (
+                    <span className="text-[10px] font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-600/40 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 text-amber-400" />
+                      Sac Plein (8/8)
+                    </span>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   {activeCampHero.possessions.length === 0 && (
@@ -1553,6 +1590,14 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                 <span>Donner</span>
                               </button>
                             )}
+                            <button
+                              onClick={() => handleCampDropItem(sIdx)}
+                              className="px-2 py-1 bg-slate-800 hover:bg-red-950/80 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-700/50 rounded text-xs font-semibold transition flex items-center gap-1 shadow-sm active:scale-95"
+                              title="Jeter définitivement cet objet avec confirmation"
+                            >
+                              <Trash2 className="w-3 h-3 text-slate-400" />
+                              <span>Jeter</span>
+                            </button>
                           </div>
                         </div>
 

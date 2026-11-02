@@ -1231,6 +1231,8 @@ export function levelUpCharacter(hero: TCharacter): {
   }
   const hpGain = newHpMax - hero.hpMax;
   hero.hpMax = newHpMax;
+  // Authentic & player requested: current HP also increases by gained HP amount upon level up
+  hero.hpLeft = Math.min(hero.hpMax, (hero.hpLeft || 0) + hpGain);
 
   recalculateCharacterCombatStats(hero);
 
