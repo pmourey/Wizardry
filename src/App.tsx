@@ -675,9 +675,8 @@ export default function App() {
     }
   }, [showScenarioMenu, location, dungeonLevel, combatGroups]);
 
-  // Global Cheat Key shortcut (F2 or Ctrl+Shift+C on GitHub Pages)
+  // Global Cheat Key shortcut (F2 or Ctrl+Shift+C)
   useEffect(() => {
-    if (isItchioBuild) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F2' || (e.ctrlKey && e.shiftKey && (e.key === 'C' || e.key === 'c'))) {
         e.preventDefault();
@@ -686,7 +685,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isItchioBuild]);
+  }, []);
 
   // Per-square usage counters for scenario events (key: level:x:y)
   const [scenarioMessage, setScenarioMessage] = useState<{ title: string; lines: string[]; details?: string } | null>(null);
@@ -1596,16 +1595,14 @@ export default function App() {
             {soundOn ? <Volume2 className="w-4 h-4 text-amber-400" /> : <VolumeX className="w-4 h-4" />}
           </button>
 
-          {!isItchioBuild && (
-            <button
-              onClick={() => setShowCheatModal(true)}
-              className="flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-600/40 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition shadow-sm"
-              title="Console de triche (GitHub Pages) : XP pour l'Auberge, Or, Clés d'ascenseurs Wizardry 1"
-            >
-              <Zap className="w-3.5 h-3.5 fill-current text-rose-400" />
-              <span className="hidden sm:inline">Triche</span>
-            </button>
-          )}
+          <button
+            onClick={() => setShowCheatModal(true)}
+            className="flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-600/40 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition shadow-sm"
+            title="Console de triche (F2) : XP pour l'Auberge, Or, Clés d'ascenseurs Wizardry 1, Soins rapides"
+          >
+            <Zap className="w-3.5 h-3.5 fill-current text-rose-400" />
+            <span className="hidden sm:inline">Triche</span>
+          </button>
 
           {!isItchioBuild && (
             <button
