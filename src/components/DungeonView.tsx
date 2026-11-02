@@ -228,6 +228,13 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       }
     }
 
+    // Direct stairs trigger with 'Y' or 'O' when standing on a stairs tile
+    if (isStairs && (e.key === 'y' || e.key === 'Y' || e.key === 'o' || e.key === 'O')) {
+      e.preventDefault();
+      handleExecuteTakeStairs();
+      return;
+    }
+
     const key = e.key.toLowerCase();
     const forwardKey = keyboardLayout === 'AZERTY' ? 'z' : 'w';
     const leftKey = keyboardLayout === 'AZERTY' ? 'q' : 'a';
@@ -254,11 +261,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       sounds.playTurn();
     } else if (key === 'i') {
       e.preventDefault();
-      if (isStairs) {
-        setShowStairsPrompt(true);
-      } else {
-        onInspectArea();
-      }
+      onInspectArea();
     }
   }, [showCamp, showMinimap, showStairsPrompt, isStairs, currentSqrDef, x, y, direction, maze, keyboardLayout]);
 

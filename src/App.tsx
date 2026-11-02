@@ -1391,7 +1391,27 @@ export default function App() {
     const ev = maze.events?.find(e => e.x === posX && e.y === posY);
     if (ev) {
       if (ev.type === 'STAIRS') {
-        handleTakeStairs(ev.aux0, ev.aux2, ev.aux1);
+        const targetFloor = ev.aux0;
+        const isCastle = targetFloor === 0;
+        const isDown = targetFloor > dungeonLevel;
+        announce(
+          isCastle 
+            ? "Escalier vers le Château" 
+            : isDown 
+              ? `Escalier descendant (Niveau ${targetFloor})` 
+              : `Escalier montant (Niveau ${targetFloor})`,
+          [
+            isCastle
+              ? "Vous inspectez les marches de pierre : cet escalier remonte directement vers la cour et la sécurité du Château."
+              : isDown
+                ? `Vous inspectez les marches taillées dans la roche : cet escalier s'enfonce dans les profondeurs vers le Niveau ${targetFloor}.`
+                : `Vous inspectez les marches de pierre : cet escalier remonte vers les couloirs du Niveau ${targetFloor}.`,
+            "Pour emprunter cet escalier, cliquez sur le bouton 'Emprunter' ou appuyez sur la touche (Y)."
+          ],
+          undefined,
+          posX,
+          posY
+        );
         return;
       }
       if (ev.type === 'SCNMSG' || ev.type === 'ENCOUNTE') {
@@ -1405,7 +1425,27 @@ export default function App() {
     const sqrCode = maze.sqrExtra?.[posX]?.[posY];
     const sqrDef = sqrCode !== undefined ? maze.extraDefs?.[sqrCode] : undefined;
     if (sqrDef?.type === 'STAIRS') {
-      handleTakeStairs(sqrDef.aux0, sqrDef.aux2, sqrDef.aux1);
+      const targetFloor = sqrDef.aux0 ?? 0;
+      const isCastle = targetFloor === 0;
+      const isDown = targetFloor > dungeonLevel;
+      announce(
+        isCastle 
+          ? "Escalier vers le Château" 
+          : isDown 
+            ? `Escalier descendant (Niveau ${targetFloor})` 
+            : `Escalier montant (Niveau ${targetFloor})`,
+        [
+          isCastle
+            ? "Vous inspectez les marches de pierre : cet escalier remonte directement vers la cour et la sécurité du Château."
+            : isDown
+              ? `Vous inspectez les marches taillées dans la roche : cet escalier s'enfonce dans les profondeurs vers le Niveau ${targetFloor}.`
+              : `Vous inspectez les marches de pierre : cet escalier remonte vers les couloirs du Niveau ${targetFloor}.`,
+          "Pour emprunter cet escalier, cliquez sur le bouton 'Emprunter' ou appuyez sur la touche (Y)."
+        ],
+        undefined,
+        posX,
+        posY
+      );
       return;
     }
     if (sqrDef?.type === 'ENCOUNTE') {
