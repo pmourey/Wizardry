@@ -1238,7 +1238,7 @@ export default function App() {
 
       // In authentic Wizardry 1: Werdna uses Reward 20 (chest: false, minIndex: 94 at 100%).
       // The legendary Amulet of Werdna (Item #94) is dropped directly upon victory!
-      const amuletItem = activeScenario.items.find(i => i.id === 94) || ITEMS_DATABASE.find(i => i.id === 94);
+      const amuletItem = ITEMS_DATABASE.find(i => i.id === 94);
       const recipient = party.find(h => (h.status === 'OK' || h.hpLeft > 0) && h.possessions.length < 8);
       if (recipient && amuletItem) {
         recipient.possessions.push({
@@ -1332,7 +1332,7 @@ export default function App() {
     const heroWithAmulet = party.find(h =>
       h.possessions.some(p => {
         if (p.itemIndex === 94) return true;
-        const it = activeScenario.items.find(i => i.id === p.itemIndex) || ITEMS_DATABASE.find(i => i.id === p.itemIndex);
+        const it = ITEMS_DATABASE.find(i => i.id === p.itemIndex);
         return it?.name?.toUpperCase().includes('WERDNA') && it?.name?.toUpperCase().includes('AMULET');
       })
     );
@@ -1349,7 +1349,7 @@ export default function App() {
         // Remove Item #94 (confiscated by Trebor)
         heroPossessions = heroPossessions.filter(p => {
           if (p.itemIndex === 94) return false;
-          const it = activeScenario.items.find(i => i.id === p.itemIndex) || ITEMS_DATABASE.find(i => i.id === p.itemIndex);
+          const it = ITEMS_DATABASE.find(i => i.id === p.itemIndex);
           return !(it?.name?.toUpperCase().includes('WERDNA') && it?.name?.toUpperCase().includes('AMULET'));
         });
 
