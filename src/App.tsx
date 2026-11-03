@@ -30,6 +30,8 @@ import { PySide6Exporter } from './components/PySide6Exporter';
 import { ScenarioMenuView } from './components/ScenarioMenuView';
 import { ManualsModal } from './components/ManualsModal';
 import { CheatModal } from './components/CheatModal';
+import { VictoryModal } from './components/VictoryModal';
+import { getCharacterChevrons } from './utils/awards';
 import { WIZARDRY_SCENARIOS, getLocalizedScenario } from './data/scenariosCatalog';
 import { useLanguage, UI_TEXT } from './utils/language';
 import { 
@@ -345,6 +347,11 @@ export default function App() {
       (window.location.hostname.includes('itch.zone') || window.location.hostname.includes('itch.io')));
   const [showPySide6Export, setShowPySide6Export] = useState<boolean>(false);
   const [showCheatModal, setShowCheatModal] = useState<boolean>(false);
+  const [victoryCelebration, setVictoryCelebration] = useState<{
+    show: boolean;
+    expBonus: number;
+    honoredHeroes: TCharacter[];
+  } | null>(null);
   const [showManualsModal, setShowManualsModal] = useState<boolean>(false);
   const [manualsScenarioTarget, setManualsScenarioTarget] = useState<string | undefined>(undefined);
   const [soundOn, setSoundOn] = useState<boolean>(true);
@@ -756,7 +763,8 @@ export default function App() {
     const text = ev.message?.join(' ').replace(/\s+/g, ' ').trim();
 
     if (ev.type === 'ENCOUNTE') {
-      if (ev.aux0 >= 0 && used >= ev.aux0) {
+      const maxUses = ev.aux0 > 0 ? ev.aux0 : (ev.aux0 === -1 ? 1 : 0);
+      if (maxUses > 0 && used >= maxUses) {
         if (searching) {
           announce('Gardiens déjà vaincus', ['Les créatures gardiennes de cette salle ont déjà été terrassées.', 'La voie est libre.'], undefined, x, y);
         }
@@ -954,7 +962,7 @@ export default function App() {
         );
       } else if (sqrDef.type === 'TRANSFER') {
         sounds.playSpellCast();
-        if (sqrDef.aux0 !== dungeonLevel && sqrDef.aux0 > 0) {
+        if (sqrDef.aux0 !== dungeonLevel && sqrDef.aux0 >= 0) {
           handleTakeStairs(sqrDef.aux0, sqrDef.aux2, sqrDef.aux1);
           return;
         }
@@ -1209,6 +1217,64 @@ export default function App() {
       return;
     }
 
+    const isWerdnaBattle = combatGroups.some(g =>
+      g.monster.id === 96 ||
+      g.monster.name.toUpperCase().includes('WERDNA')
+    );
+
+    if (isWerdnaBattle) {
+      // Mark Werdna's encounter consumed permanently
+      const werdnaKey = `${dungeonLevel}:17:3`;
+      markEventUsed(werdnaKey, 1);
+      if (pendingCombatEventKey) {
+        markEventUsed(pendingCombatEventKey, 1);
+        setPendingCombatEventKey(null);
+      }
+      // Authentic Pascal: clear room fight flags so Werdna never re-triggers in this area
+      setFightMapsByLevel(prev => ({
+        ...prev,
+        [dungeonLevel]: Array.from({ length: 20 }, () => Array(20).fill(false))
+      }));
+
+      // In authentic Wizardry 1: Werdna uses Reward 20 (chest: false, minIndex: 94 at 100%).
+      // The legendary Amulet of Werdna (Item #94) is dropped directly upon victory!
+      const amuletItem = activeScenario.items.find(i => i.id === 94) || ITEMS_DATABASE.find(i => i.id === 94);
+      const recipient = party.find(h => (h.status === 'OK' || h.hpLeft > 0) && h.possessions.length < 8);
+      if (recipient && amuletItem) {
+        recipient.possessions.push({
+          equipped: false,
+          cursed: true,
+          identified: true,
+          itemIndex: amuletItem.id
+        });
+        setParty([...party]);
+        addAdventureEvent(
+          'DISCOVERY',
+          "Victoire Suprême sur Werdna ! L'Amulette récupérée !",
+          `L'archimage Werdna est vaincu ! ${recipient.name} ramasse la légendaire Amulette de Werdna (${amuletItem.name}) ! Rapportez-la au Château de Trebor pour achever votre quête !`,
+          `Objet légendaire obtenu : ${amuletItem.name} (sac de ${recipient.name})`,
+          dungeonLevel,
+          { x: posX, y: posY }
+        );
+      }
+
+      // Generate a trapless chest containing gold and the amulet if inventory was full
+      const chest: ChestReward = {
+        trapType: 'TRAPLESS',
+        goldFound: 50000,
+        itemFound: recipient ? null : (amuletItem || null),
+        inspectedTrapGuess: 'TRAPLESS',
+        calfoRevealed: true,
+        disarmed: true,
+        exploded: false,
+        expGainedPerSurvivor: expPerSurvivor,
+        totalExpGained: totalExp
+      };
+      setChestReward(chest);
+      setLocation('CHEST');
+      return;
+    }
+
     const chest = generateChestReward(dungeonLevel);
     chest.expGainedPerSurvivor = expPerSurvivor;
     chest.totalExpGained = totalExp;
@@ -1248,23 +1314,73 @@ export default function App() {
     }
   };
 
-  // Authentic Pascal PROCEDURE CHK4WIN (pascal_source/Wiz1A/SHOPS2.TEXT.pas, l. 1341-1381):
-  // Upon returning to the Castle, clear lostLocation, sync all party members to the roster,
-  // and remove dead/ashed characters from the active party so they rest at the Temple of Cant.
+  // Authentic Pascal PROCEDURE CHK4WIN (pascal_source/Wiz1A/SHOPS2.TEXT.pas, l. 265-325):
+  // Upon returning to the Castle, check if any character holds Item #94 (WERDNA'S AMULET).
+  // If found, trigger the authentic Victory Ceremony:
+  // - Confiscate the Amulet for Trebor
+  // - Grant a boon of 250,000 EXP to each party member
+  // - Induct surviving heroes into the Overlord's Honor Guard with the Chevron (>) rank
+  // Clear lostLocation, sync all party members to the roster, and bench fallen heroes at the Temple of Cant.
   const handleReturnPartyToCastle = (forceAllowCastle = false) => {
     if (activeScenarioId === 'return-of-werdna' && dungeonLevel > 0 && !forceAllowCastle) {
       // In Wizardry IV, the surface castle of Trebor is only reached when ascending to Level 0
       return;
     }
     sounds.playDoor();
-    const cleanedParty = party.map(h => ({
-      ...h,
-      inMaze: false,
-      lostLocation: undefined,
-      poisonAmount: 0,
-      silencedRounds: 0,
-      combatAcMod: 0
-    }));
+
+    // Check if any party member holds Item #94 (WERDNA'S AMULET)
+    const heroWithAmulet = party.find(h =>
+      h.possessions.some(p => {
+        if (p.itemIndex === 94) return true;
+        const it = activeScenario.items.find(i => i.id === p.itemIndex) || ITEMS_DATABASE.find(i => i.id === p.itemIndex);
+        return it?.name?.toUpperCase().includes('WERDNA') && it?.name?.toUpperCase().includes('AMULET');
+      })
+    );
+
+    let victoryExpBonus = 0;
+    const honoredList: TCharacter[] = [];
+
+    const cleanedParty = party.map(h => {
+      let heroPossessions = [...h.possessions];
+      let heroAwards = h.awards && h.awards.length === 5 ? [...h.awards] : [0, 0, 0, 0, 0];
+      let heroExp = h.exp || 0;
+
+      if (heroWithAmulet) {
+        // Remove Item #94 (confiscated by Trebor)
+        heroPossessions = heroPossessions.filter(p => {
+          if (p.itemIndex === 94) return false;
+          const it = activeScenario.items.find(i => i.id === p.itemIndex) || ITEMS_DATABASE.find(i => i.id === p.itemIndex);
+          return !(it?.name?.toUpperCase().includes('WERDNA') && it?.name?.toUpperCase().includes('AMULET'));
+        });
+
+        // Award +250,000 XP & Chevron (>) to all living survivors
+        if (h.status !== 'DEAD' && h.status !== 'ASHES') {
+          victoryExpBonus = 250000;
+          heroExp += victoryExpBonus;
+          heroAwards[0] = 1; // Wizardry 1 completed
+          heroAwards[4] = (heroAwards[4] || 0) | 1; // Authentic Pascal bit 0 in AWARDS[4] = Chevron (>)
+        }
+      }
+
+      const updatedHero: TCharacter = {
+        ...h,
+        exp: heroExp,
+        awards: heroAwards,
+        possessions: heroPossessions,
+        inMaze: false,
+        lostLocation: undefined,
+        poisonAmount: 0,
+        silencedRounds: 0,
+        combatAcMod: 0
+      };
+
+      if (heroWithAmulet && h.status !== 'DEAD' && h.status !== 'ASHES') {
+        honoredList.push(updatedHero);
+      }
+
+      return updatedHero;
+    });
+
     const fallenHeroes = cleanedParty.filter(h => h.status === 'DEAD' || h.status === 'ASHES');
     const survivingParty = cleanedParty.filter(h => h.status !== 'DEAD' && h.status !== 'ASHES');
 
@@ -1287,22 +1403,41 @@ export default function App() {
     setAcModifier(0);
     setFightMapsByLevel({});
 
-    const castleTitle = activeScenarioId === 'return-of-werdna' 
-      ? "Arrivée au Château de Trebor (Surface)" 
-      : "Retour au Château de Trebor";
+    if (heroWithAmulet) {
+      sounds.playFanfare();
+      music.playTrack('13-complete');
+      setVictoryCelebration({
+        show: true,
+        expBonus: 250000,
+        honoredHeroes: honoredList
+      });
 
-    addAdventureEvent(
-      'CASTLE',
-      castleTitle,
-      fallenHeroes.length > 0
-        ? `L'escouade regagne le château. Les dépouilles de ${fallenHeroes.map(f => f.name).join(', ')} ont été retirées du groupe et confiées au Temple de Cant.`
-        : (activeScenarioId === 'return-of-werdna'
-          ? "Werdna et ses hordes ont percé le donjon et foulent la surface du Château de Trebor !"
-          : "L'escouade a gravi les marches pour regagner la sécurité du château."),
-      fallenHeroes.length > 0 ? `Transférés au Temple de Cant : ${fallenHeroes.map(f => f.name).join(', ')}` : undefined,
-      dungeonLevel,
-      { x: posX, y: posY }
-    );
+      addAdventureEvent(
+        'VICTORY',
+        "👑 VICTOIRE SUPRÊME : L'Amulette de Werdna est restituée à Trebor !",
+        `Vous avez accompli votre quête ! L'Amulette est rendue à votre bienveillant suzerain, le Seigneur Trebor. En récompense, il octroie un don royal de 250 000 XP à chaque héros et les initie dans la prestigieuse Garde d'Honneur du Suzerain, avec le Chevron (>) perpétuel !`,
+        `Héros honorés : ${honoredList.map(h => h.name).join(', ')} · +250 000 XP chacun · Chevron d'honneur [ > ] décerné !`,
+        0,
+        { x: 0, y: 0 }
+      );
+    } else {
+      const castleTitle = activeScenarioId === 'return-of-werdna' 
+        ? "Arrivée au Château de Trebor (Surface)" 
+        : "Retour au Château de Trebor";
+
+      addAdventureEvent(
+        'CASTLE',
+        castleTitle,
+        fallenHeroes.length > 0
+          ? `L'escouade regagne le château. Les dépouilles de ${fallenHeroes.map(f => f.name).join(', ')} ont été retirées du groupe et confiées au Temple de Cant.`
+          : (activeScenarioId === 'return-of-werdna'
+            ? "Werdna et ses hordes ont percé le donjon et foulent la surface du Château de Trebor !"
+            : "L'escouade a gravi les marches pour regagner la sécurité du château."),
+        fallenHeroes.length > 0 ? `Transférés au Temple de Cant : ${fallenHeroes.map(f => f.name).join(', ')}` : undefined,
+        dungeonLevel,
+        { x: posX, y: posY }
+      );
+    }
   };
 
   const handleTakeStairs = (targetLevel: number, targetX: number, targetY: number) => {
@@ -2006,6 +2141,17 @@ export default function App() {
         setAllCharacters={setAllCharacters}
         onRestoreAllHeroes={handleCheatRestoreParty}
       />
+
+      {/* Victory Ceremony Modal (Authentic UCSD Pascal CHK4WIN / CONGRATS) */}
+      {victoryCelebration && (
+        <VictoryModal
+          isOpen={victoryCelebration.show}
+          onClose={() => setVictoryCelebration(null)}
+          honoredHeroes={victoryCelebration.honoredHeroes}
+          expBonus={victoryCelebration.expBonus}
+          language={lang}
+        />
+      )}
     </div>
   );
 }

@@ -510,6 +510,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {[
+                    { id: 94, name: "WERDNA'S AMULET", desc: "Amulette de Werdna (#94) - Quête Finale" },
                     { id: 97, name: 'BRONZE KEY', desc: 'Clé de Bronze (#97)' },
                     { id: 98, name: 'SILVER KEY', desc: 'Clé d’Argent (#98)' },
                     { id: 100, name: 'BLUE RIBBON', desc: 'Ruban Bleu d’Accréditation (#100)' },

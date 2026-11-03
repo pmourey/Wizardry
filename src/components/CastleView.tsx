@@ -25,6 +25,7 @@ import {
 import { CharacterSheetModal } from './CharacterSheetModal';
 import { sounds } from '../utils/soundEffects';
 import { music } from '../utils/musicManager';
+import { getCharacterChevrons } from '../utils/awards';
 import { 
   Shield, 
   Sparkles, 
@@ -940,11 +941,14 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 }}
                 className="bg-slate-900 border border-slate-700 hover:border-amber-500/60 text-white font-semibold text-xs rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer transition shadow-inner truncate max-w-[200px] sm:max-w-none"
               >
-                {party.map((hero, idx) => (
-                  <option key={hero.id} value={idx}>
-                    #{idx + 1} {hero.name} ({hero.class} Niv.{hero.charLevel} · {hero.hpLeft}/{hero.hpMax} PV · {hero.gold.toLocaleString()} PO)
-                  </option>
-                ))}
+                {party.map((hero, idx) => {
+                  const chevrons = getCharacterChevrons(hero);
+                  return (
+                    <option key={hero.id} value={idx}>
+                      #{idx + 1} {chevrons ? `"${chevrons}" ` : ''}{hero.name} ({hero.class} Niv.{hero.charLevel} · {hero.hpLeft}/{hero.hpMax} PV · {hero.gold.toLocaleString()} PO)
+                    </option>
+                  );
+                })}
               </select>
             </div>
           )}
@@ -1063,7 +1067,12 @@ export const CastleView: React.FC<CastleViewProps> = ({
                   >
                     <div>
                       <div className="font-bold text-white flex items-center justify-between text-[11px] sm:text-xs">
-                        <span className="truncate">{hero.name}</span>
+                        <span className="truncate">
+                          {getCharacterChevrons(hero) ? (
+                            <span className="font-mono text-amber-400 mr-1">"{getCharacterChevrons(hero)}"</span>
+                          ) : null}
+                          {hero.name}
+                        </span>
                         <span className="text-[9px] sm:text-[10px] text-amber-400">N.{hero.charLevel}</span>
                       </div>
                       <div className="text-[10px] sm:text-[11px] text-slate-400 truncate">{hero.class}</div>
@@ -1799,6 +1808,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
                   <div key={h.id} className="p-3 bg-slate-800/60 border border-slate-700/50 rounded-lg flex items-center justify-between text-xs gap-3">
                     <div>
                       <div className="font-bold text-white flex items-center gap-2">
+                        {getCharacterChevrons(h) && (
+                          <span className="font-mono text-amber-400 font-bold bg-amber-950/60 px-1 py-0.5 rounded border border-amber-500/40 text-[11px] shrink-0">
+                            "{getCharacterChevrons(h)}"
+                          </span>
+                        )}
                         <span>{h.name} · {h.race} {h.class} (Niv.{h.charLevel})</span>
                         {isLostInDungeon && (
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-950/90 text-red-300 border border-red-700/60 flex items-center gap-1">

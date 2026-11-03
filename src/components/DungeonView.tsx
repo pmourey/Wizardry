@@ -20,6 +20,7 @@ import {
 } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
 import { music } from '../utils/musicManager';
+import { getCharacterChevrons } from '../utils/awards';
 import { useLanguage, UI_TEXT } from '../utils/language';
 import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
 import { MiniMap, loadMiniMapPrefs, saveMiniMapPrefs } from './MiniMap';
@@ -1217,7 +1218,12 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             >
               <div>
                 <div className="flex items-center justify-between font-bold text-white">
-                  <span className="truncate text-[11px] md:text-xs">{hero.name}</span>
+                  <span className="truncate text-[11px] md:text-xs">
+                    {getCharacterChevrons(hero) ? (
+                      <span className="font-mono text-amber-400 font-bold mr-1">"{getCharacterChevrons(hero)}"</span>
+                    ) : null}
+                    {hero.name}
+                  </span>
                   <div className="flex items-center gap-1">
                     <span className="text-[9px] md:text-[10px] text-amber-400 font-mono">N.{hero.charLevel}</span>
                     <button

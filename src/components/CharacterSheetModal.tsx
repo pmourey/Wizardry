@@ -19,6 +19,7 @@ import {
   getUsableClassesList
 } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
+import { getCharacterChevrons } from '../utils/awards';
 import { 
   Shield, 
   Heart, 
@@ -377,6 +378,14 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
+                {getCharacterChevrons(hero) && (
+                  <span
+                    className="text-amber-400 font-bold font-mono text-sm sm:text-base bg-amber-950/70 px-1.5 py-0.5 rounded border border-amber-500/40 shrink-0"
+                    title="Insigne de victoire (Garde d'Honneur de Trebor)"
+                  >
+                    "{getCharacterChevrons(hero)}"
+                  </span>
+                )}
                 <h2 className="text-base sm:text-xl font-bold font-serif text-white tracking-wide truncate">{hero.name}</h2>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-400 truncate">
@@ -384,6 +393,15 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
               </p>
               {/* Active Status Badges */}
               <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5">
+                {getCharacterChevrons(hero).includes('>') && (
+                  <span
+                    className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded border border-amber-500/50 bg-amber-950/70 text-amber-300 flex items-center gap-1 shadow-sm"
+                    title="Initié dans la Garde d'Honneur de Trebor pour avoir terrassé Werdna et restitué l'Amulette"
+                  >
+                    <Award className="w-3 h-3 text-amber-400" />
+                    GARDE DE TREBOR (&gt;)
+                  </span>
+                )}
                 {activeEffects.map(eff => (
                   <span
                     key={eff.id}
