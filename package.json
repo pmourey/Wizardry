@@ -12,9 +12,13 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist -t true",
     "build:docs": "vite build && rm -rf docs && cp -r dist docs",
-    "build:itchio": "VITE_ITCHIO=true vite build && rm -f wizardry-itchio.zip && (cd dist && zip -r ../wizardry-itchio.zip index.html assets/ music/)"
+    "build:itchio": "VITE_ITCHIO=true vite build && rm -f wizardry-itchio.zip && (cd dist && zip -r ../wizardry-itchio.zip index.html assets/ music/)",
+    "build:apk": "npm run build && npx cap copy android && (cd android && ./gradlew assembleDebug) && cp android/app/build/outputs/apk/debug/app-debug.apk ./Remix-Wizardry-v3.5.apk"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^7.6.10",
+    "@capacitor/core": "^8.6.0",
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/canvas-confetti": "^1.9.0",
