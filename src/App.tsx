@@ -15,6 +15,7 @@ import {
   DEFAULT_PARTY, 
   generateLevel1Maze, 
   getMazeForFloor,
+  getActiveScenarioEventItemIds,
   MONSTERS_DATABASE,
   ITEMS_DATABASE,
   getMaxCharacterSpells,
@@ -1060,7 +1061,20 @@ export default function App() {
   };
 
   const handleKickDoor = () => {
-    const wall = [maze.n, maze.e, maze.s, maze.w][direction][posX][posY];
+    let wall = [maze.n, maze.e, maze.s, maze.w][direction][posX][posY];
+    // Check opposite wall if current cell is WALL but neighbor is DOOR or HIDEDOOR
+    if (wall === 'WALL') {
+      const dx = direction === 1 ? 1 : direction === 3 ? -1 : 0;
+      const dy = direction === 0 ? 1 : direction === 2 ? -1 : 0;
+      const nx = posX + dx;
+      const ny = posY + dy;
+      if (nx >= 0 && nx < 20 && ny >= 0 && ny < 20) {
+        const oppWall = [maze.s, maze.w, maze.n, maze.e][direction][nx][ny];
+        if (oppWall === 'DOOR' || oppWall === 'HIDEDOOR') {
+          wall = oppWall;
+        }
+      }
+    }
     // Kicking only works on a door (visible or secret), never on a plain wall or open passage
     if (wall !== 'DOOR' && wall !== 'HIDEDOOR') {
       sounds.playBump();
@@ -1275,7 +1289,8 @@ export default function App() {
       return;
     }
 
-    const chest = generateChestReward(dungeonLevel);
+    const eventItemIds = getActiveScenarioEventItemIds(activeScenarioId);
+    const chest = generateChestReward(dungeonLevel, ITEMS_DATABASE, eventItemIds);
     chest.expGainedPerSurvivor = expPerSurvivor;
     chest.totalExpGained = totalExp;
     setChestReward(chest);

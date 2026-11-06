@@ -273,7 +273,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
   const tryMoveForward = (isKick: boolean) => {
     // Current facing wall
-    let wall = 'OPEN';
+    let wall: TWall = 'OPEN';
     let dx = 0;
     let dy = 0;
 
@@ -282,9 +282,26 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     else if (direction === 2) { wall = maze.s[x][y]; dy = -1; }
     else if (direction === 3) { wall = maze.w[x][y]; dx = -1; }
 
-    if (wall === 'OPEN' || (isKick && wall === 'DOOR') || (wall === 'DOOR')) {
-      sounds.playFootstep();
-      onMove(dx, dy, wall === 'DOOR');
+    // Fallback: check opposite wall of neighbor tile if current cell had WALL
+    if (wall === 'WALL') {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx >= 0 && nx < 20 && ny >= 0 && ny < 20) {
+        const oppWall = [maze.s, maze.w, maze.n, maze.e][direction][nx][ny];
+        if (oppWall === 'DOOR' || (isKick && oppWall === 'HIDEDOOR')) {
+          wall = oppWall;
+        }
+      }
+    }
+
+    const canPass = wall === 'OPEN' || wall === 'DOOR' || (isKick && wall === 'HIDEDOOR');
+    if (canPass) {
+      if (wall === 'DOOR' || wall === 'HIDEDOOR') {
+        sounds.playDoor();
+      } else {
+        sounds.playFootstep();
+      }
+      onMove(dx, dy, wall === 'DOOR' || wall === 'HIDEDOOR');
     } else {
       sounds.playBump();
     }
@@ -316,7 +333,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (absX < minSwipe && absY < minSwipe) {
       // Short tap: kick door if in front of door, otherwise move forward
       const currentWall = [maze.n, maze.e, maze.s, maze.w][direction][x][y];
-      if (currentWall === 'DOOR') {
+      if (currentWall === 'DOOR' || currentWall === 'HIDEDOOR') {
         onKickDoor();
       } else {
         tryMoveForward(false);

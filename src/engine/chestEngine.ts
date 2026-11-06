@@ -45,7 +45,70 @@ export interface ChestReward {
   totalExpGained?: number;
 }
 
-export function generateChestReward(level: number): ChestReward {
+/**
+ * Checks whether an item is a scenario quest item, passage-unlocking key,
+ * relic, or special token that should NEVER drop randomly in treasure chests.
+ */
+export function isSpecialOrQuestItem(it: TItem, eventItemIds?: Set<number>): boolean {
+  if (!it || it.id <= 0) return true;
+  const name = (it.name || '').toUpperCase().trim();
+  const unknownName = (it.nameUnknown || '').toUpperCase().trim();
+
+  // 1. Dummies, placeholders, broken items
+  if (
+    name === 'BROKEN ITEM' ||
+    name === 'DUMMY' ||
+    name === 'UNIDENTIFIED' ||
+    name.startsWith('RELIC') ||
+    unknownName.startsWith('RELIC')
+  ) {
+    return true;
+  }
+
+  // 2. Specific scenario event items (keys, statuettes, puzzle items)
+  if (eventItemIds && eventItemIds.has(it.id)) {
+    return true;
+  }
+
+  // 3. Price is zero or negative: all quest keys, statuettes, ribbons, scenario relics cannot be bought/sold at Boltac (price = 0)
+  if (!it.price || it.price <= 0) {
+    return true;
+  }
+
+  // 4. Legendary final quest items with astronomical prices (Amulet of Werdna, Black Stone, etc.)
+  if (it.price >= 100000000) {
+    return true;
+  }
+
+  // 5. Named quest relics, keys, statuettes, and ribbons across all scenarios
+  if (
+    name.includes('KEY') ||
+    unknownName.includes('KEY') ||
+    name.includes('STATUETTE') ||
+    unknownName.includes('STATUETTE') ||
+    name.includes('RIBBON') ||
+    unknownName.includes('RIBBON') ||
+    name.includes('WERDNA') ||
+    name.startsWith("KOD'S") ||
+    name === 'STAFF OF GNILDA' ||
+    name === 'HRATHNIR' ||
+    name.includes('CRYSTAL OF') ||
+    name === 'NEUTRAL CRYSTAL' ||
+    name === 'ORB OF EARITHIN' ||
+    name === 'ORB OF MHUUZFES' ||
+    name === 'SHIP IN BOTTLE'
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export function generateChestReward(
+  level: number,
+  itemsPool?: TItem[],
+  eventItemIds?: Set<number>
+): ChestReward {
   const trapList: TTrapType[] = [
     'TRAPLESS',
     'POISON_NEEDLE',
@@ -71,22 +134,16 @@ export function generateChestReward(level: number): ChestReward {
   // Item reward (chance to get a drop)
   let itemFound: TItem | null = null;
   if (Math.random() * 100 < 65) {
-    // Pick appropriate tier item (strictly filter out RELIC placeholders, dummies, and unidentified tokens)
-    const isValidChestItem = (it: TItem) =>
-      it.id > 0 &&
-      it.id !== 94 &&
-      !it.name.startsWith('RELIC') &&
-      !it.nameUnknown?.startsWith('RELIC') &&
-      it.name !== 'DUMMY' &&
-      it.name !== 'UNIDENTIFIED';
+    const sourcePool = itemsPool && itemsPool.length > 0 ? itemsPool : ITEMS_DATABASE;
+    // Strictly filter out special/quest items, keys, statuettes, ribbons, and zero-price artifacts
+    const droppableItems = sourcePool.filter(it => !isSpecialOrQuestItem(it, eventItemIds));
 
-    const eligibleItems = ITEMS_DATABASE.filter(it => isValidChestItem(it) && it.price <= (level * 800 + 100));
-    if (eligibleItems.length > 0) {
-      itemFound = eligibleItems[Math.floor(Math.random() * eligibleItems.length)];
-    } else {
-      const fallbackItems = ITEMS_DATABASE.filter(isValidChestItem);
-      if (fallbackItems.length > 0) {
-        itemFound = fallbackItems[Math.floor(Math.random() * fallbackItems.length)];
+    if (droppableItems.length > 0) {
+      const eligibleItems = droppableItems.filter(it => it.price <= (level * 800 + 100));
+      if (eligibleItems.length > 0) {
+        itemFound = eligibleItems[Math.floor(Math.random() * eligibleItems.length)];
+      } else {
+        itemFound = droppableItems[Math.floor(Math.random() * droppableItems.length)];
       }
     }
   }

@@ -1461,16 +1461,59 @@ export function getScenarioMessage(index: number): string[] {
 
 const WALL_CODES: TWall[] = ['OPEN', 'WALL', 'DOOR', 'HIDEDOOR'];
 
+export function getActiveScenarioEventItemIds(scenarioId?: string): Set<number> {
+  const bundle = SCENARIO_BUNDLES[scenarioId || ACTIVE_SCENARIO_ID] || SCENARIO_BUNDLES['proving-grounds'];
+  const ids = new Set<number>();
+  bundle.mazes.forEach(m => {
+    m.events?.forEach(ev => {
+      if (ev.itemId !== undefined) {
+        ids.add(ev.itemId);
+      }
+    });
+  });
+  return ids;
+}
+
 export function getMazeForFloor(level: number, scenarioId?: string): TMazeFloor {
   const bundle = SCENARIO_BUNDLES[scenarioId || ACTIVE_SCENARIO_ID] || SCENARIO_BUNDLES['proving-grounds'];
   const raw = bundle.mazes[Math.min(bundle.mazes.length, Math.max(1, level)) - 1];
   const walls = (cols: string[]): TWall[][] => cols.map(c => Array.from(c, ch => WALL_CODES[Number(ch)]));
+
+  const wWalls = walls(raw.w);
+  const sWalls = walls(raw.s);
+  const eWalls = walls(raw.e);
+  const nWalls = walls(raw.n);
+
+  // Harmonize internal shared walls where one side was marked DOOR and the other WALL
+  // (Fixes Apple II disk dump artifacts where adjacent cell nibbles were not kept symmetric)
+  for (let x = 0; x < 20; x++) {
+    for (let y = 0; y < 19; y++) {
+      const n = nWalls[x][y];
+      const s = sWalls[x][y + 1];
+      if ((n === 'DOOR' && s === 'WALL') || (n === 'WALL' && s === 'DOOR')) {
+        nWalls[x][y] = 'DOOR';
+        sWalls[x][y + 1] = 'DOOR';
+      }
+    }
+  }
+
+  for (let x = 0; x < 19; x++) {
+    for (let y = 0; y < 20; y++) {
+      const e = eWalls[x][y];
+      const w = wWalls[x + 1][y];
+      if ((e === 'DOOR' && w === 'WALL') || (e === 'WALL' && w === 'DOOR')) {
+        eWalls[x][y] = 'DOOR';
+        wWalls[x + 1][y] = 'DOOR';
+      }
+    }
+  }
+
   return {
     level: raw.level,
-    w: walls(raw.w),
-    s: walls(raw.s),
-    e: walls(raw.e),
-    n: walls(raw.n),
+    w: wWalls,
+    s: sWalls,
+    e: eWalls,
+    n: nWalls,
     fights: raw.fights.map(c => Array.from(c, Number)),
     sqrExtra: raw.sqrExtra.map(c => Array.from(c, ch => parseInt(ch, 16))),
     extraDefs: raw.extraDefs.map(d => ({ ...d })),
