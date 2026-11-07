@@ -22,6 +22,7 @@ export interface MiniMapPrefs {
   modalShowLegend: boolean;
   hudVisible: boolean;
   wireframeMode: boolean;
+  allowCheatMode: boolean;
 }
 
 const DEFAULT_MINIMAP_PREFS: MiniMapPrefs = {
@@ -31,7 +32,8 @@ const DEFAULT_MINIMAP_PREFS: MiniMapPrefs = {
   hudShowLegend: false,
   modalShowLegend: true,
   hudVisible: true,
-  wireframeMode: false
+  wireframeMode: false,
+  allowCheatMode: true
 };
 
 export function loadMiniMapPrefs(): MiniMapPrefs {
@@ -83,7 +85,11 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     const prefs = loadMiniMapPrefs();
     return variant === 'modal' ? prefs.modalViewMode : prefs.hudViewMode;
   });
-  const [revealAll, setRevealAll] = useState<boolean>(() => loadMiniMapPrefs().revealAll);
+  const [allowCheatMode, setAllowCheatMode] = useState<boolean>(() => loadMiniMapPrefs().allowCheatMode ?? true);
+  const [revealAll, setRevealAll] = useState<boolean>(() => {
+    const prefs = loadMiniMapPrefs();
+    return (prefs.allowCheatMode ?? true) ? prefs.revealAll : false;
+  });
   const [showLegend, setShowLegend] = useState<boolean>(() => {
     const prefs = loadMiniMapPrefs();
     return variant === 'modal' ? prefs.modalShowLegend : prefs.hudShowLegend;
@@ -91,11 +97,11 @@ export const MiniMap: React.FC<MiniMapProps> = ({
 
   useEffect(() => {
     if (variant === 'modal') {
-      saveMiniMapPrefs({ modalViewMode: viewMode, revealAll, modalShowLegend: showLegend });
+      saveMiniMapPrefs({ modalViewMode: viewMode, revealAll, modalShowLegend: showLegend, allowCheatMode });
     } else {
-      saveMiniMapPrefs({ hudViewMode: viewMode, revealAll, hudShowLegend: showLegend });
+      saveMiniMapPrefs({ hudViewMode: viewMode, revealAll, hudShowLegend: showLegend, allowCheatMode });
     }
-  }, [variant, viewMode, revealAll, showLegend]);
+  }, [variant, viewMode, revealAll, showLegend, allowCheatMode]);
 
   const dirNames = ['NORD', 'EST', 'SUD', 'OUEST'];
   const dirAngles = [0, 90, 180, 270];
@@ -255,21 +261,18 @@ export const MiniMap: React.FC<MiniMapProps> = ({
         ? 'bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-3'
         : 'bg-slate-950/90 backdrop-blur-md border border-slate-800/90 rounded-xl shadow-2xl p-2 sm:p-3 w-[260px] sm:w-[280px]'
     }`}>
-      {/* Header bar: Title & Actions */}
+      {/* Header bar: Level & Actions */}
       <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-800/80 gap-1.5">
         <div className="flex items-center gap-1.5 min-w-0">
           <div className="p-1 bg-amber-500/10 border border-amber-500/30 rounded text-amber-400 shrink-0">
             <Compass className="w-3.5 h-3.5" />
           </div>
-          <span className="text-xs font-bold text-white tracking-wide shrink-0">
-            Minicarte
-          </span>
-          <span className="text-[10px] text-amber-400 bg-amber-950/50 px-1.5 py-0.2 rounded border border-amber-600/30 font-mono font-bold shrink-0">
-            Niv. {maze.level}
+          <span className="text-xs font-bold text-amber-300 bg-amber-950/70 px-2 py-0.5 rounded border border-amber-500/50 font-mono shrink-0">
+            Niveau {maze.level}
           </span>
           {revealAll && (
-            <span className="text-[9px] text-purple-300 bg-purple-950/90 px-1.5 py-0.2 rounded border border-purple-500/80 font-mono font-bold shrink-0 tracking-wider">
-              RÉVÉLÉE
+            <span className="text-[9px] text-purple-300 bg-purple-950/90 px-1.5 py-0.5 rounded border border-purple-500/80 font-mono font-bold shrink-0 tracking-wider" title="Mode Test / Triche actif : Carte complète dévoilée">
+              TEST / TRICHE
             </span>
           )}
         </div>
@@ -285,18 +288,22 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             {viewMode === 'radar' ? '20×20' : '7×7'}
           </button>
 
-          {/* DUMAPIC clairvoyance reveal toggle */}
-          <button
-            onClick={() => setRevealAll(prev => !prev)}
-            className={`p-1 rounded text-xs border transition active:scale-95 ${
-              revealAll 
-                ? 'bg-purple-900/60 text-purple-300 border-purple-500' 
-                : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
-            }`}
-            title={revealAll ? 'Masquer le brouillard de guerre' : 'Sort DUMAPIC : Révéler la carte'}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-          </button>
+          {/* Test / Cheat Reveal mode toggle (for functional testing) */}
+          {allowCheatMode && (
+            <button
+              onClick={() => setRevealAll(prev => !prev)}
+              className={`p-1 rounded text-xs border transition active:scale-95 ${
+                revealAll 
+                  ? 'bg-purple-900/70 text-purple-200 border-purple-400 shadow-sm shadow-purple-950' 
+                  : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
+              }`}
+              title={revealAll 
+                ? 'Désactiver le mode test (afficher uniquement les zones explorées)' 
+                : 'Mode Test / Triche : Révéler toute la carte du niveau pour tests fonctionnels'}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+            </button>
+          )}
 
           {/* Legend Toggle */}
           <button
@@ -993,6 +1000,24 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           <div className="flex items-center gap-1.5 text-red-300 font-bold">
             <span>💀</span>
             <span>Dépouille</span>
+          </div>
+
+          <div className="col-span-2 sm:col-span-3 pt-1.5 mt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
+            <span>Zones explorées uniquement</span>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-slate-200" title="Activer ou masquer le bouton de révélation complète pour les tests">
+              <input
+                type="checkbox"
+                checked={allowCheatMode}
+                onChange={(e) => {
+                  const val = e.target.checked;
+                  setAllowCheatMode(val);
+                  if (!val) setRevealAll(false);
+                  saveMiniMapPrefs({ allowCheatMode: val, revealAll: val ? revealAll : false });
+                }}
+                className="rounded border-slate-700 bg-slate-800 text-purple-600 focus:ring-0 w-3 h-3 cursor-pointer"
+              />
+              <span className="font-mono text-[9px]">Outil Test / Triche</span>
+            </label>
           </div>
         </div>
       )}
