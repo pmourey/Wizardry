@@ -13,7 +13,8 @@ import {
   Crown,
   ShieldAlert,
   Flame,
-  Award
+  Award,
+  Skull
 } from 'lucide-react';
 
 interface CheatModalProps {
@@ -25,6 +26,7 @@ interface CheatModalProps {
   allCharacters: TCharacter[];
   setAllCharacters: React.Dispatch<React.SetStateAction<TCharacter[]>>;
   onRestoreAllHeroes: () => void;
+  onRespawnWerdna?: () => void;
 }
 
 export const CheatModal: React.FC<CheatModalProps> = ({
@@ -35,7 +37,8 @@ export const CheatModal: React.FC<CheatModalProps> = ({
   setParty,
   allCharacters,
   setAllCharacters,
-  onRestoreAllHeroes
+  onRestoreAllHeroes,
+  onRespawnWerdna
 }) => {
   const [activeTab, setActiveTab] = useState<'GOLD' | 'EXP' | 'KEYS' | 'RESTORE'>('EXP');
   const [selectedHeroId, setSelectedHeroId] = useState<string>('ALL');
@@ -562,6 +565,22 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                 <HeartPulse className="w-4 h-4 fill-current" />
                 <span>Ressusciter et soigner 100% de la Guilde</span>
               </button>
+
+              <div className="pt-3 border-t border-slate-800 space-y-1.5">
+                <button
+                  onClick={() => {
+                    onRespawnWerdna?.();
+                    showNotification("💀 L'Archi-Mage Werdna a été ressuscité dans son antre au Niveau 10 ! Le combat est de nouveau prêt.");
+                  }}
+                  className="w-full py-3 px-4 rounded-xl bg-purple-900/80 hover:bg-purple-800 border border-purple-500/50 text-purple-200 font-bold text-xs tracking-wide shadow flex items-center justify-center gap-2 transition"
+                >
+                  <Skull className="w-4 h-4 text-purple-400" />
+                  <span>Réanimer l'Archi-Mage Werdna (Niveau 10)</span>
+                </button>
+                <p className="text-[11px] text-slate-400 text-center">
+                  Permet d'affronter Werdna et sa garde à nouveau en case (17, 3) du Niveau 10 sans recommencer une partie.
+                </p>
+              </div>
             </div>
           )}
         </div>

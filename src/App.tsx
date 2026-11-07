@@ -1948,6 +1948,19 @@ export default function App() {
     setParty(prev => prev.map(restore));
   };
 
+  // Cheat (console): Respawn Werdna and reset encounter flags on Level 10
+  const handleRespawnWerdna = () => {
+    delete eventUsesRef.current['10:17:3'];
+    delete eventUsesRef.current['10:17:4'];
+    const keys = getStorageKeysForScenario(activeScenarioId);
+    localStorage.setItem(keys.usedEvents, JSON.stringify(eventUsesRef.current));
+    const l10Maze = getMazeForFloor(10);
+    setFightMapsByLevel(prev => ({
+      ...prev,
+      [10]: generateFightMap(l10Maze)
+    }));
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 text-slate-100 overflow-hidden font-sans">
       {/* Top Application Bar */}
@@ -2463,6 +2476,7 @@ export default function App() {
         allCharacters={allCharacters}
         setAllCharacters={setAllCharacters}
         onRestoreAllHeroes={handleCheatRestoreParty}
+        onRespawnWerdna={handleRespawnWerdna}
       />
 
       {/* Victory Ceremony Modal (Authentic UCSD Pascal CHK4WIN / CONGRATS) */}
