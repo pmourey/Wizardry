@@ -207,6 +207,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       onReturnToCastle();
     } else {
       if (onTakeStairs) {
+        lastPromptedPos.current = `${targetX ?? x},${targetY ?? y},${targetLvl}`;
         onTakeStairs(targetLvl, targetX ?? x, targetY ?? y);
       } else {
         onReturnToCastle();
@@ -253,8 +254,25 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       return;
     }
 
-    // Direct elevator trigger with 'E' or 'Y' when standing on elevator tile
-    if (isElevator && (e.key === 'e' || e.key === 'E' || e.key === 'y' || e.key === 'Y' || e.key === 'Enter')) {
+    // Elevator modal interaction: Escape/N to close, number keys to select destination floor
+    if (showElevatorModal && isElevator) {
+      if (e.key === 'Escape' || e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        setShowElevatorModal(false);
+        return;
+      }
+      const num = parseInt(e.key, 10);
+      if (!isNaN(num) && num >= elevatorMinLvl && num <= elevatorMaxLvl && num !== maze.level) {
+        e.preventDefault();
+        setShowElevatorModal(false);
+        lastPromptedPos.current = `${x},${y},${num}`;
+        if (onTakeStairs) onTakeStairs(num, x, y);
+        return;
+      }
+    }
+
+    // Direct elevator trigger with 'E' or 'Enter' when standing on elevator tile (if modal is not open)
+    if (isElevator && !showElevatorModal && (e.key === 'e' || e.key === 'E' || e.key === 'Enter')) {
       e.preventDefault();
       setShowElevatorModal(true);
       return;
@@ -292,7 +310,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       e.preventDefault();
       onInspectArea();
     }
-  }, [showCamp, showCharacterSheetModal, showMinimap, showStairsPrompt, isStairs, isElevator, currentSqrDef, x, y, direction, maze, keyboardLayout]);
+  }, [showCamp, showCharacterSheetModal, showMinimap, showStairsPrompt, showElevatorModal, isStairs, isElevator, elevatorMinLvl, elevatorMaxLvl, onTakeStairs, currentSqrDef, x, y, direction, maze, keyboardLayout]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -1065,6 +1083,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                       disabled={lvl === maze.level}
                       onClick={() => {
                         setShowElevatorModal(false);
+                        lastPromptedPos.current = `${x},${y},${lvl}`;
                         if (onTakeStairs) onTakeStairs(lvl, x, y);
                       }}
                       className={`py-2.5 px-3 rounded-xl font-bold text-xs transition cursor-pointer ${
@@ -1073,7 +1092,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                           : 'bg-sky-600 hover:bg-sky-500 text-white border border-sky-400/50 active:scale-95 shadow-md shadow-sky-950/50'
                       }`}
                     >
-                      {lang === 'en' ? `Level ${lvl}` : `Niveau ${lvl}`} {lvl === maze.level ? '(ici)' : ''}
+                      {lang === 'en' ? `Level ${lvl}` : `Niveau ${lvl}`} {lvl === maze.level ? '(ici)' : `[${lvl}]`}
                     </button>
                   ))}
                 </div>
@@ -1081,7 +1100,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                   onClick={() => setShowElevatorModal(false)}
                   className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer"
                 >
-                  {lang === 'en' ? 'Stay on this floor' : 'Rester sur ce niveau'}
+                  {lang === 'en' ? 'Stay on this floor (Esc)' : 'Rester sur ce niveau (Échap)'}
                 </button>
               </div>
             </div>

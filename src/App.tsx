@@ -938,13 +938,7 @@ export default function App() {
         handleTakeStairs(sqrDef.aux0, newX, newY);
         return;
       } else if (sqrDef.type === 'BUTTONZ') {
-        // Elevator: aux2..aux1 are the reachable levels
-        const answer = window.prompt(`Ascenseur : choisissez un niveau (${sqrDef.aux2} à ${sqrDef.aux1}), ou annulez pour sortir.`);
-        const lvl = answer ? parseInt(answer, 10) : NaN;
-        if (lvl >= sqrDef.aux2 && lvl <= sqrDef.aux1 && lvl !== dungeonLevel) {
-          handleTakeStairs(lvl, newX, newY);
-          return;
-        }
+        // Elevator (BUTTONZ): Reachable levels (aux2..aux1) are handled interactively via the rich graphical ElevatorModal in DungeonView.
       } else if (sqrDef.type === 'SPINNER') {
         // Randomize facing direction
         setDirection(Math.floor(Math.random() * 4));
