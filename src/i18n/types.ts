@@ -474,6 +474,156 @@ export interface CharacterTranslations {
   scenarioCompleted: (scenario: string) => string;
 }
 
+export interface DungeonTranslations {
+  // Navigation & Prompts
+  stairsCastle: string;
+  stairsDown: (lvl: number) => string;
+  stairsUp: (lvl: number) => string;
+  stairsCastleDesc: string;
+  stairsDownDesc: (lvl: number) => string;
+  stairsUpDesc: (lvl: number) => string;
+  stairsCastleAction: string;
+  stairsDescendAction: (lvl: number) => string;
+  stairsAscendAction: (lvl: number) => string;
+  cancelBtn: string;
+  elevatorTitle: (min: number, max: number) => string;
+  elevatorSelectPrompt: (current: number) => string;
+  elevatorCurrentFloor: string;
+  elevatorOperateAction: (min: number, max: number) => string;
+  elevatorBlueRibbonRequired: string;
+  elevatorArrivalNotice: (lvl: number) => string;
+
+  // HUD & Buttons
+  campBtn: string;
+  inspectAreaBtn: string;
+  inspectAreaNothing: string;
+  inspectAreaFound: string;
+  lightSpellActive: (rounds: number) => string;
+  shieldSpellActive: string;
+  darknessZoneWarning: string;
+
+  // Fallen Hero Discovery in Dungeon
+  fallenHeroFoundTitle: (name: string) => string;
+  fallenHeroFoundDesc: (name: string, lvl: number, x: number, y: number) => string;
+  fallenHeroRecoverBtn: (name: string) => string;
+  fallenHeroRosterFull: string;
+  fallenHeroRecoverSuccess: (name: string, count: number) => string;
+
+  // Camp Modal
+  campTitle: string;
+  campInventoryTab: string;
+  campFormationTab: string;
+  campCloseBtn: string;
+  campHealthLabel: (hp: number, maxHp: number) => string;
+  campSpellsAvailable: string;
+  campNoSpellsAvailable: string;
+  campCastBtn: string;
+  campTargetLabel: string;
+  campSilenceWarningTitle: string;
+  campSilenceWarningBody: (rounds: number) => string;
+  campSlotsRemaining: (slots: number) => string;
+
+  // Camp Formation
+  frontRow: string;
+  backRow: string;
+  formationHint: string;
+  moveForwardBtn: string;
+  moveBackwardBtn: string;
+  swapPositionSuccess: (heroA: string, posA: number, heroB: string, posB: number) => string;
+  movedPositionSuccess: (hero: string, pos: number, row: string) => string;
+
+  // Camp Inventory Actions
+  backpackLabel: (count: number) => string;
+  backpackFullNotice: string;
+  emptyBackpack: string;
+  equipBtn: string;
+  unequipBtn: string;
+  useBtn: string;
+  giveBtn: string;
+  dropBtn: string;
+  identifyBishopBtn: (bishop: string) => string;
+  giveTargetSelectPrompt: string;
+  giveSuccess: (item: string, target: string) => string;
+  giveTargetFull: (target: string) => string;
+  giveCursedFail: (item: string) => string;
+  dropCursedFail: (item: string) => string;
+  dropSuccess: (item: string) => string;
+  itemConsumed: (item: string) => string;
+  itemTransformed: (item: string) => string;
+  notProficientNotice: (hero: string, cls: string, allowed: string) => string;
+
+  // Camp Spell Results
+  spellNoEffect: (spell: string, target: string) => string;
+  spellHealSuccess: (spell: string, target: string, hp: number, currentHp: number, maxHp: number) => string;
+  spellCurePoisonSuccess: (target: string) => string;
+  spellCureParalysisSuccess: (target: string) => string;
+  spellCureStonedSuccess: (target: string) => string;
+  spellResurrectSuccess: (target: string) => string;
+  spellResurrectAshes: (target: string) => string;
+  spellResurrectLost: (target: string) => string;
+  spellNeedKadorto: (target: string) => string;
+  spellAlreadyAlive: (target: string) => string;
+  spellDumapicResult: (level: number, north: number, east: number) => string;
+  spellMalorPrompt: string;
+  spellMalorSuccess: (level: number, x: number, y: number) => string;
+  spellMalorRockDeath: string;
+  spellMalorInvalid: string;
+  spellMaporficShield: string;
+  spellLatumapicIdentified: string;
+}
+
+export interface MiniMapTranslations {
+  levelTitle: (lvl: number) => string;
+  radarModeBtn: string;
+  fullModeBtn: string;
+  radarModeTooltip: string;
+  fullModeTooltip: string;
+  revealAllBtn: string;
+  hideUndiscoveredBtn: string;
+  revealAllTooltip: string;
+  legendToggleBtn: string;
+  closeBtn: string;
+  coordinates: (x: number, y: number) => string;
+
+  // Tooltips
+  tooltipPlayer: (x: number, y: number, dir: string) => string;
+  tooltipWall: (x: number, y: number) => string;
+  tooltipDoor: (x: number, y: number) => string;
+  tooltipSecretDoor: (x: number, y: number) => string;
+  tooltipOneWayDoor: (x: number, y: number) => string;
+  tooltipStairsCastle: (x: number, y: number) => string;
+  tooltipStairsUp: (lvl: number, x: number, y: number) => string;
+  tooltipStairsDown: (lvl: number, x: number, y: number) => string;
+  tooltipTeleporter: (x: number, y: number) => string;
+  tooltipPit: (x: number, y: number) => string;
+  tooltipFallenHero: (name: string, x: number, y: number) => string;
+  tooltipDarkness: (x: number, y: number) => string;
+
+  // Legend
+  legendTitle: string;
+  legendPlayer: string;
+  legendVisited: string;
+  legendWall: string;
+  legendDoor: string;
+  legendSecretDoor: string;
+  legendOneWayDoor: string;
+  legendStairsUp: string;
+  legendStairsDown: string;
+  legendTeleporter: string;
+  legendPit: string;
+  legendDarkness: string;
+  legendFallenBody: string;
+
+  // Shortcuts & Touch
+  shortcutsFooter: (fwdKey: string) => string;
+  closeMapShortcut: string;
+  openMapShortcut: string;
+  cardinalNorth: string;
+  cardinalEast: string;
+  cardinalSouth: string;
+  cardinalWest: string;
+}
+
 export interface LocaleSchema {
   common: CommonTranslations;
   journal: JournalTranslations;
@@ -481,4 +631,6 @@ export interface LocaleSchema {
   victory: VictoryTranslations;
   castle: CastleTranslations;
   character: CharacterTranslations;
+  dungeon: DungeonTranslations;
+  miniMap: MiniMapTranslations;
 }

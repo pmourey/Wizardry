@@ -13,6 +13,7 @@ import {
   Layers,
   X
 } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 export interface MiniMapPrefs {
   hudViewMode: 'radar' | 'full';
@@ -94,6 +95,8 @@ export const MiniMap: React.FC<MiniMapProps> = ({
   onKickDoor,
   onInspectArea
 }) => {
+  const { t, lang } = useI18n();
+
   // Persistent Mode: 'radar' (7x7 local area around player) or 'full' (20x20 floor grid)
   const [viewMode, setViewMode] = useState<'radar' | 'full'>(() => {
     const prefs = loadMiniMapPrefs();
@@ -432,11 +435,11 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             <Compass className="w-3.5 h-3.5" />
           </div>
           <span className="text-xs font-bold text-amber-300 bg-amber-950/70 px-2 py-0.5 rounded border border-amber-500/50 font-mono shrink-0">
-            Niveau {maze.level}
+            {t.miniMap.levelTitle(maze.level)}
           </span>
           {revealAll && (
-            <span className="text-[9px] text-purple-300 bg-purple-950/90 px-1.5 py-0.5 rounded border border-purple-500/80 font-mono font-bold shrink-0 tracking-wider" title="Mode Test / Triche actif : Carte complète dévoilée">
-              TEST / TRICHE
+            <span className="text-[9px] text-purple-300 bg-purple-950/90 px-1.5 py-0.5 rounded border border-purple-500/80 font-mono font-bold shrink-0 tracking-wider" title={lang === 'fr' ? "Mode Test / Triche actif : Carte complète dévoilée" : "Test / Cheat Mode Active: Full map revealed"}>
+              {lang === 'fr' ? 'TEST / TRICHE' : 'TEST / CHEAT'}
             </span>
           )}
         </div>
@@ -447,7 +450,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           <button
             onClick={() => setViewMode(prev => prev === 'radar' ? 'full' : 'radar')}
             className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded text-[10px] font-mono font-bold border border-slate-700 transition active:scale-95"
-            title={viewMode === 'radar' ? 'Passer en vue globale (20×20)' : 'Passer en zoom radar (7×7)'}
+            title={viewMode === 'radar' ? (lang === 'fr' ? 'Passer en vue globale (20×20)' : 'Switch to full floor view (20×20)') : (lang === 'fr' ? 'Passer en zoom radar (7×7)' : 'Switch to radar zoom (7×7)')}
           >
             {viewMode === 'radar' ? '20×20' : '7×7'}
           </button>
@@ -462,8 +465,8 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                   : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
               }`}
               title={revealAll 
-                ? 'Désactiver le mode test (afficher uniquement les zones explorées)' 
-                : 'Mode Test / Triche : Révéler toute la carte du niveau pour tests fonctionnels'}
+                ? t.miniMap.hideUndiscoveredBtn 
+                : t.miniMap.revealAllTooltip}
             >
               <Sparkles className="w-3.5 h-3.5" />
             </button>
@@ -477,7 +480,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 ? 'bg-amber-950/60 text-amber-400 border-amber-600/40' 
                 : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
             }`}
-            title="Afficher/masquer la légende des symboles"
+            title={t.miniMap.legendToggleBtn}
           >
             <HelpCircle className="w-3.5 h-3.5" />
           </button>
@@ -605,56 +608,56 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               specialFill = '#6b21a8';
               tileBorder = '#d8b4fe';
               tileBorderWidth = 1;
-              tooltip = `⚡ Téléporteur (${cx}, ${cy})`;
+              tooltip = t.miniMap.tooltipTeleporter(cx, cy);
             } else if (specialType === 'BUTTONZ') {
               specialFill = '#0369a1';
               tileBorder = '#7dd3fc';
               tileBorderWidth = 1;
-              tooltip = `🛗 Ascenseur (${cx}, ${cy})`;
+              tooltip = lang === 'fr' ? `🛗 Ascenseur (${cx}, ${cy})` : `🛗 Elevator (${cx}, ${cy})`;
             } else if (specialType === 'CHUTE') {
               specialFill = '#b91c1c';
               tileBorder = '#fca5a5';
               tileBorderWidth = 1;
-              tooltip = `⤓ Chute / Trappe (${cx}, ${cy})`;
+              tooltip = t.miniMap.tooltipPit(cx, cy);
             } else if (specialType === 'STAIRS') {
               const isUp = aux0 !== undefined && (aux0 < maze.level || aux0 === 0);
               specialFill = isUp ? '#065f46' : '#854d0e';
               tileBorder = isUp ? '#34d399' : '#fde047';
               tileBorderWidth = 1;
               tooltip = aux0 === 0 
-                ? `▲ Escalier vers Château (${cx}, ${cy})` 
+                ? t.miniMap.tooltipStairsCastle(cx, cy)
                 : isUp 
-                  ? `▲ Escalier montant vers Niveau ${aux0} (${cx}, ${cy})` 
-                  : `▼ Escalier descendant vers Niveau ${aux0} (${cx}, ${cy})`;
+                  ? t.miniMap.tooltipStairsUp(aux0 || 0, cx, cy)
+                  : t.miniMap.tooltipStairsDown(aux0 || 0, cx, cy);
             } else if (specialType === 'PIT') {
               specialFill = '#881337';
               tileBorder = '#f43f5e';
               tileBorderWidth = 1;
-              tooltip = `☠ Fossepiège (${cx}, ${cy})`;
+              tooltip = lang === 'fr' ? `☠ Fossepiège (${cx}, ${cy})` : `☠ Pitfall Trap (${cx}, ${cy})`;
             } else if (specialType === 'SPINNER') {
               specialFill = '#0e7490';
               tileBorder = '#22d3ee';
-              tooltip = `↻ Spinner (${cx}, ${cy})`;
+              tooltip = lang === 'fr' ? `↻ Tourbillon Spinner (${cx}, ${cy})` : `↻ Spinner (${cx}, ${cy})`;
             } else if (specialType === 'DARK') {
               specialFill = '#1e1b4b';
               tileBorder = '#6366f1';
-              tooltip = `● Zone de Ténèbres (${cx}, ${cy})`;
+              tooltip = t.miniMap.tooltipDarkness(cx, cy);
             } else if (specialType === 'SCNMSG') {
               const desc = (description || '').toLowerCase();
               if (desc.includes('castle') || desc.includes('château')) {
                 specialFill = '#15803d';
                 tileBorder = '#86efac';
                 tileBorderWidth = 1;
-                tooltip = `🏰 Sortie Château (${cx}, ${cy})`;
+                tooltip = lang === 'fr' ? `🏰 Sortie Château (${cx}, ${cy})` : `🏰 Castle Exit (${cx}, ${cy})`;
               } else {
                 specialFill = '#292524';
                 tileBorder = '#a8a29e';
-                tooltip = `§ Inscription / Panneau (${cx}, ${cy})`;
+                tooltip = lang === 'fr' ? `§ Inscription / Panneau (${cx}, ${cy})` : `§ Inscription / Message (${cx}, ${cy})`;
               }
             } else if (specialType === 'ENCOUNTE') {
               specialFill = '#7f1d1d';
               tileBorder = '#f87171';
-              tooltip = `⚔ Gardiens fixes (${cx}, ${cy})`;
+              tooltip = lang === 'fr' ? `⚔ Gardiens fixes (${cx}, ${cy})` : `⚔ Fixed Monster Guard (${cx}, ${cy})`;
             }
 
             return (
@@ -1025,7 +1028,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 >
                   💀
                 </text>
-                <title>{`Corps perdu : ${marker.name} (${marker.x}, ${marker.y})`}</title>
+                <title>{t.miniMap.tooltipFallenHero(marker.name, marker.x, marker.y)}</title>
               </g>
             );
           })}
@@ -1068,10 +1071,10 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
             <span className="flex items-center gap-1.5 font-semibold text-amber-300">
               <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              Mode Exploration Active
+              {lang === 'fr' ? 'Mode Exploration Active' : 'Active Exploration Mode'}
             </span>
             <span className="text-[10px] text-slate-400 hidden sm:inline">
-              Glissez ou touchez la carte, ou utilisez les touches / commandes ci-dessous
+              {lang === 'fr' ? 'Glissez ou touchez la carte, ou utilisez les touches / commandes ci-dessous' : 'Swipe or tap map, or use controls below'}
             </span>
           </div>
 
@@ -1082,10 +1085,10 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               type="button"
               onClick={onTurnLeft}
               className="flex items-center justify-center gap-1.5 py-2 px-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 hover:border-amber-500/60 rounded-lg text-slate-200 hover:text-white font-mono text-xs font-bold transition shadow-sm active:scale-95 touch-manipulation cursor-pointer"
-              title={`Pivoter à gauche de 90° (${keyboardLayout === 'AZERTY' ? 'Touche Q ou ←' : 'Touche A ou ←'})`}
+              title={lang === 'fr' ? `Pivoter à gauche de 90° (${keyboardLayout === 'AZERTY' ? 'Touche Q ou ←' : 'Touche A ou ←'})` : `Turn left 90° (${keyboardLayout === 'AZERTY' ? 'Key Q or ←' : 'Key A or ←'})`}
             >
               <span>↺</span>
-              <span>Gauche</span>
+              <span>{lang === 'fr' ? 'Gauche' : 'Left'}</span>
               <span className="text-[10px] text-slate-400 font-normal">[{keyboardLayout === 'AZERTY' ? 'Q' : 'A'}]</span>
             </button>
 
@@ -1093,10 +1096,10 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               type="button"
               onClick={onMoveForward}
               className="flex items-center justify-center gap-1.5 py-2 px-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-black font-mono text-xs font-bold rounded-lg border border-amber-400/80 transition shadow-md shadow-amber-950/40 active:scale-95 touch-manipulation cursor-pointer"
-              title={`Avancer d'une case (${keyboardLayout === 'AZERTY' ? 'Touche Z ou ↑' : 'Touche W ou ↑'})`}
+              title={lang === 'fr' ? `Avancer d'une case (${keyboardLayout === 'AZERTY' ? 'Touche Z ou ↑' : 'Touche W ou ↑'})` : `Step forward (${keyboardLayout === 'AZERTY' ? 'Key Z or ↑' : 'Key W or ↑'})`}
             >
               <span>▲</span>
-              <span>Avancer</span>
+              <span>{lang === 'fr' ? 'Avancer' : 'Forward'}</span>
               <span className="text-[10px] text-amber-950 font-semibold">[{keyboardLayout === 'AZERTY' ? 'Z' : 'W'}]</span>
             </button>
 
@@ -1104,9 +1107,9 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               type="button"
               onClick={onTurnRight}
               className="flex items-center justify-center gap-1.5 py-2 px-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 hover:border-amber-500/60 rounded-lg text-slate-200 hover:text-white font-mono text-xs font-bold transition shadow-sm active:scale-95 touch-manipulation cursor-pointer"
-              title="Pivoter à droite de 90° (Touche D ou →)"
+              title={lang === 'fr' ? 'Pivoter à droite de 90° (Touche D ou →)' : 'Turn right 90° (Key D or →)'}
             >
-              <span>Droite</span>
+              <span>{lang === 'fr' ? 'Droite' : 'Right'}</span>
               <span>↻</span>
               <span className="text-[10px] text-slate-400 font-normal">[D]</span>
             </button>
@@ -1116,7 +1119,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               type="button"
               onClick={onTurnAround}
               className="flex items-center justify-center gap-1 py-1.5 px-2 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 rounded-lg text-slate-300 hover:text-white font-mono text-[11px] font-semibold transition active:scale-95 touch-manipulation cursor-pointer"
-              title="Faire demi-tour à 180° (Touche S ou ↓)"
+              title={lang === 'fr' ? 'Faire demi-tour à 180° (Touche S ou ↓)' : 'Turn around 180° (Key S or ↓)'}
             >
               <span>↷ 180°</span>
               <span className="text-[9px] text-slate-400 font-normal">[S]</span>
@@ -1127,9 +1130,9 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 type="button"
                 onClick={onKickDoor}
                 className="flex items-center justify-center gap-1 py-1.5 px-2 bg-amber-950/70 hover:bg-amber-900/80 active:bg-amber-950 border border-amber-600/70 text-amber-300 hover:text-amber-200 font-mono text-[11px] font-semibold rounded-lg transition active:scale-95 touch-manipulation cursor-pointer"
-                title="Enfoncer / ouvrir la porte en face (Touche K ou Espace)"
+                title={lang === 'fr' ? 'Enfoncer / ouvrir la porte en face (Touche K ou Espace)' : 'Bash / kick open the door ahead (Key K or Space)'}
               >
-                <span>🚪 Porte</span>
+                <span>{lang === 'fr' ? '🚪 Porte' : '🚪 Door'}</span>
                 <span className="text-[9px] text-amber-400/80 font-normal">[K]</span>
               </button>
             )}
@@ -1139,9 +1142,9 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 type="button"
                 onClick={onInspectArea}
                 className="flex items-center justify-center gap-1 py-1.5 px-2 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 rounded-lg text-slate-300 hover:text-white font-mono text-[11px] font-semibold transition active:scale-95 touch-manipulation cursor-pointer"
-                title="Inspecter / fouiller la case courante (Touche I)"
+                title={lang === 'fr' ? 'Inspecter / fouiller la case courante (Touche I)' : 'Inspect / search current tile (Key I)'}
               >
-                <span>🔍 Fouiller</span>
+                <span>{lang === 'fr' ? '🔍 Fouiller' : '🔍 Inspect'}</span>
                 <span className="text-[9px] text-slate-400 font-normal">[I]</span>
               </button>
             )}
@@ -1154,15 +1157,15 @@ export const MiniMap: React.FC<MiniMapProps> = ({
         <div className="mt-2 sm:mt-3 pt-2 border-t border-slate-800 text-[10px] sm:text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-slate-300">
           <div className="flex items-center gap-1.5">
             <span className="w-3.5 h-[1.5px] bg-slate-400 rounded-sm inline-block" />
-            <span>Mur</span>
+            <span>{t.miniMap.legendWall}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3.5 h-[1.5px] bg-amber-400 rounded-sm inline-block shadow-sm" />
-            <span>Porte</span>
+            <span>{t.miniMap.legendDoor}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3.5 h-[1.5px] border-t-2 border-dashed border-purple-400 inline-block" />
-            <span>Porte secrète</span>
+            <span>{t.miniMap.legendSecretDoor}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <svg width="16" height="12" viewBox="0 0 16 12" className="inline-block shrink-0">
@@ -1170,31 +1173,31 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               <line x1="2" y1="6" x2="11.5" y2="6" stroke="#38bdf8" strokeWidth="1.1" strokeLinecap="round" />
               <polygon points="14,6 10.5,3.8 10.5,8.2" fill="#38bdf8" />
             </svg>
-            <span>Porte 1-sens</span>
+            <span>{t.miniMap.legendOneWayDoor}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-emerald-400 font-bold">▲</span>
-            <span>Escalier Montant</span>
+            <span>{t.miniMap.legendStairsUp}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-amber-400 font-bold">▼</span>
-            <span>Escalier Descendant</span>
+            <span>{t.miniMap.legendStairsDown}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-purple-400 font-bold">⚡</span>
-            <span>Téléporteur</span>
+            <span>{t.miniMap.legendTeleporter}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-sky-400 font-bold">🛗</span>
-            <span>Ascenseur</span>
+            <span>{lang === 'fr' ? 'Ascenseur' : 'Elevator'}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-rose-400 font-bold">⤓</span>
-            <span>Chute / Trappe</span>
+            <span>{t.miniMap.legendPit}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-red-400 font-bold">☠</span>
-            <span>Fossepiège</span>
+            <span>{lang === 'fr' ? 'Fossepiège' : 'Pitfall'}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-cyan-400 font-bold">↻</span>
@@ -1202,20 +1205,20 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-purple-400 font-bold">●</span>
-            <span>Ténèbres</span>
+            <span>{t.miniMap.legendDarkness}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-emerald-400 font-bold">🏰</span>
-            <span>Château</span>
+            <span>{lang === 'fr' ? 'Château' : 'Castle'}</span>
           </div>
           <div className="flex items-center gap-1.5 text-red-300 font-bold">
             <span>💀</span>
-            <span>Dépouille</span>
+            <span>{t.miniMap.legendFallenBody}</span>
           </div>
 
           <div className="col-span-2 sm:col-span-3 pt-1.5 mt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400">
-            <span>Zones explorées uniquement</span>
-            <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-slate-200" title="Activer ou masquer le bouton de révélation complète pour les tests">
+            <span>{lang === 'fr' ? 'Zones explorées uniquement' : 'Explored areas only'}</span>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none hover:text-slate-200" title={lang === 'fr' ? 'Activer ou masquer le bouton de révélation complète pour les tests' : 'Show or hide complete map reveal button for testing'}>
               <input
                 type="checkbox"
                 checked={allowCheatMode}
@@ -1227,7 +1230,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 }}
                 className="rounded border-slate-700 bg-slate-800 text-purple-600 focus:ring-0 w-3 h-3 cursor-pointer"
               />
-              <span className="font-mono text-[9px]">Outil Test / Triche</span>
+              <span className="font-mono text-[9px]">{lang === 'fr' ? 'Outil Test / Triche' : 'Test / Cheat Tool'}</span>
             </label>
           </div>
         </div>
@@ -1236,10 +1239,14 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       {/* Footer Details */}
       <div className="mt-2 pt-1.5 sm:pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400">
         <span className="hidden sm:inline">
-          Touches ({keyboardLayout}) : <strong>{keyboardLayout === 'AZERTY' ? 'Z' : 'W'}</strong> Avancer • <strong>{keyboardLayout === 'AZERTY' ? 'Q/D' : 'A/D'}</strong> Pivoter • <strong>S</strong> 180° • <strong>K/Espace</strong> Porte
+          {lang === 'fr' ? (
+            <>Touches ({keyboardLayout}) : <strong>{keyboardLayout === 'AZERTY' ? 'Z' : 'W'}</strong> Avancer • <strong>{keyboardLayout === 'AZERTY' ? 'Q/D' : 'A/D'}</strong> Pivoter • <strong>S</strong> 180° • <strong>K/Espace</strong> Porte</>
+          ) : (
+            <>Controls ({keyboardLayout}) : <strong>{keyboardLayout === 'AZERTY' ? 'Z' : 'W'}</strong> Forward • <strong>{keyboardLayout === 'AZERTY' ? 'Q/D' : 'A/D'}</strong> Turn • <strong>S</strong> 180° • <strong>K/Space</strong> Door</>
+          )}
         </span>
-        <span className="sm:hidden text-slate-400">Niv. {maze.level}</span>
-        <span>{variant === 'modal' ? 'Fermer : ' : 'Carte : '}<kbd className="px-1 py-0.2 bg-slate-800 border border-slate-700 rounded text-amber-300 font-mono text-[9px] sm:text-[10px]">{variant === 'modal' ? 'Échap / M' : 'M'}</kbd></span>
+        <span className="sm:hidden text-slate-400">{t.character.lvlShort} {maze.level}</span>
+        <span>{variant === 'modal' ? (lang === 'fr' ? 'Fermer : ' : 'Close: ') : (lang === 'fr' ? 'Carte : ' : 'Map: ')}<kbd className="px-1 py-0.2 bg-slate-800 border border-slate-700 rounded text-amber-300 font-mono text-[9px] sm:text-[10px]">{variant === 'modal' ? (lang === 'fr' ? 'Échap / M' : 'Esc / M') : 'M'}</kbd></span>
       </div>
     </div>
   );

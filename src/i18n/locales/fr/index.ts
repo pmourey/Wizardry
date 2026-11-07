@@ -5,6 +5,8 @@ import { gameOverFr } from './gameOver';
 import { victoryFr } from './victory';
 import { castleFr } from './castle';
 import { characterFr } from './character';
+import { dungeonFr } from './dungeon';
+import { miniMapFr } from './miniMap';
 
 export const frLocale: LocaleSchema = {
   common: commonFr,
@@ -13,4 +15,6 @@ export const frLocale: LocaleSchema = {
   victory: victoryFr,
   castle: castleFr,
   character: characterFr,
+  dungeon: dungeonFr,
+  miniMap: miniMapFr,
 };

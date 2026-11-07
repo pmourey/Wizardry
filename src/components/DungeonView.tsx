@@ -22,7 +22,7 @@ import {
 import { sounds } from '../utils/soundEffects';
 import { music } from '../utils/musicManager';
 import { getCharacterChevrons } from '../utils/awards';
-import { useLanguage, UI_TEXT } from '../utils/language';
+import { useI18n } from '../i18n';
 import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
 import { MiniMap, loadMiniMapPrefs, saveMiniMapPrefs } from './MiniMap';
 import { CharacterSheetModal } from './CharacterSheetModal';
@@ -123,8 +123,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   onTakeStairs,
   onTriggerEncounter
 }) => {
-  const [lang] = useLanguage();
-  const t = UI_TEXT[lang] || UI_TEXT.fr;
+  const { t, lang } = useI18n();
   const [wireframeMode, setWireframeMode] = useState<boolean>(() => loadMiniMapPrefs().wireframeMode);
   const [showMinimap, setShowMinimap] = useState<boolean>(() => loadMiniMapPrefs().modalEnlarged ?? false);
   const [hudMinimapVisible, setHudMinimapVisible] = useState<boolean>(() => loadMiniMapPrefs().hudVisible);
@@ -442,12 +441,17 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     newParty.splice(toIdx, 0, moved);
     setParty(newParty);
     setCampCharIdx(toIdx);
-    setCampMessage(`🔄 ${moved.name} est maintenant en position #${toIdx + 1} (${toIdx < 3 ? 'Avant-garde (Mêlée)' : 'Arrière-garde (Distance/Magie)'}).`);
+    const rowName = toIdx < 3 ? (lang === 'fr' ? 'Avant-garde (Mêlée)' : 'Front Row (Melee)') : (lang === 'fr' ? 'Arrière-garde (Distance/Magie)' : 'Back Row (Ranged/Magic)');
+    setCampMessage(t.dungeon.movedPositionSuccess(moved.name, toIdx + 1, rowName));
     onAddAdventureEvent?.(
       'DISCOVERY',
-      'Modification de l\'Ordre du Groupe',
-      `Formation réorganisée : ${moved.name} prend le rang #${toIdx + 1} (${toIdx < 3 ? 'Avant-garde' : 'Arrière-garde'}).`,
-      `Ordre actuel : ${newParty.map((h, i) => `#${i + 1} ${h.name} (${i < 3 ? 'Avant' : 'Arrière'})`).join(', ')}`,
+      lang === 'fr' ? "Modification de l'Ordre du Groupe" : 'Party Formation Reordered',
+      lang === 'fr'
+        ? `Formation réorganisée : ${moved.name} prend le rang #${toIdx + 1} (${toIdx < 3 ? 'Avant-garde' : 'Arrière-garde'}).`
+        : `Formation reordered: ${moved.name} moves to rank #${toIdx + 1} (${toIdx < 3 ? 'Front Row' : 'Back Row'}).`,
+      lang === 'fr'
+        ? `Ordre actuel : ${newParty.map((h, i) => `#${i + 1} ${h.name} (${i < 3 ? 'Avant' : 'Arrière'})`).join(', ')}`
+        : `Current order: ${newParty.map((h, i) => `#${i + 1} ${h.name} (${i < 3 ? 'Front' : 'Back'})`).join(', ')}`,
       maze.level,
       { x, y }
     );
@@ -462,12 +466,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     newParty[idxB] = temp;
     setParty(newParty);
     setCampCharIdx(idxB);
-    setCampMessage(`🔄 Échange de position : #${idxA + 1} ${newParty[idxA].name} ⇄ #${idxB + 1} ${newParty[idxB].name}.`);
+    setCampMessage(t.dungeon.swapPositionSuccess(newParty[idxA].name, idxA + 1, newParty[idxB].name, idxB + 1));
     onAddAdventureEvent?.(
       'DISCOVERY',
-      'Modification de l\'Ordre du Groupe',
-      `Échange de positions au camp : #${idxA + 1} ${newParty[idxA].name} et #${idxB + 1} ${newParty[idxB].name}.`,
-      `Nouvel ordre : ${newParty.map((h, i) => `#${i + 1} ${h.name} (${i < 3 ? 'Avant' : 'Arrière'})`).join(', ')}`,
+      lang === 'fr' ? "Modification de l'Ordre du Groupe" : 'Party Formation Swapped',
+      lang === 'fr'
+        ? `Échange de positions au camp : #${idxA + 1} ${newParty[idxA].name} et #${idxB + 1} ${newParty[idxB].name}.`
+        : `Positions swapped in camp: #${idxA + 1} ${newParty[idxA].name} and #${idxB + 1} ${newParty[idxB].name}.`,
+      lang === 'fr'
+        ? `Nouvel ordre : ${newParty.map((h, i) => `#${i + 1} ${h.name} (${i < 3 ? 'Avant' : 'Arrière'})`).join(', ')}`
+        : `New order: ${newParty.map((h, i) => `#${i + 1} ${h.name} (${i < 3 ? 'Front' : 'Back'})`).join(', ')}`,
       maze.level,
       { x, y }
     );
@@ -485,18 +493,18 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
     if (slot.equipped) {
       if (slot.cursed) {
-        setCampMessage(`L'objet ${itm.name} est MAUDIT ! Impossible de le retirer.`);
+        setCampMessage(t.character.cursedCannotRemove(itm.name));
         sounds.playBump();
         return;
       }
       slot.equipped = false;
       recalculateCharacterCombatStats(activeCampHero);
-      setCampMessage(`${itm.name} retiré (CA : ${activeCampHero.armorClass} · Dégâts : ${formatDamageDice(activeCampHero.wepDamage)}).`);
+      setCampMessage(t.character.unequippedNotice(itm.name, activeCampHero.armorClass, formatDamageDice(activeCampHero.wepDamage)));
     } else {
       // Authentic Pascal Class Proficiency Check (UTILITIE2.TEXT l. 276)
-      const check = canHeroEquipItem(activeCampHero, itm);
+      const check = canHeroEquipItem(activeCampHero, itm, lang);
       if (!check.canEquip) {
-        setCampMessage(check.reason || 'Objet impossible à équiper pour cette classe.');
+        setCampMessage(check.reason || (lang === 'fr' ? 'Objet impossible à équiper pour cette classe.' : 'Item cannot be equipped by this class.'));
         sounds.playBump();
         return;
       }
@@ -516,7 +524,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         slot.cursed = true;
       }
       recalculateCharacterCombatStats(activeCampHero);
-      setCampMessage(`${itm.name} équipé (CA : ${activeCampHero.armorClass} · Dégâts : ${formatDamageDice(activeCampHero.wepDamage)}).`);
+      setCampMessage(t.character.equippedNotice(itm.name, activeCampHero.armorClass, formatDamageDice(activeCampHero.wepDamage)));
     }
     setParty([...party]);
   };
@@ -528,8 +536,8 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (!itm) return;
 
     if (!canClassUseItem(activeCampHero.class, itm)) {
-      const allowed = getUsableClassesList(itm).join(', ') || 'Aucune';
-      setCampMessage(`${activeCampHero.name} (${activeCampHero.class}) ne maîtrise pas cet objet (Classes autorisées : ${allowed}).`);
+      const allowed = getUsableClassesList(itm, false, lang).join(', ') || (lang === 'fr' ? 'Aucune' : 'None');
+      setCampMessage(t.dungeon.notProficientNotice(activeCampHero.name, activeCampHero.class, allowed));
       sounds.playBump();
       return;
     }
@@ -550,14 +558,14 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       if (itm.healPts && itm.healPts > 0) {
         const healAmt = itm.healPts * 6 + Math.floor(Math.random() * 8);
         targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + healAmt);
-        setCampMessage(`🧪 ${activeCampHero.name} utilise ${itm.name} : ${targetHero.name} récupère ${healAmt} PV (${targetHero.hpLeft}/${targetHero.hpMax}).`);
+        setCampMessage(t.dungeon.spellHealSuccess(itm.name, targetHero.name, healAmt, targetHero.hpLeft, targetHero.hpMax));
         effectDone = true;
       } else if (itm.name.toUpperCase().includes('POISON') || itm.name.toUpperCase().includes('LATUMOFIS')) {
         targetHero.poisonAmount = 0;
-        setCampMessage(`🧪 ${activeCampHero.name} utilise ${itm.name} : le poison de ${targetHero.name} est totalement dissipé.`);
+        setCampMessage(t.dungeon.spellCurePoisonSuccess(targetHero.name));
         effectDone = true;
       } else {
-        setCampMessage(`✨ ${activeCampHero.name} utilise ${itm.name}.`);
+        setCampMessage(lang === 'fr' ? `✨ ${activeCampHero.name} utilise ${itm.name}.` : `✨ ${activeCampHero.name} uses ${itm.name}.`);
         effectDone = true;
       }
     }
@@ -567,11 +575,11 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       if (!itm.changeTo || itm.changeTo === 0) {
         if (slot.equipped) slot.equipped = false;
         activeCampHero.possessions.splice(slotIdx, 1);
-        setCampMessage(prev => `${prev} L'objet ${itm.name} a été entièrement consommé.`);
+        setCampMessage(prev => `${prev} ${t.dungeon.itemConsumed(itm.name)}`);
       } else {
         slot.itemIndex = itm.changeTo;
         const newItem = ITEMS_DATABASE.find(i => i.id === itm.changeTo);
-        setCampMessage(prev => `${prev} L'objet s'est transformé en ${newItem?.name || 'objet inerte'}.`);
+        setCampMessage(prev => `${prev} ${t.dungeon.itemTransformed(newItem?.name || (lang === 'fr' ? 'objet inerte' : 'inert item'))}`);
       }
       recalculateCharacterCombatStats(activeCampHero);
     }
@@ -586,7 +594,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (!itm) return;
 
     if (slot.equipped && slot.cursed) {
-      setCampMessage(`L'objet ${itm.name} est MAUDIT ! Impossible de le transférer.`);
+      setCampMessage(t.dungeon.giveCursedFail(itm.name));
       return;
     }
 
@@ -594,7 +602,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (!targetHero) return;
 
     if (targetHero.possessions.length >= 8) {
-      setCampMessage(`Le sac de ${targetHero.name} est plein (8/8 objets maximum) !`);
+      setCampMessage(t.dungeon.giveTargetFull(targetHero.name));
       return;
     }
 
@@ -619,23 +627,22 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
     setTransferringSlotIdx(null);
     setParty([...party]);
-    setCampMessage(`📦 ${slot.identified ? itm.name : itm.nameUnknown} a été donné à ${targetHero.name} (${targetHero.possessions.length}/8) !`);
+    setCampMessage(t.dungeon.giveSuccess(slot.identified ? itm.name : (itm.nameUnknown || (lang === 'fr' ? 'Objet inconnu' : 'Unknown item')), targetHero.name));
   };
 
   const handleCampDropItem = (slotIdx: number) => {
     const slot = activeCampHero.possessions[slotIdx];
     if (!slot) return;
     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
-    const displayName = slot.identified ? (itm?.name || 'Objet') : (itm?.nameUnknown || 'Objet non identifié');
+    const displayName = slot.identified ? (itm?.name || 'Objet') : (itm?.nameUnknown || (lang === 'fr' ? 'Objet non identifié' : 'Unidentified item'));
 
     if (slot.equipped && slot.cursed) {
-      setCampMessage(`💀 Impossible de jeter ${displayName} : cet objet maudit est scellé sur votre corps !`);
+      setCampMessage(t.dungeon.dropCursedFail(displayName));
       sounds.playBump();
       return;
     }
 
-    const confirmMsg = `Êtes-vous sûr de vouloir jeter définitivement "${displayName}" ?\nCet objet sera perdu dans le dédale et ne pourra plus être récupéré.`;
-    if (!window.confirm(confirmMsg)) {
+    if (!window.confirm(t.character.dropConfirm(displayName))) {
       return;
     }
 
@@ -646,12 +653,12 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     recalculateCharacterCombatStats(activeCampHero);
     setParty([...party]);
     sounds.playTurn();
-    setCampMessage(`🗑️ ${displayName} a été jeté dans le dédale.`);
+    setCampMessage(t.dungeon.dropSuccess(displayName));
   };
 
   const handleRecoverBody = (fallenId: string) => {
     if (party.length >= 6) {
-      alert("Votre escouade est au complet (6/6) ! Vous devez avoir un emplacement libre pour transporter un corps.");
+      alert(t.dungeon.fallenHeroRosterFull);
       return;
     }
     const fallen = allCharacters.find(c => c.id === fallenId);
@@ -671,12 +678,14 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (setAllCharacters) {
       setAllCharacters(nextAll);
     }
-    setCampMessage(`💀 Le corps de ${fallen.name} a été hissé dans votre escouade (${nextParty.length}/6). Ramenez-le au Temple de Cant au Château pour le ressusciter !`);
+    setCampMessage(t.dungeon.fallenHeroRecoverSuccess(fallen.name, nextParty.length));
     onAddAdventureEvent?.(
       'RESCUE',
-      `Dépouille de ${fallen.name} récupérée dans le dédale`,
-      `L'escouade de secours a localisé le corps sans vie de ${fallen.name} au Niveau ${maze.level} (${x}, ${y}) et l'a hissé pour le ramener au sanctuaire de Cant.`,
-      `Statut : Escouade à ${nextParty.length}/6 membres`,
+      lang === 'fr' ? `Dépouille de ${fallen.name} récupérée dans le dédale` : `Remains of ${fallen.name} recovered in maze`,
+      lang === 'fr'
+        ? `L'escouade de secours a localisé le corps sans vie de ${fallen.name} au Niveau ${maze.level} (${x}, ${y}) et l'a hissé pour le ramener au sanctuaire de Cant.`
+        : `The rescue expedition found ${fallen.name}'s remains on Floor ${maze.level} (${x}, ${y}) and secured them for the Temple of Cant.`,
+      lang === 'fr' ? `Statut : Escouade à ${nextParty.length}/6 membres` : `Status: Party at ${nextParty.length}/6 companions`,
       maze.level,
       { x, y }
     );
@@ -685,7 +694,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   const handleCampCastSpell = (spell: any, targetHero: TCharacter) => {
     const castCheck = canHeroCastSpells(activeCampHero);
     if (!castCheck.canCast) {
-      setCampMessage(`Impossible de lancer le sort : ${castCheck.reason}`);
+      setCampMessage(lang === 'fr' ? `Impossible de lancer le sort : ${castCheck.reason}` : `Cannot cast spell: ${castCheck.reason}`);
       return;
     }
 
@@ -697,22 +706,22 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     }
 
     const rollDice = (n: number, sides: number) => {
-      let t = 0;
-      for (let i = 0; i < n; i++) t += Math.floor(Math.random() * sides) + 1;
-      return t;
+      let total = 0;
+      for (let i = 0; i < n; i++) total += Math.floor(Math.random() * sides) + 1;
+      return total;
     };
     const isGone = (h: TCharacter) => h.status === 'DEAD' || h.status === 'ASHES' || h.status === 'LOST';
 
     if (spell.name === 'DIOS' || spell.name === 'DIAL' || spell.name === 'DIALMA') {
       if (isGone(targetHero)) {
         setParty([...party]);
-        setCampMessage(`${spell.name} n'a aucun effet sur ${targetHero.name}.`);
+        setCampMessage(t.dungeon.spellNoEffect(spell.name, targetHero.name));
         return;
       }
       const healed = rollDice(spell.name === 'DIOS' ? 1 : spell.name === 'DIAL' ? 2 : 3, 8);
       targetHero.hpLeft = Math.min(targetHero.hpMax, targetHero.hpLeft + healed);
       setParty([...party]);
-      setCampMessage(`${spell.name} : ${targetHero.name} récupère ${healed} PV (${targetHero.hpLeft}/${targetHero.hpMax}).`);
+      setCampMessage(t.dungeon.spellHealSuccess(spell.name, targetHero.name, healed, targetHero.hpLeft, targetHero.hpMax));
       return;
     }
     if (spell.name === 'DIALKO') {
@@ -722,7 +731,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (spell.name === 'MADI') {
       if (isGone(targetHero)) {
         setParty([...party]);
-        setCampMessage(`MADI n'a aucun effet sur ${targetHero.name}.`);
+        setCampMessage(t.dungeon.spellNoEffect('MADI', targetHero.name));
         return;
       }
       targetHero.hpLeft = targetHero.hpMax;
@@ -736,18 +745,18 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       const dead = targetHero.status === 'DEAD';
       const ashes = targetHero.status === 'ASHES';
       if (targetHero.status === 'LOST') {
-        setCampMessage(`${targetHero.name} est perdu à jamais.`);
+        setCampMessage(t.dungeon.spellResurrectLost(targetHero.name));
       } else if (!dead && !(ashes && !isDi)) {
-        setCampMessage(ashes ? `"KADORTO" est nécessaire pour ${targetHero.name}.` : `${targetHero.name} n'est pas mort.`);
+        setCampMessage(ashes ? t.dungeon.spellNeedKadorto(targetHero.name) : t.dungeon.spellAlreadyAlive(targetHero.name));
       } else if (Math.floor(Math.random() * 100) <= 4 * targetHero.attrib.VITALITY) {
         targetHero.hpLeft = isDi ? 1 : targetHero.hpMax;
         targetHero.status = 'OK';
         if (targetHero.attrib.VITALITY <= 3) targetHero.status = 'LOST';
         else targetHero.attrib.VITALITY -= 1;
-        setCampMessage(targetHero.status === 'OK' ? `EXCELSIOR ! ${targetHero.name} est ressuscité.` : `${targetHero.name} est perdu à jamais.`);
+        setCampMessage(targetHero.status === 'OK' ? t.dungeon.spellResurrectSuccess(targetHero.name) : t.dungeon.spellResurrectLost(targetHero.name));
       } else {
         targetHero.status = dead ? 'ASHES' : 'LOST';
-        setCampMessage(`OUPS ! Le sort échoue : ${targetHero.name} est ${targetHero.status === 'ASHES' ? 'réduit en cendres' : 'perdu'}.`);
+        setCampMessage(dead ? t.dungeon.spellResurrectAshes(targetHero.name) : t.dungeon.spellResurrectLost(targetHero.name));
       }
       setParty([...party]);
       return;
@@ -756,18 +765,21 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (spell.name === 'KANDI') {
       const lost = allCharacters.filter(c => c.lostLocation);
       setCampMessage(lost.length === 0
-        ? 'KANDI ne détecte aucune âme perdue.'
-        : 'KANDI : ' + lost.map(c => `${c.name} (niveau ${c.lostLocation!.level}, E${c.lostLocation!.x} N${c.lostLocation!.y})`).join(' ; '));
+        ? (lang === 'fr' ? 'KANDI ne détecte aucune âme perdue.' : 'KANDI senses no lost souls in the maze.')
+        : 'KANDI : ' + lost.map(c => `${c.name} (${lang === 'fr' ? 'niveau' : 'floor'} ${c.lostLocation!.level}, E${c.lostLocation!.x} N${c.lostLocation!.y})`).join(' ; '));
       setParty([...party]);
       return;
     }
 
     if (spell.name === 'MALOR') {
-      const input = window.prompt('MALOR — déplacement : Nord(+)/Sud(-), Est(+)/Ouest(-), étages vers le bas(+)/haut(-)\nFormat : nord est étages  (ex. 3 -2 0)');
+      const malorPrompt = lang === 'fr' 
+        ? 'MALOR — déplacement : Nord(+)/Sud(-), Est(+)/Ouest(-), étages vers le bas(+)/haut(-)\nFormat : nord est étages  (ex. 3 -2 0)'
+        : 'MALOR Teleportation: North(+)/South(-), East(+)/West(-), Floors down(+)/up(-)\nFormat: north east floors (e.g. 3 -2 0)';
+      const input = window.prompt(malorPrompt);
       const parts = (input || '').trim().split(/\s+/).map(Number);
       if (!input || parts.length !== 3 || parts.some(n => !Number.isInteger(n))) {
         setParty([...party]);
-        setCampMessage('MALOR : destination invalide, le sort est perdu.');
+        setCampMessage(t.dungeon.spellMalorInvalid);
         return;
       }
       const [dn, de, dl] = parts;
@@ -781,7 +793,6 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     }
 
     if (spell.name === 'DUMAPIC') {
-      const dirNames = ['NORD', 'EST', 'SUD', 'OUEST'];
       setVisitedTiles(prev => {
         const next = prev.map(row => [...row]);
         for (let dx = -2; dx <= 2; dx++) {
@@ -796,7 +807,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         return next;
       });
       setParty([...party]);
-      setCampMessage(`✨ DUMAPIC : Coordonnées (X=${x}, Y=${y}) · Orientation ${dirNames[direction]} · Étage ${maze.level} ! Les couloirs environnants sont révélés.`);
+      setCampMessage(t.dungeon.spellDumapicResult(maze.level, y, x));
       return;
     }
 
@@ -804,29 +815,29 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       const milwaSteps = 15 + Math.floor(Math.random() * 15);
       setLightLevel?.(milwaSteps);
       setParty([...party]);
-      setCampMessage(`✨ MILWA : Une douce lueur magique emplit les couloirs (${milwaSteps} pas) !`);
-      onAddAdventureEvent?.('DISCOVERY', 'Sortilège de Lumière', `${activeCampHero.name} lance MILWA, repoussant l'obscurité.`, 'Lumière temporaire', maze.level, { x, y });
+      setCampMessage(t.dungeon.lightSpellActive(milwaSteps));
+      onAddAdventureEvent?.('DISCOVERY', lang === 'fr' ? 'Sortilège de Lumière' : 'Light Spell', `${activeCampHero.name} cast MILWA.`, 'Light', maze.level, { x, y });
       return;
     }
 
     if (spell.name === 'LOMILWA') {
       setLightLevel?.(32000);
       setParty([...party]);
-      setCampMessage(`✨ LOMILWA : Une vive clarté magique inonde le donjon !`);
-      onAddAdventureEvent?.('DISCOVERY', 'Sortilège de Clarté Éternelle', `${activeCampHero.name} lance LOMILWA, illuminant durablement le donjon.`, 'Lumière permanente', maze.level, { x, y });
+      setCampMessage(lang === 'fr' ? `✨ LOMILWA : Une vive clarté magique inonde le donjon !` : `✨ LOMILWA: A radiant magical light floods the dungeon!`);
+      onAddAdventureEvent?.('DISCOVERY', lang === 'fr' ? 'Sortilège de Clarté Éternelle' : 'Radiant Light Spell', `${activeCampHero.name} cast LOMILWA.`, 'Permanent Light', maze.level, { x, y });
       return;
     }
 
     if (spell.name === 'MAPORFIC') {
       setAcModifier?.(prev => prev + 2);
       setParty([...party]);
-      setCampMessage(`🛡️ MAPORFIC : Un champ de protection mystique enveloppe les aventuriers (+2 CA) !`);
-      onAddAdventureEvent?.('DISCOVERY', 'Bouclier Mystique', `${activeCampHero.name} lance MAPORFIC, améliorant l'armure du groupe.`, '+2 CA', maze.level, { x, y });
+      setCampMessage(t.dungeon.spellMaporficShield);
+      onAddAdventureEvent?.('DISCOVERY', lang === 'fr' ? 'Bouclier Mystique' : 'Mystic Shield', `${activeCampHero.name} cast MAPORFIC.`, '+2 AC', maze.level, { x, y });
       return;
     }
 
     setParty([...party]);
-    setCampMessage(`${spell.name} lancé sur ${targetHero.name} (${targetHero.hpLeft}/${targetHero.hpMax} PV) !`);
+    setCampMessage(`${spell.name} (${targetHero.name}: ${targetHero.hpLeft}/${targetHero.hpMax} ${t.character.hpShort})!`);
   };
 
   const handleBishopIdentify = (slotIdx: number) => {
@@ -847,7 +858,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (Math.random() * 100 < chance) {
       slot.identified = true;
       sounds.playFanfare();
-      setCampMessage(`Succès ! ${bishop.name} identifie l'objet : il s'agit de "${itm.name}" !`);
+      setCampMessage(t.character.bishopSuccess(bishop.name, itm.name));
     } else {
       // Authentic Pascal curse fumble: (RANDOM MOD 100) < (35 - 3 * bishopLevel)
       const curseChance = Math.max(5, 35 - 3 * (bishop.charLevel || 1));
@@ -857,10 +868,10 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         slot.equipped = true;
         recalculateCharacterCombatStats(activeCampHero);
         sounds.playBump();
-        setCampMessage(`MALÉDICTION ! ${bishop.name} commet une erreur d'analyse et l'objet maudit (${itm.name}) se verrouille sur son porteur !`);
+        setCampMessage(t.character.bishopCurseFumble(bishop.name, itm.name));
       } else {
         sounds.playBump();
-        setCampMessage(`Échec de l'identification : ${bishop.name} n'arrive pas à percer le secret de cet objet.`);
+        setCampMessage(t.character.bishopFail(bishop.name));
       }
     }
     setParty([...party]);
@@ -889,7 +900,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         {/* Buffs and View toggles */}
         <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
           {lightLevel > 0 && (
-            <div className="flex items-center gap-1 text-amber-400 font-bold text-[11px] md:text-xs" title="Lumière magique Milwa/Lomilwa active">
+            <div className="flex items-center gap-1 text-amber-400 font-bold text-[11px] md:text-xs" title={lang === 'fr' ? "Lumière magique Milwa/Lomilwa active" : "Magical light Milwa/Lomilwa active"}>
               <Flame className="w-3 h-3 md:w-3.5 md:h-3.5 animate-pulse" />
               <span className="hidden sm:inline">{t.dungeonLightTag}</span> <span>({lightLevel > 999 ? '∞' : lightLevel})</span>
             </div>
@@ -1224,7 +1235,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 className="w-full p-2.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-lg flex items-center gap-2 text-slate-200 font-semibold transition"
               >
                 <Tent className="w-4 h-4 text-emerald-400" />
-                <span>{lang === 'en' ? 'Set Camp (C)' : 'Monter le Camp (C)'}</span>
+                <span>{t.dungeon.campBtn}</span>
               </button>
 
               <button
@@ -1232,7 +1243,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 className="w-full p-2.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-lg flex items-center gap-2 text-slate-200 font-semibold transition"
               >
                 <Map className="w-4 h-4 text-blue-400" />
-                <span>{lang === 'en' ? 'View Map (M)' : 'Consulter la Carte (M)'}</span>
+                <span>{t.miniMap.viewMapBtn}</span>
               </button>
 
               <button
@@ -1240,7 +1251,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 className="w-full p-2.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 rounded-lg flex items-center gap-2 text-slate-200 font-semibold transition"
               >
                 <Eye className="w-4 h-4 text-amber-400" />
-                <span>{lang === 'en' ? 'Inspect Area (I)' : 'Inspecter les lieux (I)'}</span>
+                <span>{t.dungeon.inspectAreaBtn}</span>
               </button>
             </div>
           </div>
@@ -1254,10 +1265,10 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               <Layers className="w-4 h-4" />
               <span>
                 {stairsTargetLvl === 0 
-                  ? (lang === 'en' ? 'Return to Castle (Y)' : 'Remonter au Château (Y)') 
+                  ? t.dungeon.stairsCastleAction 
                   : stairsTargetLvl > maze.level 
-                    ? (lang === 'en' ? `Descend to Level ${stairsTargetLvl} (Y)` : `Descendre au Niveau ${stairsTargetLvl} (Y)`) 
-                    : (lang === 'en' ? `Ascend to Level ${stairsTargetLvl} (Y)` : `Monter au Niveau ${stairsTargetLvl} (Y)`)}
+                    ? t.dungeon.stairsDescendAction(stairsTargetLvl) 
+                    : t.dungeon.stairsAscendAction(stairsTargetLvl)}
               </span>
             </button>
           )}
@@ -1270,9 +1281,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             >
               <span className="text-base">🛗</span>
               <span>
-                {lang === 'en' 
-                  ? `Operate Elevator (Levels ${elevatorMinLvl}-${elevatorMaxLvl})` 
-                  : `Actionner l'Ascenseur (Niveaux ${elevatorMinLvl} à ${elevatorMaxLvl})`}
+                {t.dungeon.elevatorOperateAction(elevatorMinLvl, elevatorMaxLvl)}
               </span>
             </button>
           )}
@@ -1368,8 +1377,8 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                   <Tent className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-white">Campement dans le Labyrinthe</h2>
-                  <p className="text-[10px] text-slate-400">Gestion de l'escouade, formation et inventaire</p>
+                  <h2 className="text-base font-bold text-white">{t.dungeon.campTitle}</h2>
+                  <p className="text-[10px] text-slate-400">{lang === 'fr' ? "Gestion de l'escouade, formation et inventaire" : 'Expedition management, formation & inventory'}</p>
                 </div>
               </div>
 
@@ -1385,7 +1394,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                   }`}
                 >
                   <Package className="w-3.5 h-3.5" />
-                  <span>Équipement & Magie</span>
+                  <span>{t.dungeon.campInventoryTab}</span>
                 </button>
                 <button
                   type="button"
@@ -1397,7 +1406,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                   }`}
                 >
                   <ArrowUpDown className="w-3.5 h-3.5" />
-                  <span>Ordre du Groupe (Formation)</span>
+                  <span>{t.dungeon.campFormationTab}</span>
                 </button>
               </div>
 
@@ -1432,7 +1441,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                           ? isSel ? 'bg-amber-800 text-amber-200' : 'bg-amber-950/80 text-amber-400 border border-amber-800/60'
                           : isSel ? 'bg-blue-800 text-blue-200' : 'bg-blue-950/80 text-blue-400 border border-blue-800/60'
                       }`}>
-                        {isFront ? 'Avant' : 'Arrière'}
+                        {isFront ? (lang === 'fr' ? 'Avant' : 'Front') : (lang === 'fr' ? 'Arrière' : 'Back')}
                       </span>
                     </button>
                   );
@@ -1460,11 +1469,11 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                               ? 'bg-amber-950/80 border-amber-500/60 text-amber-300' 
                               : 'bg-blue-950/80 border-blue-500/60 text-blue-300'
                           }`}>
-                            {campCharIdx < 3 ? `Avant-garde · Rang #${campCharIdx + 1}` : `Arrière-garde · Rang #${campCharIdx + 1}`}
+                            {campCharIdx < 3 ? (lang === 'fr' ? `Avant-garde · Rang #${campCharIdx + 1}` : `Front Row · Rank #${campCharIdx + 1}`) : (lang === 'fr' ? `Arrière-garde · Rang #${campCharIdx + 1}` : `Back Row · Rank #${campCharIdx + 1}`)}
                           </span>
                         </div>
                         <div className="text-slate-400 text-xs">
-                          {activeCampHero.race} {activeCampHero.class} (Niveau {activeCampHero.charLevel}) · CA {activeCampHero.armorClass}
+                          {activeCampHero.race} {activeCampHero.class} ({t.character.lvlShort} {activeCampHero.charLevel}) · {t.character.acShort} {activeCampHero.armorClass}
                         </div>
                       </div>
 
@@ -1474,7 +1483,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                           onClick={() => handleMoveHero(campCharIdx, campCharIdx - 1)}
                           disabled={campCharIdx === 0}
                           className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 border border-slate-700 rounded text-slate-300 hover:text-white transition"
-                          title="Monter d'un rang dans le groupe"
+                          title={lang === 'fr' ? "Monter d'un rang dans le groupe" : "Move up one rank"}
                         >
                           <MoveUp className="w-3.5 h-3.5" />
                         </button>
@@ -1482,31 +1491,31 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                           onClick={() => handleMoveHero(campCharIdx, campCharIdx + 1)}
                           disabled={campCharIdx === party.length - 1}
                           className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 border border-slate-700 rounded text-slate-300 hover:text-white transition"
-                          title="Descendre d'un rang dans le groupe"
+                          title={lang === 'fr' ? "Descendre d'un rang dans le groupe" : "Move down one rank"}
                         >
                           <MoveDown className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setCampTab('FORMATION')}
                           className="px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-[11px] font-bold text-amber-300 flex items-center gap-1 transition"
-                          title="Ouvrir le gestionnaire de formation complet"
+                          title={lang === 'fr' ? "Ouvrir le gestionnaire de formation complet" : "Open full formation editor"}
                         >
                           <ArrowUpDown className="w-3 h-3" />
-                          <span>Ordre</span>
+                          <span>{lang === 'fr' ? 'Ordre' : 'Order'}</span>
                         </button>
                         <button
                           onClick={() => setShowCharacterSheetModal(true)}
                           className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 rounded text-[11px] font-bold text-white flex items-center gap-1 transition shadow-sm"
-                          title="Consulter la fiche complète du personnage (Caractéristiques, Sorts, Équipement)"
+                          title={lang === 'fr' ? "Consulter la fiche complète du personnage" : "View full character sheet"}
                         >
                           <FileText className="w-3.5 h-3.5" />
-                          <span>Fiche</span>
+                          <span>{t.castle.sheetBtn}</span>
                         </button>
                       </div>
                     </div>
 
                     <div className="text-slate-400">
-                      Points de Vie : <strong className="text-emerald-400">{activeCampHero.hpLeft}/{activeCampHero.hpMax}</strong> · Or : <strong className="text-amber-400">{activeCampHero.gold} PO</strong>
+                      {t.castle.healthLabel(activeCampHero.hpLeft, activeCampHero.hpMax)} · {t.castle.goldLabel(activeCampHero.gold)}
                     </div>
                   </div>
 
@@ -1514,10 +1523,10 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
-                      Sorts Disponibles :
+                      {t.dungeon.campSpellsAvailable}
                     </span>
                     <div className="flex items-center gap-1.5 text-[11px]">
-                      <span className="text-slate-400">Cible :</span>
+                      <span className="text-slate-400">{t.dungeon.campTargetLabel}</span>
                       <select
                         value={campTargetIdx}
                         onChange={e => setCampTargetIdx(Number(e.target.value))}
@@ -1525,7 +1534,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                       >
                         {party.map((p, idx) => (
                           <option key={p.id} value={idx}>
-                            {p.name} ({p.hpLeft}/{p.hpMax} PV {p.status !== 'OK' ? `[${p.status}]` : ''}{p.poisonAmount > 0 ? ` [POISON x${p.poisonAmount}]` : ''})
+                            {p.name} ({p.hpLeft}/{p.hpMax} HP {p.status !== 'OK' ? `[${p.status}]` : ''}{p.poisonAmount > 0 ? ` [POISON x${p.poisonAmount}]` : ''})
                           </option>
                         ))}
                       </select>
@@ -1547,7 +1556,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
                   <div className="space-y-1.5">
                     {SPELLS.filter(sp => sp.camp && activeCampHero.spellsKnown[sp.id]).length === 0 && (
-                      <p className="text-slate-500 italic">Aucun sort de soin ou utilitaire appris.</p>
+                      <p className="text-slate-500 italic">{t.dungeon.campNoSpellsAvailable}</p>
                     )}
                     {SPELLS.filter(sp => sp.camp && activeCampHero.spellsKnown[sp.id]).map(sp => {
                       const targetHero = party[campTargetIdx] || activeCampHero;
@@ -1555,6 +1564,9 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                         ? activeCampHero.priestSpells[sp.tier] > 0 
                         : activeCampHero.mageSpells[sp.tier] > 0;
                       const canCast = canHeroCastSpells(activeCampHero).canCast && hasSlots;
+                      const slotsCount = sp.spellType === 'PRIEST' 
+                        ? activeCampHero.priestSpells[sp.tier] 
+                        : activeCampHero.mageSpells[sp.tier];
 
                       return (
                         <div key={sp.id} className="p-2.5 bg-slate-800/70 border border-slate-700/50 rounded-lg flex items-center justify-between">
@@ -1562,7 +1574,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                             <div className="font-bold text-white flex items-center gap-2">
                               <span>{sp.name} (T{sp.tier})</span>
                               <span className="text-[10px] text-amber-400">
-                                {sp.spellType === 'PRIEST' ? `${activeCampHero.priestSpells[sp.tier]} slots` : `${activeCampHero.mageSpells[sp.tier]} slots`}
+                                {t.dungeon.campSlotsRemaining(slotsCount)}
                               </span>
                             </div>
                             <div className="text-[11px] text-slate-400">{sp.description}</div>
@@ -1572,7 +1584,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                             disabled={!canCast}
                             className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-bold transition disabled:opacity-30 disabled:pointer-events-none"
                           >
-                            Lancer
+                            {t.dungeon.campCastBtn}
                           </button>
                         </div>
                       );
@@ -1585,18 +1597,18 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
-                    Équipement & Sac ({activeCampHero.possessions.length}/8) :
+                    {t.dungeon.backpackLabel(activeCampHero.possessions.length)}
                   </div>
                   {activeCampHero.possessions.length >= 8 && (
                     <span className="text-[10px] font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-600/40 flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3 text-amber-400" />
-                      Sac Plein (8/8)
+                      {t.dungeon.backpackFullNotice}
                     </span>
                   )}
                 </div>
                 <div className="space-y-1.5">
                   {activeCampHero.possessions.length === 0 && (
-                    <p className="text-slate-500 italic py-4 text-center">Sac vide.</p>
+                    <p className="text-slate-500 italic py-4 text-center">{t.dungeon.emptyBackpack}</p>
                   )}
                   {activeCampHero.possessions.map((slot, sIdx) => {
                     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
@@ -1610,16 +1622,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                           <div>
                             <div className="font-bold text-white flex items-center gap-1.5 flex-wrap">
                               <span>{slot.identified ? itm.name : itm.nameUnknown}</span>
-                              {slot.equipped && <span className="text-[10px] text-emerald-400 font-bold">[Équipé]</span>}
-                              {slot.cursed && <span className="text-[10px] text-red-400 font-bold">[Maudit]</span>}
-                              {equippable && !isProficient && <span className="text-[10px] text-rose-400 font-bold">[Incompatible]</span>}
+                              {slot.equipped && <span className="text-[10px] text-emerald-400 font-bold">[{t.castle.equippedBadge}]</span>}
+                              {slot.cursed && <span className="text-[10px] text-red-400 font-bold">[{t.castle.cursedBadge}]</span>}
+                              {equippable && !isProficient && <span className="text-[10px] text-rose-400 font-bold">[{t.castle.incompatibleBadge}]</span>}
                             </div>
                             <div className="text-[11px] text-slate-400">
-                              {itm.objType} {itm.objType === 'WEAPON' && itm.wepHpDam?.level ? `· Dégâts ${formatDamageDice(itm.wepHpDam)}` : ''} {itm.armorMod ? `· CA -${itm.armorMod}` : ''}
+                              {itm.objType} {itm.objType === 'WEAPON' && itm.wepHpDam?.level ? `· ${lang === 'fr' ? 'Dégâts' : 'Damage'} ${formatDamageDice(itm.wepHpDam)}` : ''} {itm.armorMod ? `· AC -${itm.armorMod}` : ''}
                             </div>
                             {equippable && (
                               <div className="text-[10px] text-slate-500">
-                                Classes : <span className={isProficient ? "text-slate-400" : "text-rose-400 font-semibold"}>{getUsableClassesList(itm, true).join(', ') || 'Aucune'}</span>
+                                {t.castle.classesLabel} <span className={isProficient ? "text-slate-400" : "text-rose-400 font-semibold"}>{getUsableClassesList(itm, true).join(', ') || (lang === 'fr' ? 'Aucune' : 'None')}</span>
                               </div>
                             )}
                           </div>
@@ -1635,19 +1647,19 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                       ? 'bg-slate-800 hover:bg-rose-950/70 text-slate-400 hover:text-rose-200 border border-slate-700'
                                       : 'bg-slate-700 hover:bg-slate-600 text-white'
                                 } rounded text-xs font-semibold transition`}
-                                title={!slot.equipped && !isProficient ? `Incompatible avec ${activeCampHero.class}. Autorisés : ${getUsableClassesList(itm).join(', ')}` : undefined}
+                                title={!slot.equipped && !isProficient ? (lang === 'fr' ? `Incompatible avec ${activeCampHero.class}. Autorisés : ${getUsableClassesList(itm).join(', ')}` : `Incompatible with ${activeCampHero.class}. Allowed: ${getUsableClassesList(itm).join(', ')}`) : undefined}
                               >
-                                {slot.equipped ? 'Retirer' : 'Équiper'}
+                                {slot.equipped ? t.dungeon.unequipBtn : t.dungeon.equipBtn}
                               </button>
                             )}
                             {isItemUsable(itm) && (
                               <button
                                 onClick={() => handleCampUseItem(sIdx)}
                                 className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-xs font-semibold transition flex items-center gap-1 shadow-sm"
-                                title="Utiliser / Boire / Invoquer cet objet"
+                                title={lang === 'fr' ? "Utiliser / Boire / Invoquer cet objet" : "Use / Drink / Invoke this item"}
                               >
                                 <FlaskConical className="w-3 h-3 text-emerald-200" />
-                                <span>Utiliser</span>
+                                <span>{t.dungeon.useBtn}</span>
                               </button>
                             )}
                             {(() => {
@@ -1657,10 +1669,10 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                   <button
                                     onClick={() => handleBishopIdentify(sIdx)}
                                     className="px-2.5 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-xs font-semibold transition flex items-center gap-1 shadow-sm active:scale-95"
-                                    title={`Faire expertiser et identifier par ${bishopInParty.name} (${bishopInParty.class} Niv. ${bishopInParty.charLevel})`}
+                                    title={lang === 'fr' ? `Faire expertiser et identifier par ${bishopInParty.name} (${bishopInParty.class} Niv. ${bishopInParty.charLevel})` : `Have evaluated and identified by ${bishopInParty.name} (${bishopInParty.class} Lvl. ${bishopInParty.charLevel})`}
                                   >
                                     <Sparkles className="w-3 h-3 text-purple-200" />
-                                    <span>Identifier {activeCampHero.id !== bishopInParty.id ? `(${bishopInParty.name})` : ''}</span>
+                                    <span>{t.dungeon.identifyBishopBtn(activeCampHero.id !== bishopInParty.id ? bishopInParty.name : bishopInParty.class)}</span>
                                   </button>
                                 );
                               }
@@ -1674,19 +1686,19 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                     ? 'bg-amber-600 text-white shadow-sm' 
                                     : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30'
                                 }`}
-                                title="Donner cet objet à un autre compagnon"
+                                title={lang === 'fr' ? "Donner cet objet à un autre compagnon" : "Give this item to a party member"}
                               >
                                 <ArrowRightLeft className="w-3 h-3" />
-                                <span>Donner</span>
+                                <span>{t.dungeon.giveBtn}</span>
                               </button>
                             )}
                             <button
                               onClick={() => handleCampDropItem(sIdx)}
                               className="px-2 py-1 bg-slate-800 hover:bg-red-950/80 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-700/50 rounded text-xs font-semibold transition flex items-center gap-1 shadow-sm active:scale-95"
-                              title="Jeter définitivement cet objet avec confirmation"
+                              title={lang === 'fr' ? "Jeter définitivement cet objet avec confirmation" : "Discard this item permanently with confirmation"}
                             >
                               <Trash2 className="w-3 h-3 text-slate-400" />
-                              <span>Jeter</span>
+                              <span>{t.dungeon.dropBtn}</span>
                             </button>
                           </div>
                         </div>
@@ -1697,13 +1709,13 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                             <div className="text-[11px] text-slate-300 font-semibold flex items-center justify-between">
                               <span className="flex items-center gap-1 text-amber-400">
                                 <Package className="w-3.5 h-3.5" />
-                                Transférer à quel compagnon ?
+                                {t.dungeon.giveTargetSelectPrompt}
                               </span>
                               <button 
                                 onClick={() => setTransferringSlotIdx(null)}
                                 className="text-slate-400 hover:text-white text-[10px] underline"
                               >
-                                Annuler
+                                {t.common.cancel}
                               </button>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
@@ -1716,7 +1728,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                     onClick={() => handleTransferItem(sIdx, target.id)}
                                     disabled={isFull || isCursedEquipped}
                                     className="px-2.5 py-1 bg-slate-800 hover:bg-amber-600/90 disabled:opacity-40 disabled:pointer-events-none border border-slate-700 hover:border-amber-500 text-white rounded text-xs font-semibold transition flex items-center gap-1.5"
-                                    title={isFull ? 'Inventaire de ce héros plein (8/8)' : isCursedEquipped ? 'Impossible de transférer un objet maudit équipé' : `Transférer à ${target.name}`}
+                                    title={isFull ? (lang === 'fr' ? 'Inventaire de ce héros plein (8/8)' : 'Hero inventory is full (8/8)') : isCursedEquipped ? (lang === 'fr' ? 'Impossible de transférer un objet maudit équipé' : 'Cannot give away an equipped cursed item') : `${t.dungeon.giveBtn} -> ${target.name}`}
                                   >
                                     <span>{target.name}</span>
                                     <span className={`text-[10px] font-mono ${isFull ? 'text-red-400 font-bold' : 'text-slate-400'}`}>
@@ -1740,11 +1752,12 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 <div className="p-4 bg-amber-950/30 border border-amber-600/40 rounded-xl space-y-1.5">
                   <div className="font-bold text-amber-300 flex items-center gap-2 text-sm font-serif">
                     <Swords className="w-4 h-4 text-amber-400" />
-                    <span>Règles Pascal de Wizardry I : Disposition Tactique du Groupe</span>
+                    <span>{lang === 'fr' ? "Règles Pascal de Wizardry I : Disposition Tactique du Groupe" : "Pascal Wizardry I Rules: Tactical Party Formation"}</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Seuls les <strong>3 premiers personnages (l'Avant-garde)</strong> peuvent porter des attaques physiques au corps-à-corps et subir les assauts physiques directs des monstres.
-                    Les personnages <strong>4, 5 et 6 (l'Arrière-garde)</strong> sont protégés des coups de mêlée et combattent par leurs sorts, objets ou compétences.
+                    {lang === 'fr'
+                      ? "Seuls les 3 premiers personnages (l'Avant-garde) peuvent porter des attaques physiques au corps-à-corps et subir les assauts physiques directs des monstres. Les personnages 4, 5 et 6 (l'Arrière-garde) sont protégés des coups de mêlée et combattent par leurs sorts, objets ou compétences."
+                      : "Only the first 3 characters (Front Row) can make physical melee attacks and take direct melee hits from monsters. Characters 4, 5, and 6 (Back Row) are protected from melee attacks and fight with spells, items, or skills."}
                   </p>
                 </div>
 
@@ -1758,8 +1771,8 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                           <Swords className="w-4 h-4" />
                         </span>
                         <div>
-                          <div className="font-bold text-sm text-amber-300">AVANT-GARDE (Ligne de Front)</div>
-                          <div className="text-[11px] text-slate-400">Rangs #1 à #3 · Attaquent et encaissent en mêlée</div>
+                          <div className="font-bold text-sm text-amber-300">{lang === 'fr' ? "AVANT-GARDE (Ligne de Front)" : "FRONT ROW (Vanguard)"}</div>
+                          <div className="text-[11px] text-slate-400">{lang === 'fr' ? "Rangs #1 à #3 · Attaquent et encaissent en mêlée" : "Ranks #1 to #3 · Attack and take melee hits"}</div>
                         </div>
                       </div>
                       <span className="text-xs font-mono font-bold text-amber-400">
@@ -1786,7 +1799,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                     <span className="text-[10px] text-amber-400 font-normal">({hero.class})</span>
                                   </div>
                                   <div className="text-[11px] text-slate-400">
-                                    Niv.{hero.charLevel} · CA {hero.armorClass} · {hero.hpLeft}/{hero.hpMax} PV
+                                    {lang === 'fr' ? `Niv.${hero.charLevel}` : `Lvl.${hero.charLevel}`} · AC {hero.armorClass} · {hero.hpLeft}/{hero.hpMax} HP
                                   </div>
                                 </div>
                               </div>
@@ -1798,7 +1811,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                   onClick={() => handleMoveHero(actualIdx, actualIdx - 1)}
                                   disabled={actualIdx === 0}
                                   className="p-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-white rounded text-xs transition"
-                                  title="Monter d'un rang"
+                                  title={lang === 'fr' ? "Monter d'un rang" : "Move up one rank"}
                                 >
                                   <MoveUp className="w-3.5 h-3.5" />
                                 </button>
@@ -1807,7 +1820,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                   onClick={() => handleMoveHero(actualIdx, actualIdx + 1)}
                                   disabled={actualIdx === party.length - 1}
                                   className="p-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-white rounded text-xs transition"
-                                  title="Descendre d'un rang"
+                                  title={lang === 'fr' ? "Descendre d'un rang" : "Move down one rank"}
                                 >
                                   <MoveDown className="w-3.5 h-3.5" />
                                 </button>
@@ -1816,9 +1829,9 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                     type="button"
                                     onClick={() => handleMoveHero(actualIdx, Math.min(party.length - 1, 3))}
                                     className="px-2 py-1 bg-blue-950/80 hover:bg-blue-900 border border-blue-700/60 text-blue-300 rounded text-[11px] font-semibold transition"
-                                    title="Placer en arrière-garde"
+                                    title={lang === 'fr' ? "Placer en arrière-garde" : "Place in back row"}
                                   >
-                                    Arrière ⏩
+                                    {lang === 'fr' ? "Arrière ⏩" : "Rear ⏩"}
                                   </button>
                                 )}
                               </div>
@@ -1826,7 +1839,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
                             {/* Swap selector */}
                             <div className="flex items-center justify-between pt-1 border-t border-slate-700/40 text-[11px]">
-                              <span className="text-slate-400">Échanger avec :</span>
+                              <span className="text-slate-400">{lang === 'fr' ? "Échanger avec :" : "Swap with:"}</span>
                               <select
                                 onChange={e => {
                                   const targetIdx = Number(e.target.value);
@@ -1835,12 +1848,12 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                 value=""
                                 className="bg-slate-900 border border-slate-700 text-slate-300 rounded px-2 py-0.5 text-xs focus:outline-none"
                               >
-                                <option value="" disabled>Choisir un compagnon...</option>
+                                <option value="" disabled>{lang === 'fr' ? "Choisir un compagnon..." : "Select companion..."}</option>
                                 {party.map((p, pIdx) => {
                                   if (pIdx === actualIdx) return null;
                                   return (
                                     <option key={p.id} value={pIdx}>
-                                      #{pIdx + 1} {p.name} ({p.class} · {pIdx < 3 ? 'Avant' : 'Arrière'})
+                                      #{pIdx + 1} {p.name} ({p.class} · {pIdx < 3 ? (lang === 'fr' ? 'Avant' : 'Front') : (lang === 'fr' ? 'Arrière' : 'Rear')})
                                     </option>
                                   );
                                 })}
@@ -1860,8 +1873,8 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                           <ShieldCheck className="w-4 h-4" />
                         </span>
                         <div>
-                          <div className="font-bold text-sm text-blue-300">ARRIÈRE-GARDE (Second Rang)</div>
-                          <div className="text-[11px] text-slate-400">Rangs #4 à #6 · Protégés de la mêlée physique</div>
+                          <div className="font-bold text-sm text-blue-300">{lang === 'fr' ? "ARRIÈRE-GARDE (Second Rang)" : "BACK ROW (Rearguard)"}</div>
+                          <div className="text-[11px] text-slate-400">{lang === 'fr' ? "Rangs #4 à #6 · Protégés de la mêlée physique" : "Ranks #4 to #6 · Protected from melee hits"}</div>
                         </div>
                       </div>
                       <span className="text-xs font-mono font-bold text-blue-400">
@@ -1872,7 +1885,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                     <div className="space-y-2.5">
                       {party.length <= 3 && (
                         <div className="p-6 bg-slate-950/40 border border-dashed border-slate-800 rounded-xl text-center text-slate-500">
-                          Aucun héros en arrière-garde. Tous vos aventuriers sont au front !
+                          {lang === 'fr' ? "Aucun héros en arrière-garde. Tous vos aventuriers sont au front !" : "No adventurers in back row. All party members are at the front!"}
                         </div>
                       )}
                       {party.slice(3).map((hero, idx) => {
@@ -1893,7 +1906,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                     <span className="text-[10px] text-blue-400 font-normal">({hero.class})</span>
                                   </div>
                                   <div className="text-[11px] text-slate-400">
-                                    Niv.{hero.charLevel} · CA {hero.armorClass} · {hero.hpLeft}/{hero.hpMax} PV
+                                    {lang === 'fr' ? `Niv.${hero.charLevel}` : `Lvl.${hero.charLevel}`} · AC {hero.armorClass} · {hero.hpLeft}/{hero.hpMax} HP
                                   </div>
                                 </div>
                               </div>
@@ -1904,7 +1917,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                   type="button"
                                   onClick={() => handleMoveHero(actualIdx, actualIdx - 1)}
                                   className="p-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition"
-                                  title="Monter d'un rang"
+                                  title={lang === 'fr' ? "Monter d'un rang" : "Move up one rank"}
                                 >
                                   <MoveUp className="w-3.5 h-3.5" />
                                 </button>
@@ -1913,7 +1926,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                   onClick={() => handleMoveHero(actualIdx, actualIdx + 1)}
                                   disabled={actualIdx === party.length - 1}
                                   className="p-1.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-30 text-white rounded text-xs transition"
-                                  title="Descendre d'un rang"
+                                  title={lang === 'fr' ? "Descendre d'un rang" : "Move down one rank"}
                                 >
                                   <MoveDown className="w-3.5 h-3.5" />
                                 </button>
@@ -1921,16 +1934,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                   type="button"
                                   onClick={() => handleMoveHero(actualIdx, 0)}
                                   className="px-2 py-1 bg-amber-950/80 hover:bg-amber-900 border border-amber-700/60 text-amber-300 rounded text-[11px] font-semibold transition"
-                                  title="Placer en tête de ligne (Avant-garde)"
+                                  title={lang === 'fr' ? "Placer en tête de ligne (Avant-garde)" : "Place at the front (Vanguard)"}
                                 >
-                                  ⏪ Avant
+                                  {lang === 'fr' ? "⏪ Avant" : "⏪ Front"}
                                 </button>
                               </div>
                             </div>
 
                             {/* Swap selector */}
                             <div className="flex items-center justify-between pt-1 border-t border-slate-700/40 text-[11px]">
-                              <span className="text-slate-400">Échanger avec :</span>
+                              <span className="text-slate-400">{lang === 'fr' ? "Échanger avec :" : "Swap with:"}</span>
                               <select
                                 onChange={e => {
                                   const targetIdx = Number(e.target.value);
@@ -1939,12 +1952,12 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                 value=""
                                 className="bg-slate-900 border border-slate-700 text-slate-300 rounded px-2 py-0.5 text-xs focus:outline-none"
                               >
-                                <option value="" disabled>Choisir un compagnon...</option>
+                                <option value="" disabled>{lang === 'fr' ? "Choisir un compagnon..." : "Select companion..."}</option>
                                 {party.map((p, pIdx) => {
                                   if (pIdx === actualIdx) return null;
                                   return (
                                     <option key={p.id} value={pIdx}>
-                                      #{pIdx + 1} {p.name} ({p.class} · {pIdx < 3 ? 'Avant' : 'Arrière'})
+                                      #{pIdx + 1} {p.name} ({p.class} · {pIdx < 3 ? (lang === 'fr' ? 'Avant' : 'Front') : (lang === 'fr' ? 'Arrière' : 'Rear')})
                                     </option>
                                   );
                                 })}
@@ -1993,12 +2006,10 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               🛗
             </div>
             <h3 className="text-lg font-black text-sky-300 tracking-wide">
-              {lang === 'en' ? 'Elevator Mechanism' : 'Mécanisme d\'Ascenseur'}
+              {t.dungeon.elevatorTitle(elevatorMinLvl, elevatorMaxLvl)}
             </h3>
             <p className="text-xs text-slate-300">
-              {lang === 'en' 
-                ? `Select destination floor (current floor: Level ${maze.level}):` 
-                : `Choisissez l'étage de destination (étage actuel : Niveau ${maze.level}) :`}
+              {t.dungeon.elevatorSelectPrompt(maze.level)}
             </p>
             <div className="grid grid-cols-2 gap-2 pt-1">
               {Array.from({ length: elevatorMaxLvl - elevatorMinLvl + 1 }, (_, i) => elevatorMinLvl + i).map(lvl => (
@@ -2016,7 +2027,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                       : 'bg-sky-600 hover:bg-sky-500 text-white border border-sky-400/50 active:scale-95 shadow-md shadow-sky-950/50'
                   }`}
                 >
-                  {lang === 'en' ? `Level ${lvl}` : `Niveau ${lvl}`} {lvl === maze.level ? '(ici)' : `[${lvl}]`}
+                  {lang === 'en' ? `Floor ${lvl}` : `Niveau ${lvl}`} {lvl === maze.level ? t.dungeon.elevatorCurrentFloor : `[${lvl}]`}
                 </button>
               ))}
             </div>
@@ -2024,7 +2035,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               onClick={() => setShowElevatorModal(false)}
               className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer"
             >
-              {lang === 'en' ? 'Stay on this floor (Esc)' : 'Rester sur ce niveau (Échap)'}
+              {t.dungeon.cancelBtn}
             </button>
           </div>
         </div>
@@ -2039,17 +2050,17 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             </div>
             <h3 className="text-lg font-black text-amber-300 tracking-wide">
               {stairsTargetLvl === 0 
-                ? (lang === 'en' ? "Stairs to the Castle" : "Escalier vers le Château")
+                ? t.dungeon.stairsCastle
                 : stairsTargetLvl > maze.level 
-                  ? (lang === 'en' ? `Descending Stairs (Level ${stairsTargetLvl})` : `Escalier Descendant (Niveau ${stairsTargetLvl})`) 
-                  : (lang === 'en' ? `Ascending Stairs (Level ${stairsTargetLvl})` : `Escalier Montant (Niveau ${stairsTargetLvl})`)}
+                  ? t.dungeon.stairsDown(stairsTargetLvl)
+                  : t.dungeon.stairsUp(stairsTargetLvl)}
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed">
               {stairsTargetLvl === 0
-                ? (lang === 'en' ? "A broad flight of stone stairs leads up to the courtyard and safety of the Castle." : "Un large perron de pierre remonte vers la cour et la sécurité du Château.")
+                ? t.dungeon.stairsCastleDesc
                 : stairsTargetLvl > maze.level
-                  ? (lang === 'en' ? `A spiral staircase carved into raw rock descends into the depths towards Level ${stairsTargetLvl}. The air is colder, and creature roars echo closer.` : `Un escalier en colimaçon taillé dans la roche brute s'enfonce dans les profondeurs vers le Niveau ${stairsTargetLvl}. L'air y est plus froid, et les rugissements des créatures résonnent plus près.`)
-                  : (lang === 'en' ? `A carved stone staircase leads up to the corridors of Level ${stairsTargetLvl}.` : `Un escalier de pierre taillée remonte vers les couloirs du Niveau ${stairsTargetLvl}.`)}
+                  ? t.dungeon.stairsDownDesc(stairsTargetLvl)
+                  : t.dungeon.stairsUpDesc(stairsTargetLvl)}
             </p>
             <div className="text-amber-200/90 font-bold text-xs pt-1">
               {lang === 'en' ? "Do you wish to take these stairs?" : "Voulez-vous emprunter cet escalier ?"}
@@ -2060,16 +2071,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl text-xs font-black shadow-lg transition active:scale-95 cursor-pointer"
               >
                 {stairsTargetLvl === 0 
-                  ? (lang === 'en' ? 'Return to Castle (Y)' : 'Remonter au Château (Y)')
+                  ? t.dungeon.stairsCastleAction
                   : stairsTargetLvl > maze.level 
-                    ? (lang === 'en' ? `Descend to Level ${stairsTargetLvl} (Y)` : `Descendre au Niveau ${stairsTargetLvl} (Y)`) 
-                    : (lang === 'en' ? `Ascend to Level ${stairsTargetLvl} (Y)` : `Monter au Niveau ${stairsTargetLvl} (Y)`)}
+                    ? t.dungeon.stairsDescendAction(stairsTargetLvl) 
+                    : t.dungeon.stairsAscendAction(stairsTargetLvl)}
               </button>
               <button
                 onClick={() => setShowStairsPrompt(false)}
                 className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
               >
-                {lang === 'en' ? 'Stay Here (N)' : 'Rester ici (N)'}
+                {t.dungeon.cancelBtn}
               </button>
             </div>
           </div>

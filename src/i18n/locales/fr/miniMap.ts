@@ -1,0 +1,53 @@
+import { MiniMapTranslations } from '../../types';
+
+export const miniMapFr: MiniMapTranslations = {
+  levelTitle: (lvl: number) => `Niveau ${lvl}`,
+  radarModeBtn: 'Mode Radar',
+  fullModeBtn: 'Carte Complète',
+  radarModeTooltip: 'Passer en vue radar 7x7 centrée sur le groupe',
+  fullModeTooltip: 'Passer en vue grille complète 20x20 du niveau',
+  revealAllBtn: 'Tout Révéler',
+  hideUndiscoveredBtn: 'Brouillard de Guerre',
+  revealAllTooltip: 'Révéler toutes les salles et couloirs du niveau',
+  legendToggleBtn: 'Afficher / Masquer Légende',
+  closeBtn: 'Fermer la Carte',
+  coordinates: (x: number, y: number) => `(${x}, ${y})`,
+
+  // Tooltips
+  tooltipPlayer: (x: number, y: number, dir: string) => `🧙 Vous êtes ici (${x}, ${y}) face au ${dir}`,
+  tooltipWall: (x: number, y: number) => `Mur de pierre (${x}, ${y})`,
+  tooltipDoor: (x: number, y: number) => `🚪 Porte (${x}, ${y})`,
+  tooltipSecretDoor: (x: number, y: number) => `🔍 Porte Secrète (${x}, ${y})`,
+  tooltipOneWayDoor: (x: number, y: number) => `➜ Porte 1-Sens (${x}, ${y})`,
+  tooltipStairsCastle: (x: number, y: number) => `▲ Escalier vers Château (${x}, ${y})`,
+  tooltipStairsUp: (lvl: number, x: number, y: number) => `▲ Escalier montant vers Niveau ${lvl} (${x}, ${y})`,
+  tooltipStairsDown: (lvl: number, x: number, y: number) => `▼ Escalier descendant vers Niveau ${lvl} (${x}, ${y})`,
+  tooltipTeleporter: (x: number, y: number) => `⚡ Téléporteur (${x}, ${y})`,
+  tooltipPit: (x: number, y: number) => `⤓ Chute / Trappe (${x}, ${y})`,
+  tooltipFallenHero: (name: string, x: number, y: number) => `💀 Dépouille de ${name} (${x}, ${y})`,
+  tooltipDarkness: (x: number, y: number) => `Zone d'obscurité magique (${x}, ${y})`,
+
+  // Legend
+  legendTitle: 'Légende de la Carte',
+  legendPlayer: 'Groupe Joueur',
+  legendVisited: 'Couloir Exploré',
+  legendWall: 'Mur',
+  legendDoor: 'Porte',
+  legendSecretDoor: 'Porte secrète',
+  legendOneWayDoor: 'Porte 1-sens',
+  legendStairsUp: 'Escalier Montant',
+  legendStairsDown: 'Escalier Descendant',
+  legendTeleporter: 'Téléporteur',
+  legendPit: 'Chute / Trappe',
+  legendDarkness: 'Ténèbres',
+  legendFallenBody: 'Dépouille',
+
+  // Shortcuts & Touch
+  shortcutsFooter: (fwdKey: string) => `Touches : ${fwdKey} Avancer • Q/D Tourner • S Demi-tour • Espace/E Ouvrir Porte`,
+  closeMapShortcut: 'Fermer : [M] ou [Échap]',
+  openMapShortcut: 'Carte : [M]',
+  cardinalNorth: 'Nord',
+  cardinalEast: 'Est',
+  cardinalSouth: 'Sud',
+  cardinalWest: 'Ouest',
+};
