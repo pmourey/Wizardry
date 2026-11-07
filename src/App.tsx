@@ -632,11 +632,51 @@ export default function App() {
   // Check victory condition: Amulet of Werdna (id 94) in inventory at Castle
   useEffect(() => {
     if (location === 'CASTLE') {
-      const hasAmulet = party.some(p => p.possessions.some(slot => slot.itemIndex === 94));
+      const hasAmulet = party.some(p =>
+        p.possessions.some(slot => {
+          if (slot.itemIndex === 94) return true;
+          const it = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+          return it?.name?.toUpperCase().includes('WERDNA') && it?.name?.toUpperCase().includes('AMULET');
+        })
+      );
       if (hasAmulet) {
+        // Confiscate Amulet of Werdna (confiscated by Trebor), award 250,000 XP & Chevron (>)
+        const updatedParty = party.map(h => {
+          const possessions = h.possessions.filter(slot => {
+            if (slot.itemIndex === 94) return false;
+            const it = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
+            return !(it?.name?.toUpperCase().includes('WERDNA') && it?.name?.toUpperCase().includes('AMULET'));
+          });
+          const awards = h.awards && h.awards.length === 5 ? [...h.awards] : [0, 0, 0, 0, 0];
+          let exp = h.exp || 0;
+          if (h.status !== 'DEAD' && h.status !== 'ASHES') {
+            exp += 250000;
+            awards[0] = 1; // Wizardry 1 completed
+            awards[4] = (awards[4] || 0) | 1; // Chevron (>)
+          }
+          return {
+            ...h,
+            possessions,
+            awards,
+            exp
+          };
+        });
+
+        setParty(updatedParty);
+        setAllCharacters(prev => {
+          const roster = [...prev];
+          updatedParty.forEach(up => {
+            const idx = roster.findIndex(c => c.id === up.id);
+            if (idx >= 0) roster[idx] = { ...up };
+            else roster.push({ ...up });
+          });
+          return roster;
+        });
+
         setLocation('VICTORY');
         confetti({ particleCount: 150, spread: 80 });
         sounds.playFanfare();
+        music.playTrack('13-complete');
         addAdventureEvent(
           'DISCOVERY',
           "Victoire Suprême : L'Amulette de Werdna est nôtre !",
@@ -934,8 +974,10 @@ export default function App() {
         }
       } else if (sqrDef.type === 'CHUTE') {
         sounds.playBump();
-        const targetX = (sqrDef.aux2 !== undefined && sqrDef.aux2 !== -1) ? sqrDef.aux2 : newX;
-        const targetY = (sqrDef.aux1 !== undefined && sqrDef.aux1 !== -1) ? sqrDef.aux1 : newY;
+        // In Wizardry data: aux0 = target floor, aux1 = target Y (North), aux2 = target X (East)
+        // For Level 9 -> Level 10 chute: aux0 = 10, aux1 = 0, aux2 = 0 -> arrives at (0, 0)
+        const targetX = (sqrDef.aux2 !== undefined && sqrDef.aux2 >= 0) ? sqrDef.aux2 : 0;
+        const targetY = (sqrDef.aux1 !== undefined && sqrDef.aux1 >= 0) ? sqrDef.aux1 : 0;
         addAdventureEvent(
           'LOSS', 
           'Chute dans un puits !', 
@@ -1560,13 +1602,13 @@ export default function App() {
     let finalX = targetX;
     let finalY = targetY;
 
-    // Safety check: if targetX, targetY is (0,0) or walled in, find the real stairs on targetMaze connecting back to dungeonLevel
+    // Safety check: if target destination is walled in, find the real stairs on targetMaze connecting back to dungeonLevel
     const isWalledIn = targetMaze.w[finalX]?.[finalY] === 'WALL' &&
                        targetMaze.e[finalX]?.[finalY] === 'WALL' &&
                        targetMaze.s[finalX]?.[finalY] === 'WALL' &&
                        targetMaze.n[finalX]?.[finalY] === 'WALL';
 
-    if ((finalX === 0 && finalY === 0) || isWalledIn) {
+    if (isWalledIn) {
       // Find the connecting stairs on the target floor
       const destStairs = targetMaze.events?.find(e => e.type === 'STAIRS' && e.aux0 === dungeonLevel);
       if (destStairs) {
@@ -2296,7 +2338,26 @@ export default function App() {
               </p>
             </div>
             <button
-              onClick={() => setLocation('CASTLE')}
+              onClick={() => {
+                // Ensure Amulet is completely removed from all characters so victory loop never re-triggers
+                setParty(prev => prev.map(h => ({
+                  ...h,
+                  possessions: h.possessions.filter(p => {
+                    if (p.itemIndex === 94) return false;
+                    const it = ITEMS_DATABASE.find(i => i.id === p.itemIndex);
+                    return !(it?.name?.toUpperCase().includes('WERDNA') && it?.name?.toUpperCase().includes('AMULET'));
+                  })
+                })));
+                setAllCharacters(prev => prev.map(h => ({
+                  ...h,
+                  possessions: h.possessions.filter(p => {
+                    if (p.itemIndex === 94) return false;
+                    const it = ITEMS_DATABASE.find(i => i.id === p.itemIndex);
+                    return !(it?.name?.toUpperCase().includes('WERDNA') && it?.name?.toUpperCase().includes('AMULET'));
+                  })
+                })));
+                setLocation('CASTLE');
+              }}
               className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-sm transition"
             >
               Retourner au Château célébrer la victoire
