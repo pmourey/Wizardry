@@ -608,6 +608,9 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
       for (let cy = 0; cy < 20; cy++) {
         const sqrCode = maze.sqrExtra[cx]?.[cy];
         const sqrDef = maze.extraDefs?.[sqrCode];
+        const eventDef = maze.events?.find(e => e.x === cx && e.y === cy);
+        const isStairsDef = sqrDef?.type === 'STAIRS' || eventDef?.type === 'STAIRS';
+
         if (sqrDef?.type === 'DARK') {
           // Authentic Wizardry: Darkness blocks all line of sight into or through it
           // Solid pure black cube that occludes all geometry inside or behind it in both wireframe & stone modes
@@ -621,8 +624,9 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
           const darkMesh = new THREE.Mesh(darkBoxGeo, darkBoxMat);
           darkMesh.position.set(cx * 4, 1.6, -cy * 4);
           group.add(darkMesh);
-        } else if (sqrDef?.type === 'STAIRS') {
-          const isDown = sqrDef.aux0 > maze.level;
+        } else if (isStairsDef) {
+          const stairsTargetLvl = eventDef?.aux0 ?? sqrDef?.aux0 ?? 0;
+          const isDown = stairsTargetLvl > maze.level;
           const stairsGroup = new THREE.Group();
           stairsGroup.position.set(cx * 4, 0.05, -cy * 4);
 

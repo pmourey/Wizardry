@@ -163,6 +163,10 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     }
 
     const isVisited = visitedTiles[cx]?.[cy] || revealAll;
+    const isNorthVisited = cy < 19 ? (visitedTiles[cx]?.[cy + 1] || revealAll) : false;
+    const isSouthVisited = cy > 0 ? (visitedTiles[cx]?.[cy - 1] || revealAll) : false;
+    const isEastVisited = cx < 19 ? (visitedTiles[cx + 1]?.[cy] || revealAll) : false;
+    const isWestVisited = cx > 0 ? (visitedTiles[cx - 1]?.[cy] || revealAll) : false;
     const sqrCode = maze.sqrExtra?.[cx]?.[cy] || 0;
     const specialDef = maze.extraDefs?.[sqrCode];
     const eventDef = maze.events?.find(ev => ev.x === cx && ev.y === cy);
@@ -179,6 +183,10 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     return {
       isValid: true,
       isVisited,
+      isNorthVisited,
+      isSouthVisited,
+      isEastVisited,
+      isWestVisited,
       north: maze.n[cx][cy],
       south: maze.s[cx][cy],
       east: maze.e[cx][cy],
@@ -433,10 +441,15 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               tileBorderWidth = 1;
               tooltip = `⤓ Chute / Trappe (${cx}, ${cy})`;
             } else if (specialType === 'STAIRS') {
-              specialFill = '#854d0e';
-              tileBorder = '#fde047';
+              const isUp = aux0 !== undefined && (aux0 < maze.level || aux0 === 0);
+              specialFill = isUp ? '#065f46' : '#854d0e';
+              tileBorder = isUp ? '#34d399' : '#fde047';
               tileBorderWidth = 1;
-              tooltip = (aux0 === 0 || (cx === 0 && cy === 0)) ? `▲ Escalier vers Château (${cx}, ${cy})` : `▼ Escalier (${cx}, ${cy})`;
+              tooltip = aux0 === 0 
+                ? `▲ Escalier vers Château (${cx}, ${cy})` 
+                : isUp 
+                  ? `▲ Escalier montant vers Niveau ${aux0} (${cx}, ${cy})` 
+                  : `▼ Escalier descendant vers Niveau ${aux0} (${cx}, ${cy})`;
             } else if (specialType === 'PIT') {
               specialFill = '#881337';
               tileBorder = '#f43f5e';
@@ -524,13 +537,13 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 {specialType === 'STAIRS' && (
                   <polygon
                     points={
-                      (aux0 === 0 || (cx === 0 && cy === 0))
+                      (aux0 !== undefined && (aux0 < maze.level || aux0 === 0))
                         ? `${svgX + cellSize * 0.5},${svgY + cellSize * 0.18} ${svgX + cellSize * 0.2},${svgY + cellSize * 0.82} ${svgX + cellSize * 0.8},${svgY + cellSize * 0.82}`
                         : `${svgX + cellSize * 0.5},${svgY + cellSize * 0.82} ${svgX + cellSize * 0.2},${svgY + cellSize * 0.18} ${svgX + cellSize * 0.8},${svgY + cellSize * 0.18}`
                     }
                     fill="#ffffff"
-                    stroke="#fde047"
-                    strokeWidth={0.5}
+                    stroke={aux0 !== undefined && (aux0 < maze.level || aux0 === 0) ? '#34d399' : '#fde047'}
+                    strokeWidth={0.8}
                   />
                 )}
 
@@ -607,7 +620,12 @@ export const MiniMap: React.FC<MiniMapProps> = ({
 
           {/* 2. Walls and Doors */}
           {gridCells.map((cell) => {
-            const { svgX, svgY, isVisited, isValid, north, south, east, west, oppNorth, oppSouth, oppEast, oppWest } = cell;
+            const { 
+              svgX, svgY, isVisited, isValid, 
+              north, south, east, west, 
+              oppNorth, oppSouth, oppEast, oppWest,
+              isNorthVisited, isSouthVisited, isEastVisited, isWestVisited 
+            } = cell;
             if (!isValid || !isVisited) return null;
 
             const wallStroke = '#64748b';
@@ -637,25 +655,34 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                     {/* Directional arrow if one-way */}
                     {oppNorth === 'WALL' && (
                       <polygon
-                        points={`${xMid},${svgY - aSize} ${xMid - aSize},${svgY + aSize * 0.8} ${xMid + aSize},${svgY + aSize * 0.8}`}
+                        points={`${xMid},${svgY - aSize} ${xMid - aSize * 0.8},${svgY + aSize * 0.6} ${xMid + aSize * 0.8},${svgY + aSize * 0.6}`}
                         fill={north === 'HIDEDOOR' ? '#c084fc' : '#fbbf24'}
                       />
                     )}
                   </g>
                 ) : north === 'WALL' && (oppNorth === 'DOOR' || (oppNorth === 'HIDEDOOR' && revealAll)) ? (
-                  /* Blocked side of one-way door (légèrement grisée) */
+                  /* Blocked side of one-way door: continuous solid wall + red blocked accent if opposite is known */
                   <g>
-                    <line x1={svgX} y1={svgY} x2={svgX + cellSize * 0.25} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize * 0.75} y1={svgY} x2={svgX + cellSize} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
                     <line
-                      x1={svgX + cellSize * 0.25}
+                      x1={svgX}
                       y1={svgY}
-                      x2={svgX + cellSize * 0.75}
+                      x2={svgX + cellSize}
                       y2={svgY}
-                      stroke="#78716c"
-                      strokeWidth={wallWidth + 0.5}
-                      strokeDasharray="2,2"
+                      stroke={wallStroke}
+                      strokeWidth={wallWidth}
+                      strokeLinecap="square"
                     />
+                    {(isNorthVisited || revealAll) && (
+                      <line
+                        x1={xMid - cellSize * 0.2}
+                        y1={svgY}
+                        x2={xMid + cellSize * 0.2}
+                        y2={svgY}
+                        stroke="#ef4444"
+                        strokeWidth={wallWidth + 1.2}
+                        strokeLinecap="round"
+                      />
+                    )}
                   </g>
                 ) : north === 'WALL' ? (
                   <line
@@ -692,17 +719,26 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                   </g>
                 ) : south === 'WALL' && (oppSouth === 'DOOR' || (oppSouth === 'HIDEDOOR' && revealAll)) ? (
                   <g>
-                    <line x1={svgX} y1={svgY + cellSize} x2={svgX + cellSize * 0.25} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize * 0.75} y1={svgY + cellSize} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
                     <line
-                      x1={svgX + cellSize * 0.25}
+                      x1={svgX}
                       y1={svgY + cellSize}
-                      x2={svgX + cellSize * 0.75}
+                      x2={svgX + cellSize}
                       y2={svgY + cellSize}
-                      stroke="#78716c"
-                      strokeWidth={wallWidth + 0.5}
-                      strokeDasharray="2,2"
+                      stroke={wallStroke}
+                      strokeWidth={wallWidth}
+                      strokeLinecap="square"
                     />
+                    {(isSouthVisited || revealAll) && (
+                      <line
+                        x1={xMid - cellSize * 0.2}
+                        y1={svgY + cellSize}
+                        x2={xMid + cellSize * 0.2}
+                        y2={svgY + cellSize}
+                        stroke="#ef4444"
+                        strokeWidth={wallWidth + 1.2}
+                        strokeLinecap="round"
+                      />
+                    )}
                   </g>
                 ) : south === 'WALL' ? (
                   <line
@@ -739,17 +775,26 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                   </g>
                 ) : east === 'WALL' && (oppEast === 'DOOR' || (oppEast === 'HIDEDOOR' && revealAll)) ? (
                   <g>
-                    <line x1={svgX + cellSize} y1={svgY} x2={svgX + cellSize} y2={svgY + cellSize * 0.25} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize} y1={svgY + cellSize * 0.75} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
                     <line
                       x1={svgX + cellSize}
-                      y1={svgY + cellSize * 0.25}
+                      y1={svgY}
                       x2={svgX + cellSize}
-                      y2={svgY + cellSize * 0.75}
-                      stroke="#78716c"
-                      strokeWidth={wallWidth + 0.5}
-                      strokeDasharray="2,2"
+                      y2={svgY + cellSize}
+                      stroke={wallStroke}
+                      strokeWidth={wallWidth}
+                      strokeLinecap="square"
                     />
+                    {(isEastVisited || revealAll) && (
+                      <line
+                        x1={svgX + cellSize}
+                        y1={yMid - cellSize * 0.2}
+                        x2={svgX + cellSize}
+                        y2={yMid + cellSize * 0.2}
+                        stroke="#ef4444"
+                        strokeWidth={wallWidth + 1.2}
+                        strokeLinecap="round"
+                      />
+                    )}
                   </g>
                 ) : east === 'WALL' ? (
                   <line
@@ -786,17 +831,26 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                   </g>
                 ) : west === 'WALL' && (oppWest === 'DOOR' || (oppWest === 'HIDEDOOR' && revealAll)) ? (
                   <g>
-                    <line x1={svgX} y1={svgY} x2={svgX} y2={svgY + cellSize * 0.25} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX} y1={svgY + cellSize * 0.75} x2={svgX} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
                     <line
                       x1={svgX}
-                      y1={svgY + cellSize * 0.25}
+                      y1={svgY}
                       x2={svgX}
-                      y2={svgY + cellSize * 0.75}
-                      stroke="#78716c"
-                      strokeWidth={wallWidth + 0.5}
-                      strokeDasharray="2,2"
+                      y2={svgY + cellSize}
+                      stroke={wallStroke}
+                      strokeWidth={wallWidth}
+                      strokeLinecap="square"
                     />
+                    {(isWestVisited || revealAll) && (
+                      <line
+                        x1={svgX}
+                        y1={yMid - cellSize * 0.2}
+                        x2={svgX}
+                        y2={yMid + cellSize * 0.2}
+                        stroke="#ef4444"
+                        strokeWidth={wallWidth + 1.2}
+                        strokeLinecap="round"
+                      />
+                    )}
                   </g>
                 ) : west === 'WALL' ? (
                   <line
@@ -882,23 +936,31 @@ export const MiniMap: React.FC<MiniMapProps> = ({
         <div className="mt-2 sm:mt-3 pt-2 border-t border-slate-800 text-[10px] sm:text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-slate-300">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-1 bg-slate-400 rounded-sm inline-block" />
-            <span>Mur</span>
+            <span>Mur plein</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-1 bg-amber-500 rounded-sm inline-block" />
             <span>Porte</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-1 bg-stone-500 border-t border-dashed border-stone-400 inline-block" />
-            <span>1-sens (grisée)</span>
+            <span className="w-3 h-1 bg-amber-500 inline-flex items-center justify-end text-[7px] text-amber-950 font-bold pr-0.5">►</span>
+            <span>Porte 1-sens</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-1 bg-slate-400 border-t-2 border-red-500 inline-block" />
+            <span>Sens interdit ⛔</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-1 border-t-2 border-dashed border-purple-400 inline-block" />
             <span>Porte secrète</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-amber-400 font-bold">▲/▼</span>
-            <span>Escalier</span>
+            <span className="text-emerald-400 font-bold">▲</span>
+            <span>Escalier Montant</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-amber-400 font-bold">▼</span>
+            <span>Escalier Descendant</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-purple-400 font-bold">⚡</span>

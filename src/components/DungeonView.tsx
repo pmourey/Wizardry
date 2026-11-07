@@ -174,18 +174,25 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   const isDarkZone = sqrType === 'DARK';
   const isStairs = sqrType === 'STAIRS';
   const stairsTargetLvl = currentEvent ? currentEvent.aux0 : currentSqrDef?.aux0;
+  const isElevator = sqrType === 'BUTTONZ';
+  const elevatorMinLvl = currentSqrDef?.aux2 ?? 1;
+  const elevatorMaxLvl = currentSqrDef?.aux1 ?? 4;
 
   const [showStairsPrompt, setShowStairsPrompt] = useState<boolean>(false);
+  const [showElevatorModal, setShowElevatorModal] = useState<boolean>(false);
   const lastPromptedPos = React.useRef<string>('');
 
-  // Automatically prompt player when stepping onto a staircase (like Pascal STAIRSYN)
+  // Automatically prompt player when stepping onto a staircase (like Pascal STAIRSYN) or elevator
   useEffect(() => {
     const posKey = `${x},${y},${maze.level}`;
     if (isStairs && lastPromptedPos.current !== posKey) {
       lastPromptedPos.current = posKey;
       setShowStairsPrompt(true);
+    } else if (isElevator && lastPromptedPos.current !== posKey) {
+      lastPromptedPos.current = posKey;
+      setShowElevatorModal(true);
     }
-  }, [x, y, maze.level, isStairs]);
+  }, [x, y, maze.level, isStairs, isElevator]);
 
   const handleExecuteTakeStairs = () => {
     setShowStairsPrompt(false);
@@ -234,6 +241,13 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     if (isStairs && (e.key === 'y' || e.key === 'Y' || e.key === 'o' || e.key === 'O')) {
       e.preventDefault();
       handleExecuteTakeStairs();
+      return;
+    }
+
+    // Direct elevator trigger with 'E' or 'Y' when standing on elevator tile
+    if (isElevator && (e.key === 'e' || e.key === 'E' || e.key === 'y' || e.key === 'Y' || e.key === 'Enter')) {
+      e.preventDefault();
+      setShowElevatorModal(true);
       return;
     }
 
@@ -296,6 +310,18 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       onMove(dx, dy, wall === 'DOOR' || wall === 'HIDEDOOR');
     } else {
       sounds.playBump();
+      if (wall === 'HIDEDOOR') {
+        if (onAddAdventureEvent) {
+          onAddAdventureEvent(
+            'DISCOVERY',
+            'Passage secret détecté !',
+            `Une porte dérobée est dissimulée dans la paroi en (${x}, ${y}) ! Appuyez sur [K] (Enfoncer) pour la franchir.`,
+            undefined,
+            maze.level,
+            { x, y }
+          );
+        }
+      }
       // If facing the blocked side of a one-way door or secret door
       if (wall === 'WALL' && nx >= 0 && nx < 20 && ny >= 0 && ny < 20) {
         const oppWall = [maze.s, maze.w, maze.n, maze.e][direction]?.[nx]?.[ny];
@@ -303,8 +329,8 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           if (onAddAdventureEvent) {
             onAddAdventureEvent(
               'DISCOVERY',
-              'Passage à sens unique',
-              `La paroi en (${x}, ${y}) ne s'ouvre que depuis l'autre côté (passage à sens unique).`,
+              'Passage à sens unique (sens interdit)',
+              `La paroi en (${x}, ${y}) est un mur plein : ce passage ne s'ouvre que depuis l'autre côté (${nx}, ${ny}).`,
               undefined,
               maze.level,
               { x, y }
@@ -983,6 +1009,66 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             </div>
           )}
 
+          {/* Elevator Detected Floating Banner */}
+          {isElevator && (
+            <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 border border-sky-500/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-2xl backdrop-blur-md max-w-[calc(100vw-1rem)]">
+              <span className="text-base">🛗</span>
+              <span className="text-xs font-bold text-sky-300">
+                {lang === 'en' ? `Elevator (Levels ${elevatorMinLvl} - ${elevatorMaxLvl})` : `Ascenseur (Niveaux ${elevatorMinLvl} à ${elevatorMaxLvl})`}
+              </span>
+              <button
+                onClick={() => setShowElevatorModal(true)}
+                className="ml-2 px-3 py-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-black rounded-full text-xs shadow transition active:scale-95 cursor-pointer"
+              >
+                {lang === 'en' ? 'Use (E)' : 'Actionner (E)'}
+              </button>
+            </div>
+          )}
+
+          {/* Elevator Selection Modal */}
+          {showElevatorModal && isElevator && (
+            <div className="absolute inset-0 z-40 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+              <div className="bg-slate-900 border-2 border-sky-500/80 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
+                <div className="w-14 h-14 mx-auto rounded-full bg-sky-950/80 border-2 border-sky-400 flex items-center justify-center text-sky-400 text-2xl shadow-lg shadow-sky-950/60">
+                  🛗
+                </div>
+                <h3 className="text-lg font-black text-sky-300 tracking-wide">
+                  {lang === 'en' ? 'Elevator Mechanism' : 'Mécanisme d\'Ascenseur'}
+                </h3>
+                <p className="text-xs text-slate-300">
+                  {lang === 'en' 
+                    ? `Select destination floor (current floor: Level ${maze.level}):` 
+                    : `Choisissez l'étage de destination (étage actuel : Niveau ${maze.level}) :`}
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {Array.from({ length: elevatorMaxLvl - elevatorMinLvl + 1 }, (_, i) => elevatorMinLvl + i).map(lvl => (
+                    <button
+                      key={lvl}
+                      disabled={lvl === maze.level}
+                      onClick={() => {
+                        setShowElevatorModal(false);
+                        if (onTakeStairs) onTakeStairs(lvl, x, y);
+                      }}
+                      className={`py-2.5 px-3 rounded-xl font-bold text-xs transition cursor-pointer ${
+                        lvl === maze.level
+                          ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
+                          : 'bg-sky-600 hover:bg-sky-500 text-white border border-sky-400/50 active:scale-95 shadow-md shadow-sky-950/50'
+                      }`}
+                    >
+                      {lang === 'en' ? `Level ${lvl}` : `Niveau ${lvl}`} {lvl === maze.level ? '(ici)' : ''}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setShowElevatorModal(false)}
+                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer"
+                >
+                  {lang === 'en' ? 'Stay on this floor' : 'Rester sur ce niveau'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Interactive Stairs Confirmation Modal */}
           {showStairsPrompt && isStairs && stairsTargetLvl !== undefined && (
             <div className="absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
@@ -1095,7 +1181,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               </button>
             </div>
 
-            {/* Dynamic Stairs or 180 Turnaround button */}
+            {/* Dynamic Stairs, Elevator or 180 Turnaround button */}
             {isStairs && stairsTargetLvl !== undefined ? (
               <button
                 onClick={handleExecuteTakeStairs}
@@ -1108,6 +1194,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                     : stairsTargetLvl > maze.level 
                       ? (lang === 'en' ? `Level ${stairsTargetLvl} ↓` : `Niveau ${stairsTargetLvl} ↓`) 
                       : (lang === 'en' ? `Level ${stairsTargetLvl} ↑` : `Niveau ${stairsTargetLvl} ↑`)}
+                </span>
+              </button>
+            ) : isElevator ? (
+              <button
+                onClick={() => setShowElevatorModal(true)}
+                className="w-full py-2 px-2 bg-gradient-to-r from-sky-600 to-sky-500 active:from-sky-500 active:to-sky-400 text-white rounded-lg text-xs font-black transition shadow flex items-center justify-center gap-1.5 border border-sky-300/40 active:scale-95"
+              >
+                <span className="text-sm">🛗</span>
+                <span className="truncate">
+                  {lang === 'en' ? `Elevator (${elevatorMinLvl}-${elevatorMaxLvl})` : `Ascenseur (${elevatorMinLvl}-${elevatorMaxLvl})`}
                 </span>
               </button>
             ) : (
@@ -1222,6 +1318,21 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                   : stairsTargetLvl > maze.level 
                     ? (lang === 'en' ? `Descend to Level ${stairsTargetLvl} (Y)` : `Descendre au Niveau ${stairsTargetLvl} (Y)`) 
                     : (lang === 'en' ? `Ascend to Level ${stairsTargetLvl} (Y)` : `Monter au Niveau ${stairsTargetLvl} (Y)`)}
+              </span>
+            </button>
+          )}
+
+          {/* Dynamic Elevator Action Button */}
+          {isElevator && (
+            <button
+              onClick={() => setShowElevatorModal(true)}
+              className="w-full p-3 bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white rounded-xl text-xs font-black transition shadow-lg shadow-sky-950/40 flex items-center justify-center gap-2 border border-sky-300/40 active:scale-95 cursor-pointer"
+            >
+              <span className="text-base">🛗</span>
+              <span>
+                {lang === 'en' 
+                  ? `Operate Elevator (Levels ${elevatorMinLvl}-${elevatorMaxLvl})` 
+                  : `Actionner l'Ascenseur (Niveaux ${elevatorMinLvl} à ${elevatorMaxLvl})`}
               </span>
             </button>
           )}
