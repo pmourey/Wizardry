@@ -48,6 +48,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { getActiveStatusEffects, TActiveStatusEffect } from '../engine/statusSystem';
+import { useI18n } from '../i18n';
 
 interface CharacterSheetModalProps {
   character: TCharacter;
@@ -58,62 +59,6 @@ interface CharacterSheetModalProps {
   currentIndex?: number;
 }
 
-const ATTRIBUTE_DETAILS: Record<TAttrib, { label: string; abbr: string; desc: string; iconColor: string; effect: string }> = {
-  STRENGTH: {
-    label: 'Force',
-    abbr: 'FOR',
-    desc: 'Détermine la puissance des coups au corps-à-corps, le nombre d\'attaques par tour et les armes lourdes maniables.',
-    iconColor: 'text-red-400',
-    effect: 'Bonus dégâts & toucher'
-  },
-  IQ: {
-    label: 'Intelligence (I.Q.)',
-    abbr: 'INT',
-    desc: 'Mesure la capacité intellectuelle et la vitesse d\'apprentissage des puissants sorts de Mage.',
-    iconColor: 'text-cyan-400',
-    effect: 'Sorts de Mage & décryptage'
-  },
-  PIETY: {
-    label: 'Piété',
-    abbr: 'PIE',
-    desc: 'Dévotion divine accordant la bénédiction des dieux et l\'apprentissage des miracles de Prêtre.',
-    iconColor: 'text-amber-400',
-    effect: 'Miracles divins de Prêtre'
-  },
-  VITALITY: {
-    label: 'Vitalité',
-    abbr: 'VIT',
-    desc: 'Constitution physique régissant les points de vie gagnés à chaque niveau et les chances de survie à la résurrection.',
-    iconColor: 'text-emerald-400',
-    effect: '+PV par niveau & robustesse'
-  },
-  AGILITY: {
-    label: 'Agilité',
-    abbr: 'AGI',
-    desc: 'Vitesse de réflexes, rapidité d\'initiative au combat et habileté manuelle pour crocheter les coffres piégés.',
-    iconColor: 'text-blue-400',
-    effect: 'Initiative combat & esquive'
-  },
-  LUCK: {
-    label: 'Chance',
-    abbr: 'CHA',
-    desc: 'Facteur mystique protégeant des souffles de monstres, du poison, des sorts de mort subite et des pièges pernicieux.',
-    iconColor: 'text-purple-400',
-    effect: 'Résistance aux souffles & poisons'
-  }
-};
-
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  OK: { label: 'EN FORME', color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-500/30' },
-  AFRAID: { label: 'EFFRAYÉ', color: 'text-amber-400', bg: 'bg-amber-950/40 border-amber-500/30' },
-  ASLEEP: { label: 'ENDORMI', color: 'text-blue-300', bg: 'bg-blue-950/40 border-blue-500/30' },
-  PLYZE: { label: 'PARALYSÉ', color: 'text-purple-400', bg: 'bg-purple-950/40 border-purple-500/30' },
-  STONED: { label: 'PÉTRIFIÉ', color: 'text-slate-400', bg: 'bg-slate-800 border-slate-600' },
-  DEAD: { label: 'MORT', color: 'text-red-400', bg: 'bg-red-950/40 border-red-500/30' },
-  ASHES: { label: 'CENDRES', color: 'text-orange-400', bg: 'bg-orange-950/40 border-orange-500/30' },
-  LOST: { label: 'PERDU DANS LE NÉANT', color: 'text-gray-500', bg: 'bg-gray-900 border-gray-700' }
-};
-
 export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
   character,
   party,
@@ -122,9 +67,48 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
   onSelectCharacter,
   currentIndex = 0
 }) => {
+  const { lang, t } = useI18n();
   const [activeTab, setActiveTab] = useState<'ATTRIBUTES' | 'INVENTORY' | 'SPELLS'>('ATTRIBUTES');
   const [hero, setHero] = useState<TCharacter>(character);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+
+  const attributeDetails: Record<TAttrib, { label: string; abbr: string; desc: string; iconColor: string; effect: string }> = {
+    STRENGTH: {
+      ...t.character.attributes.strength,
+      iconColor: 'text-red-400',
+    },
+    IQ: {
+      ...t.character.attributes.iq,
+      iconColor: 'text-cyan-400',
+    },
+    PIETY: {
+      ...t.character.attributes.piety,
+      iconColor: 'text-amber-400',
+    },
+    VITALITY: {
+      ...t.character.attributes.vitality,
+      iconColor: 'text-emerald-400',
+    },
+    AGILITY: {
+      ...t.character.attributes.agility,
+      iconColor: 'text-blue-400',
+    },
+    LUCK: {
+      ...t.character.attributes.luck,
+      iconColor: 'text-purple-400',
+    },
+  };
+
+  const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+    OK: { label: t.character.statuses.ok, color: 'text-emerald-400', bg: 'bg-emerald-950/40 border-emerald-500/30' },
+    AFRAID: { label: t.character.statuses.afraid, color: 'text-amber-400', bg: 'bg-amber-950/40 border-amber-500/30' },
+    ASLEEP: { label: t.character.statuses.asleep, color: 'text-blue-300', bg: 'bg-blue-950/40 border-blue-500/30' },
+    PLYZE: { label: t.character.statuses.paralyzed, color: 'text-purple-400', bg: 'bg-purple-950/40 border-purple-500/30' },
+    STONED: { label: t.character.statuses.petrified, color: 'text-slate-400', bg: 'bg-slate-800 border-slate-600' },
+    DEAD: { label: t.character.statuses.dead, color: 'text-red-400', bg: 'bg-red-950/40 border-red-500/30' },
+    ASHES: { label: t.character.statuses.ashes, color: 'text-orange-400', bg: 'bg-orange-950/40 border-orange-500/30' },
+    LOST: { label: t.character.statuses.lost, color: 'text-gray-500', bg: 'bg-gray-900 border-gray-700' }
+  };
 
   useEffect(() => {
     setHero(character);
@@ -165,19 +149,19 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
 
     if (slot.equipped) {
       if (slot.cursed) {
-        setFeedbackMessage(`L'objet ${itm.name} est MAUDIT ! Impossible de le retirer sans bénédiction.`);
+        setFeedbackMessage(t.character.cursedCannotRemove(itm.name));
         sounds.playBump();
         return;
       }
       slot.equipped = false;
       recalculateCharacterCombatStats(hero);
-      setFeedbackMessage(`${itm.name} retiré (CA : ${hero.armorClass} · Dégâts : ${formatDamageDice(hero.wepDamage)}).`);
+      setFeedbackMessage(t.character.unequippedNotice(itm.name, hero.armorClass, formatDamageDice(hero.wepDamage)));
       sounds.playTurn();
     } else {
       // Authentic Pascal Class Proficiency Check (UTILITIE2.TEXT l. 276)
-      const check = canHeroEquipItem(hero, itm);
+      const check = canHeroEquipItem(hero, itm, lang);
       if (!check.canEquip) {
-        setFeedbackMessage(check.reason || 'Objet impossible à équiper pour cette classe.');
+        setFeedbackMessage(check.reason || (lang === 'fr' ? 'Objet impossible à équiper pour cette classe.' : 'Item cannot be equipped by this class.'));
         sounds.playBump();
         return;
       }
@@ -198,7 +182,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
         slot.cursed = true;
       }
       recalculateCharacterCombatStats(hero);
-      setFeedbackMessage(`${itm.name} équipé avec succès (CA : ${hero.armorClass} · Dégâts : ${formatDamageDice(hero.wepDamage)}).`);
+      setFeedbackMessage(t.character.equippedNotice(itm.name, hero.armorClass, formatDamageDice(hero.wepDamage)));
       sounds.playDoor();
     }
 
@@ -225,7 +209,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
     if (Math.random() * 100 < chance) {
       slot.identified = true;
       sounds.playFanfare();
-      setFeedbackMessage(`✨ Succès ! ${bishop.name} identifie l'objet : il s'agit de "${itm.name}" !`);
+      setFeedbackMessage(t.character.bishopSuccess(bishop.name, itm.name));
     } else {
       // Authentic Pascal curse fumble: (RANDOM MOD 100) < (35 - 3 * bishopLevel)
       const curseChance = Math.max(5, 35 - 3 * (bishop.charLevel || 1));
@@ -235,10 +219,10 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
         slot.equipped = true;
         recalculateCharacterCombatStats(hero);
         sounds.playBump();
-        setFeedbackMessage(`💀 MALÉDICTION ! ${bishop.name} commet une erreur d'analyse et l'objet maudit (${itm.name}) se verrouille sur son porteur !`);
+        setFeedbackMessage(t.character.bishopCurseFumble(bishop.name, itm.name));
       } else {
         sounds.playBump();
-        setFeedbackMessage(`❌ Échec de l'identification : ${bishop.name} n'arrive pas à percer le secret de cet objet.`);
+        setFeedbackMessage(t.character.bishopFail(bishop.name));
       }
     }
     const updated = { ...hero };
@@ -253,8 +237,8 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
     if (!itm) return;
 
     if (!canClassUseItem(hero.class, itm)) {
-      const allowed = getUsableClassesList(itm).join(', ') || 'Aucune';
-      setFeedbackMessage(`${hero.name} (${hero.class}) ne sait pas manier cet objet magique (Classes : ${allowed}).`);
+      const allowed = getUsableClassesList(itm, false, lang).join(', ') || (lang === 'fr' ? 'Aucune' : 'None');
+      setFeedbackMessage(t.character.notQualifiedNotice(hero.name, hero.class, allowed));
       sounds.playBump();
       return;
     }
@@ -267,39 +251,53 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
         if (sp.name === 'DIOS' || sp.name === 'DIAL' || sp.name === 'DIALMA') {
           const heal = Math.floor(Math.random() * (sp.name === 'DIOS' ? 8 : sp.name === 'DIAL' ? 16 : 24)) + 1;
           hero.hpLeft = Math.min(hero.hpMax, hero.hpLeft + heal);
-          msg = `✨ ${hero.name} utilise ${itm.name} et récupère ${heal} PV (${hero.hpLeft}/${hero.hpMax}).`;
+          msg = lang === 'fr'
+            ? `✨ ${hero.name} utilise ${itm.name} et récupère ${heal} PV (${hero.hpLeft}/${hero.hpMax}).`
+            : `✨ ${hero.name} uses ${itm.name} and recovers ${heal} HP (${hero.hpLeft}/${hero.hpMax}).`;
         } else if (sp.name === 'MADI') {
           hero.hpLeft = hero.hpMax;
           hero.poisonAmount = 0;
           hero.status = 'OK';
-          msg = `✨ ${hero.name} utilise ${itm.name} : Guérison totale MADI !`;
+          msg = lang === 'fr'
+            ? `✨ ${hero.name} utilise ${itm.name} : Guérison totale MADI !`
+            : `✨ ${hero.name} uses ${itm.name}: Full MADI restoration!`;
         } else if (sp.name === 'LATUMOFI') {
           hero.poisonAmount = 0;
-          msg = `✨ ${hero.name} utilise ${itm.name} : Le poison est neutralisé.`;
+          msg = lang === 'fr'
+            ? `✨ ${hero.name} utilise ${itm.name} : Le poison est neutralisé.`
+            : `✨ ${hero.name} uses ${itm.name}: Poison is neutralized.`;
         } else {
-          msg = `✨ ${hero.name} libère le pouvoir de ${sp.name} via ${itm.name} !`;
+          msg = lang === 'fr'
+            ? `✨ ${hero.name} libère le pouvoir de ${sp.name} via ${itm.name} !`
+            : `✨ ${hero.name} unleashes ${sp.name} power via ${itm.name}!`;
         }
       }
     } else if (itm.healPts && itm.healPts > 0) {
       const heal = itm.healPts * 6;
       hero.hpLeft = Math.min(hero.hpMax, hero.hpLeft + heal);
-      msg = `💚 ${hero.name} boit ${itm.name} et récupère ${heal} PV (${hero.hpLeft}/${hero.hpMax}).`;
+      msg = lang === 'fr'
+        ? `💚 ${hero.name} boit ${itm.name} et récupère ${heal} PV (${hero.hpLeft}/${hero.hpMax}).`
+        : `💚 ${hero.name} drinks ${itm.name} and recovers ${heal} HP (${hero.hpLeft}/${hero.hpMax}).`;
     } else if (itm.name.toUpperCase().includes('POISON') || itm.name.toUpperCase().includes('LATUMOFIS')) {
       hero.poisonAmount = 0;
-      msg = `💚 ${hero.name} boit ${itm.name} : Le poison est guéri.`;
+      msg = lang === 'fr'
+        ? `💚 ${hero.name} boit ${itm.name} : Le poison est guéri.`
+        : `💚 ${hero.name} drinks ${itm.name}: Poison cured.`;
     } else {
-      msg = `✨ ${hero.name} utilise ${itm.name}.`;
+      msg = lang === 'fr' ? `✨ ${hero.name} utilise ${itm.name}.` : `✨ ${hero.name} uses ${itm.name}.`;
     }
 
     if (itm.changeChance > 0 && Math.random() * 100 < itm.changeChance) {
       if (!itm.changeTo || itm.changeTo === 0) {
         if (slot.equipped) slot.equipped = false;
         hero.possessions.splice(slotIdx, 1);
-        msg += ` L'objet a été entièrement consommé.`;
+        msg += lang === 'fr' ? ` L'objet a été entièrement consommé.` : ` The item was fully consumed.`;
       } else {
         slot.itemIndex = itm.changeTo;
         const newItem = ITEMS_DATABASE.find(i => i.id === itm.changeTo);
-        msg += ` L'objet s'est transformé en ${newItem?.name || 'objet inerte'}.`;
+        msg += lang === 'fr'
+          ? ` L'objet s'est transformé en ${newItem?.name || 'objet inerte'}.`
+          : ` The item transformed into ${newItem?.name || 'inert item'}.`;
       }
     }
 
@@ -314,16 +312,17 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
     const slot = hero.possessions[slotIdx];
     if (!slot) return;
     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
-    const displayName = slot.identified ? (itm?.name || 'Objet') : (itm?.nameUnknown || 'Objet non identifié');
+    const displayName = slot.identified ? (itm?.name || (lang === 'fr' ? 'Objet' : 'Item')) : (itm?.nameUnknown || (lang === 'fr' ? 'Objet non identifié' : 'Unidentified item'));
 
     if (slot.equipped && slot.cursed) {
-      setFeedbackMessage(`💀 Impossible de jeter ${displayName} : cet objet maudit est scellé sur votre corps !`);
+      setFeedbackMessage(lang === 'fr'
+        ? `💀 Impossible de jeter ${displayName} : cet objet maudit est scellé sur votre corps !`
+        : `💀 Cannot drop ${displayName}: this cursed item is bound to your body!`);
       sounds.playBump();
       return;
     }
 
-    const confirmMsg = `Êtes-vous sûr de vouloir jeter définitivement "${displayName}" ?\nCet objet sera perdu et ne pourra plus être récupéré.`;
-    if (!window.confirm(confirmMsg)) {
+    if (!window.confirm(t.character.dropConfirm(displayName))) {
       return;
     }
 
@@ -337,10 +336,10 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
     setHero(updated);
     if (onUpdateCharacter) onUpdateCharacter(updated);
     sounds.playTurn();
-    setFeedbackMessage(`🗑️ ${displayName} a été jeté et retiré de l'inventaire.`);
+    setFeedbackMessage(t.character.dropSuccess(displayName));
   };
 
-  const statusInfo = STATUS_CONFIG[hero.status] || STATUS_CONFIG.OK;
+  const statusInfo = statusConfig[hero.status] || statusConfig.OK;
   const ageYears = Math.floor(hero.age / 52);
   const activeEffects = getActiveStatusEffects(hero);
 
@@ -389,17 +388,17 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 <h2 className="text-base sm:text-xl font-bold font-serif text-white tracking-wide truncate">{hero.name}</h2>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-400 truncate">
-                {hero.race} · {hero.class} · {hero.align} · {ageYears} ans
+                {t.character.races[hero.race.toLowerCase() as keyof typeof t.character.races] || hero.race} · {t.character.classes[hero.class.toLowerCase() as keyof typeof t.character.classes] || hero.class} · {t.character.alignments[hero.align.toLowerCase() as keyof typeof t.character.alignments] || hero.align} · {ageYears} {t.character.years}
               </p>
               {/* Active Status Badges */}
               <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5">
                 {getCharacterChevrons(hero).includes('>') && (
                   <span
                     className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded border border-amber-500/50 bg-amber-950/70 text-amber-300 flex items-center gap-1 shadow-sm"
-                    title="Initié dans la Garde d'Honneur de Trebor pour avoir terrassé Werdna et restitué l'Amulette"
+                    title={t.character.honorGuardDesc}
                   >
                     <Award className="w-3 h-3 text-amber-400" />
-                    GARDE DE TREBOR (&gt;)
+                    {t.character.honorGuardTitle}
                   </span>
                 )}
                 {activeEffects.map(eff => (
@@ -415,7 +414,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 {activeEffects.length === 0 && (
                   <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded border bg-emerald-950/40 border-emerald-500/30 text-emerald-400 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    EN FORME
+                    {t.character.statuses.ok}
                   </span>
                 )}
               </div>
@@ -432,7 +431,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                     onSelectCharacter(prev);
                     sounds.playTurn();
                   }}
-                  title="Héros précédent (Touche Gauche)"
+                  title={t.character.prevHeroTooltip}
                   className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-95"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -446,7 +445,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                     onSelectCharacter(next);
                     sounds.playTurn();
                   }}
-                  title="Héros suivant (Touche Droite)"
+                  title={t.character.nextHeroTooltip}
                   className="p-1.5 hover:bg-slate-800 rounded text-slate-300 hover:text-white transition active:scale-95"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -456,7 +455,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
             <button
               onClick={() => { sounds.playTurn(); onClose(); }}
               className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition active:scale-95 min-h-[36px] min-w-[36px] flex items-center justify-center"
-              title="Fermer la fiche (Échap)"
+              title={t.character.closeTooltip}
             >
               <X className="w-5 h-5" />
             </button>
@@ -470,7 +469,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
             <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${hero.hpLeft < hero.hpMax / 3 ? 'text-red-500 animate-pulse' : 'text-emerald-400'}`} />
             <div className="flex-1 min-w-0">
               <div className="flex justify-between text-[10px] sm:text-[11px] font-semibold">
-                <span className="text-slate-400 truncate">PV</span>
+                <span className="text-slate-400 truncate">{t.character.hpShort}</span>
                 <span className={hero.hpLeft < hero.hpMax / 3 ? 'text-red-400 font-bold' : 'text-emerald-300'}>
                   {hero.hpLeft}/{hero.hpMax}
                 </span>
@@ -488,11 +487,11 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
           <div className="flex items-center gap-2 p-1.5 sm:p-2 bg-slate-900/80 rounded-lg border border-slate-800">
             <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400 shrink-0" />
             <div className="min-w-0">
-              <div className="text-[10px] sm:text-[11px] text-slate-400 font-semibold truncate">CA</div>
+              <div className="text-[10px] sm:text-[11px] text-slate-400 font-semibold truncate">{t.character.acShort}</div>
               <div className="text-xs sm:text-sm font-bold text-white flex items-center gap-1">
                 <span>{hero.armorClass}</span>
                 <span className="text-[9px] text-slate-500 font-normal hidden sm:inline">
-                  ({hero.armorClass <= 2 ? 'Robuste' : hero.armorClass <= 6 ? 'Moyenne' : 'Vulnérable'})
+                  ({hero.armorClass <= 2 ? (lang === 'fr' ? 'Robuste' : 'Sturdy') : hero.armorClass <= 6 ? (lang === 'fr' ? 'Moyenne' : 'Average') : (lang === 'fr' ? 'Vulnérable' : 'Vulnerable')})
                 </span>
               </div>
             </div>
@@ -503,7 +502,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
             <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="flex justify-between text-[10px] sm:text-[11px] font-semibold">
-                <span className="text-slate-400 truncate">Niv.{hero.charLevel}</span>
+                <span className="text-slate-400 truncate">{t.character.lvlShort}{hero.charLevel}</span>
                 <span className="text-amber-300">{expProgress}%</span>
               </div>
               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
@@ -519,9 +518,9 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
           <div className="flex items-center gap-2 p-1.5 sm:p-2 bg-slate-900/80 rounded-lg border border-slate-800">
             <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400 shrink-0" />
             <div className="min-w-0">
-              <div className="text-[10px] sm:text-[11px] text-slate-400 font-semibold truncate">Or</div>
+              <div className="text-[10px] sm:text-[11px] text-slate-400 font-semibold truncate">{t.character.gold}</div>
               <div className="text-xs sm:text-sm font-bold text-yellow-300 truncate">
-                {hero.gold.toLocaleString()} <span className="text-[9px] text-yellow-500 font-normal">PO</span>
+                {hero.gold.toLocaleString()} <span className="text-[9px] text-yellow-500 font-normal">{t.character.goldShort}</span>
               </div>
             </div>
           </div>
@@ -538,7 +537,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
             }`}
           >
             <Activity className="w-3.5 h-3.5" />
-            <span>Caractéristiques</span>
+            <span>{t.character.attributesTab}</span>
           </button>
           <button
             onClick={() => { setActiveTab('INVENTORY'); sounds.playTurn(); }}
@@ -549,7 +548,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
             }`}
           >
             <Package className="w-3.5 h-3.5" />
-            <span>Inventaire ({hero.possessions.length}/8)</span>
+            <span>{t.character.inventoryTab} ({hero.possessions.length}/8)</span>
           </button>
           {hasSpells && (
             <button
@@ -561,7 +560,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Grimoire</span>
+              <span>{t.character.spellsTab}</span>
             </button>
           )}
         </div>
@@ -589,10 +588,12 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                     <Activity className="w-4 h-4" />
-                    État de Santé & Afflictions Actives
+                    {lang === 'fr' ? 'État de Santé & Afflictions Actives' : 'Health Status & Active Afflictions'}
                   </h3>
                   <span className="text-[11px] text-slate-400 font-mono">
-                    {activeEffects.length > 0 ? `${activeEffects.length} affliction(s) détectée(s)` : 'Sain & Opérationnel'}
+                    {activeEffects.length > 0
+                      ? (lang === 'fr' ? `${activeEffects.length} affliction(s) détectée(s)` : `${activeEffects.length} affliction(s) detected`)
+                      : (lang === 'fr' ? 'Sain & Opérationnel' : 'Healthy & Ready')}
                   </span>
                 </div>
 
@@ -600,9 +601,13 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                   <div className="p-3 bg-emerald-950/20 border border-emerald-500/30 rounded-lg flex items-center gap-2.5 text-xs text-emerald-300">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                     <div>
-                      <strong className="font-bold text-white">Condition physique optimale :</strong>
+                      <strong className="font-bold text-white">
+                        {lang === 'fr' ? 'Condition physique optimale :' : 'Optimal physical condition:'}
+                      </strong>
                       <span className="text-emerald-300/90 ml-1.5">
-                        Le héros est en pleine santé. Aucun poison, paralysie, sommeil magique ou mutisme n'entrave ses capacités.
+                        {lang === 'fr'
+                          ? "Le héros est en pleine santé. Aucun poison, paralysie, sommeil magique ou mutisme n'entrave ses capacités."
+                          : 'The adventurer is in full health. No poison, paralysis, magical sleep, or silence impairs their abilities.'}
                       </span>
                     </div>
                   </div>
@@ -629,7 +634,9 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                         </div>
                         <div className="pt-2 border-t border-white/10 text-[10px] space-y-0.5">
                           <div className="text-amber-200/90 font-medium">
-                            <strong className="text-slate-400 font-normal">Impact mécanique : </strong>
+                            <strong className="text-slate-400 font-normal">
+                              {lang === 'fr' ? 'Impact mécanique : ' : 'Gameplay impact: '}
+                            </strong>
                             {eff.gameplayPenalty}
                           </div>
                         </div>
@@ -644,14 +651,16 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
                     <Zap className="w-4 h-4 text-amber-400" />
-                    Caractéristiques Principales (Dés de Pascal)
+                    {lang === 'fr' ? 'Caractéristiques Principales (Dés de Pascal)' : 'Core Attributes (Pascal Dice)'}
                   </h3>
-                  <span className="text-[11px] text-slate-400">Score maximal naturel : 18</span>
+                  <span className="text-[11px] text-slate-400">
+                    {lang === 'fr' ? 'Score maximal naturel : 18' : 'Natural maximum score: 18'}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {(Object.keys(ATTRIBUTE_DETAILS) as TAttrib[]).map(key => {
-                    const info = ATTRIBUTE_DETAILS[key];
+                  {(Object.keys(attributeDetails) as TAttrib[]).map(key => {
+                    const info = attributeDetails[key];
                     const val = hero.attrib[key] || 10;
                     const percent = Math.min(100, Math.round((val / 18) * 100));
 
@@ -687,7 +696,9 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                         </div>
 
                         <div className="mt-2 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
-                          <span className="text-slate-500 font-medium">Effet principal :</span>
+                          <span className="text-slate-500 font-medium">
+                            {lang === 'fr' ? 'Effet principal :' : 'Primary effect:'}
+                          </span>
                           <span className="text-amber-300 font-semibold">{info.effect}</span>
                         </div>
                       </div>
@@ -702,30 +713,42 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
                     <Swords className="w-4 h-4 text-amber-400" />
-                    Capacité Offensive & Maîtrise Martiale
+                    {lang === 'fr' ? 'Capacité Offensive & Maîtrise Martiale' : 'Offensive Capability & Martial Skill'}
                   </h4>
 
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-slate-800/60">
-                      <span className="text-slate-400">Frappes par Assaut (Swings) :</span>
-                      <strong className="text-white font-mono">{hero.swingCount || 1} coup(s)</strong>
+                      <span className="text-slate-400">
+                        {lang === 'fr' ? 'Frappes par Assaut (Swings) :' : 'Attacks per Round (Swings):'}
+                      </span>
+                      <strong className="text-white font-mono">
+                        {hero.swingCount || 1} {lang === 'fr' ? 'coup(s)' : 'swing(s)'}
+                      </strong>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-800/60">
-                      <span className="text-slate-400">Bonus au Toucher :</span>
+                      <span className="text-slate-400">
+                        {lang === 'fr' ? 'Bonus au Toucher :' : 'Hit Roll Bonus:'}
+                      </span>
                       <strong className="text-emerald-400 font-mono">
                         {hero.hitMod >= 0 ? `+${hero.hitMod}` : hero.hitMod}
                       </strong>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-800/60">
-                      <span className="text-slate-400">Dégâts de Base Arme :</span>
+                      <span className="text-slate-400">
+                        {lang === 'fr' ? 'Dégâts de Base Arme :' : 'Base Weapon Damage:'}
+                      </span>
                       <strong className="text-amber-300 font-mono">
                         {formatDamageDice(hero.wepDamage)}
                       </strong>
                     </div>
                     <div className="flex justify-between py-1">
-                      <span className="text-slate-400">Coup Mortel (Décapitation) :</span>
+                      <span className="text-slate-400">
+                        {lang === 'fr' ? 'Coup Mortel (Décapitation) :' : 'Critical Strike (Decapitation):'}
+                      </span>
                       <strong className={hero.critHit ? 'text-red-400 font-bold' : 'text-slate-500'}>
-                        {hero.critHit ? 'OUI (Style Ninja)' : 'NON'}
+                        {hero.critHit
+                          ? (lang === 'fr' ? 'OUI (Style Ninja)' : 'YES (Ninja Style)')
+                          : (lang === 'fr' ? 'NON' : 'NO')}
                       </strong>
                     </div>
                   </div>
@@ -735,28 +758,40 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
                     <Award className="w-4 h-4 text-amber-400" />
-                    Progression & Points d'Expérience
+                    {lang === 'fr' ? "Progression & Points d'Expérience" : 'Progression & Experience Points'}
                   </h4>
 
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-slate-800/60">
-                      <span className="text-slate-400">Expérience Actuelle :</span>
+                      <span className="text-slate-400">
+                        {lang === 'fr' ? 'Expérience Actuelle :' : 'Current Experience:'}
+                      </span>
                       <strong className="text-amber-300 font-mono">{hero.exp.toLocaleString()} XP</strong>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-800/60">
-                      <span className="text-slate-400">Prochain Palier (Niv.{hero.charLevel + 1}) :</span>
+                      <span className="text-slate-400">
+                        {lang === 'fr' ? `Prochain Palier (Niv.${hero.charLevel + 1}) :` : `Next Level (Lvl.${hero.charLevel + 1}):`}
+                      </span>
                       <strong className="text-white font-mono">{nextLevelTier.toLocaleString()} XP</strong>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-800/60">
-                      <span className="text-slate-400">XP Manquante :</span>
+                      <span className="text-slate-400">
+                        {lang === 'fr' ? 'XP Manquante :' : 'XP Needed:'}
+                      </span>
                       <strong className="text-emerald-400 font-mono">
                         {Math.max(0, nextLevelTier - hero.exp).toLocaleString()} XP
                       </strong>
                     </div>
                     <div className="flex justify-between py-1">
-                      <span className="text-slate-400">Titre Héroïque :</span>
+                      <span className="text-slate-400">
+                        {lang === 'fr' ? 'Titre Héroïque :' : 'Heroic Rank:'}
+                      </span>
                       <strong className="text-slate-300">
-                        {hero.charLevel >= 10 ? 'Maître du Donjon' : hero.charLevel >= 5 ? 'Vétéran Aguérri' : 'Novice de Trebor'}
+                        {hero.charLevel >= 10
+                          ? (lang === 'fr' ? 'Maître du Donjon' : 'Dungeon Master')
+                          : hero.charLevel >= 5
+                            ? (lang === 'fr' ? 'Vétéran Aguérri' : 'Seasoned Veteran')
+                            : (lang === 'fr' ? 'Novice de Trebor' : 'Novice of Trebor')}
                       </strong>
                     </div>
                   </div>
@@ -771,14 +806,19 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                    Équipement & Sac à Dos ({hero.possessions.length}/8 emplacements)
+                    {lang === 'fr'
+                      ? `Équipement & Sac à Dos (${hero.possessions.length}/8 emplacements)`
+                      : `Equipment & Backpack (${hero.possessions.length}/8 slots)`}
                   </h3>
                   <p className="text-[11px] text-slate-400">
-                    Cliquez sur un objet pour l'équiper ou le retirer. La CA s'ajuste instantanément.
+                    {lang === 'fr'
+                      ? "Cliquez sur un objet pour l'équiper ou le retirer. La CA s'ajuste instantanément."
+                      : 'Click an item to equip or unequip it. AC recalculates immediately.'}
                   </p>
                 </div>
                 <div className="text-xs font-semibold text-slate-300">
-                  Classe d'Armure globale : <strong className="text-cyan-400 font-mono text-sm">{hero.armorClass}</strong>
+                  {lang === 'fr' ? "Classe d'Armure globale :" : 'Overall Armor Class:'}{' '}
+                  <strong className="text-cyan-400 font-mono text-sm">{hero.armorClass}</strong>
                 </div>
               </div>
 
@@ -786,14 +826,19 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 <div className="p-2.5 bg-amber-950/60 border border-amber-600/50 rounded-lg flex items-center gap-2 text-amber-200 text-xs">
                   <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                   <span>
-                    <strong>Sac plein (8/8) !</strong> Vous pouvez jeter des objets encombrants ou inutiles pour libérer de la place.
+                    <strong>{lang === 'fr' ? 'Sac plein (8/8) !' : 'Backpack full (8/8)!'}</strong>{' '}
+                    {lang === 'fr'
+                      ? 'Vous pouvez jeter des objets encombrants ou inutiles pour libérer de la place.'
+                      : 'You can drop unnecessary items to free up space.'}
                   </span>
                 </div>
               )}
 
               {hero.possessions.length === 0 ? (
                 <div className="p-8 text-center bg-slate-950/40 border border-slate-800 rounded-xl text-slate-500 text-xs italic">
-                  Aucun objet dans l'inventaire. Visitez le Comptoir de Boltac pour acheter des pièces d'équipement.
+                  {lang === 'fr'
+                    ? "Aucun objet dans l'inventaire. Visitez le Comptoir de Boltac pour acheter des pièces d'équipement."
+                    : "No items in inventory. Visit Boltac's Trading Post to purchase equipment."}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -803,7 +848,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
 
                     const isProficient = canClassUseItem(hero.class, itm);
                     const equippable = isItemEquippable(itm);
-                    const displayName = slot.identified ? itm.name : (itm.nameUnknown || 'OBJET INCONNU');
+                    const displayName = slot.identified ? itm.name : (itm.nameUnknown || (lang === 'fr' ? 'OBJET INCONNU' : 'UNIDENTIFIED ITEM'));
                     const bishopInParty = hero.class === 'BISHOP' 
                       ? hero 
                       : party.find(h => h.class === 'BISHOP' && h.status === 'OK');
@@ -825,29 +870,29 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                                 <span>{displayName}</span>
                                 {!slot.identified && (
                                   <span className="text-[10px] px-1.5 py-0.2 bg-amber-950/80 text-amber-300 border border-amber-600/40 rounded font-bold">
-                                    [Non identifié]
+                                    {t.castle.unidentBadge}
                                   </span>
                                 )}
                                 {slot.equipped && (
                                   <span className="text-[10px] px-1.5 py-0.2 bg-emerald-950 text-emerald-300 border border-emerald-500/30 rounded font-bold">
-                                    Équipé
+                                    {t.castle.equippedBadge}
                                   </span>
                                 )}
                                 {slot.cursed && (
                                   <span className="text-[10px] px-1.5 py-0.2 bg-red-950 text-red-300 border border-red-500/30 rounded font-bold">
-                                    Maudit
+                                    {t.castle.cursedBadge}
                                   </span>
                                 )}
                                 {slot.identified && equippable && !isProficient && (
-                                  <span className="text-[10px] px-1.5 py-0.2 bg-rose-950/80 text-rose-300 border border-rose-800/60 rounded font-bold" title={`Incompatible avec ${hero.class}`}>
-                                    Incompatible
+                                  <span className="text-[10px] px-1.5 py-0.2 bg-rose-950/80 text-rose-300 border border-rose-800/60 rounded font-bold" title={lang === 'fr' ? `Incompatible avec ${hero.class}` : `Incompatible with ${hero.class}`}>
+                                    {t.castle.incompatibleBadge}
                                   </span>
                                 )}
                               </div>
                               <span className="text-[10px] text-slate-400 uppercase tracking-wider">{itm.objType}</span>
                             </div>
                             <span className="text-xs font-mono font-bold text-yellow-400">
-                              {slot.identified ? `${itm.price} PO` : '? PO'}
+                              {slot.identified ? `${itm.price} ${t.character.goldShort}` : `? ${t.character.goldShort}`}
                             </span>
                           </div>
 
@@ -855,15 +900,15 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                             <div className="space-y-1 text-[11px] text-slate-300 py-1">
                               {itm.armorMod !== 0 && (
                                 <div className="flex justify-between">
-                                  <span className="text-slate-400">Protection Armure (CA) :</span>
+                                  <span className="text-slate-400">{lang === 'fr' ? "Protection Armure (CA) :" : "Armor Protection (AC):"}</span>
                                   <strong className="text-cyan-400 font-mono">
-                                    {itm.armorMod > 0 ? `-${itm.armorMod} CA (Améliore)` : `+${Math.abs(itm.armorMod)} CA`}
+                                    {itm.armorMod > 0 ? `-${itm.armorMod} CA` : `+${Math.abs(itm.armorMod)} CA`}
                                   </strong>
                                 </div>
                               )}
                               {itm.objType === 'WEAPON' && itm.wepHpDam && (
                                 <div className="flex justify-between">
-                                  <span className="text-slate-400">Dégâts de l'arme :</span>
+                                  <span className="text-slate-400">{lang === 'fr' ? "Dégâts de l'arme :" : "Weapon Damage:"}</span>
                                   <strong className="text-amber-300 font-mono">
                                     {formatDamageDice(itm.wepHpDam)}
                                     {itm.wepHitMod > 0 ? ` (+${itm.wepHitMod} touch)` : ''}
@@ -872,16 +917,16 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                               )}
                               {equippable && (
                                 <div className="flex justify-between text-[10px] pt-0.5">
-                                  <span className="text-slate-400">Classes autorisées :</span>
+                                  <span className="text-slate-400">{lang === 'fr' ? "Classes autorisées :" : "Allowed Classes:"}</span>
                                   <span className={isProficient ? "text-slate-300 font-mono" : "text-rose-400 font-bold font-mono"}>
-                                    {getUsableClassesList(itm, true).join(', ') || 'Aucune'}
+                                    {getUsableClassesList(itm, true, lang).join(', ') || (lang === 'fr' ? 'Aucune' : 'None')}
                                   </span>
                                 </div>
                               )}
                             </div>
                           ) : (
                             <div className="py-2 text-[11px] text-slate-400 italic">
-                              Propriétés et modificateurs cachés avant identification.
+                              {lang === 'fr' ? "Propriétés et modificateurs cachés avant identification." : "Properties and bonuses hidden until identified."}
                             </div>
                           )}
                         </div>
@@ -892,10 +937,12 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                               <button
                                 onClick={() => handleBishopIdentify(idx)}
                                 className="px-2.5 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-xs font-bold transition flex items-center gap-1 shadow-sm active:scale-95"
-                                title={`Faire expertiser et identifier par ${bishopInParty.name} (${bishopInParty.class} Niv. ${bishopInParty.charLevel})`}
+                                title={lang === 'fr'
+                                  ? `Faire expertiser et identifier par ${bishopInParty.name} (${bishopInParty.class} Niv. ${bishopInParty.charLevel})`
+                                  : `Appraise and identify by ${bishopInParty.name} (${bishopInParty.class} Lvl. ${bishopInParty.charLevel})`}
                               >
                                 <Sparkles className="w-3.5 h-3.5 text-purple-200" />
-                                <span>Identifier {hero.id !== bishopInParty.id ? `(${bishopInParty.name})` : ''}</span>
+                                <span>{lang === 'fr' ? `Identifier ${hero.id !== bishopInParty.id ? `(${bishopInParty.name})` : ''}` : `Identify ${hero.id !== bishopInParty.id ? `(${bishopInParty.name})` : ''}`}</span>
                               </button>
                             )}
                             {(equippable || slot.equipped) && (
@@ -908,32 +955,32 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                                       ? 'bg-slate-800 hover:bg-rose-950/70 text-slate-400 hover:text-rose-200 border border-slate-700 hover:border-rose-700/60'
                                       : 'bg-amber-600 hover:bg-amber-500 text-white'
                                 }`}
-                                title={!slot.equipped && !isProficient ? `Incompatible avec ${hero.class}. Autorisés : ${getUsableClassesList(itm).join(', ')}` : undefined}
+                                title={!slot.equipped && !isProficient ? (lang === 'fr' ? `Incompatible avec ${hero.class}. Autorisés : ${getUsableClassesList(itm, false, lang).join(', ')}` : `Incompatible with ${hero.class}. Allowed: ${getUsableClassesList(itm, false, lang).join(', ')}`) : undefined}
                               >
-                                {slot.equipped ? 'Déséquiper' : 'Équiper'}
+                                {slot.equipped ? t.character.unequipBtn : t.character.equipBtn}
                               </button>
                             )}
                             {isItemUsable(itm) && (
                               <button
                                 onClick={() => handleUseItem(idx)}
                                 className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-xs font-bold transition flex items-center gap-1 shadow-sm"
-                                title="Utiliser / Boire / Invoquer cet objet"
+                                title={lang === 'fr' ? "Utiliser / Boire / Invoquer cet objet" : "Use / Drink / Invoke item"}
                               >
                                 <FlaskConical className="w-3.5 h-3.5 text-emerald-200" />
-                                <span>Utiliser</span>
+                                <span>{t.character.useBtn}</span>
                               </button>
                             )}
                             <button
                               onClick={() => handleDropItem(idx)}
                               className="px-2.5 py-1 bg-slate-800 hover:bg-red-950/80 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-700/50 rounded text-xs font-semibold transition flex items-center gap-1 shadow-sm active:scale-95"
-                              title="Jeter définitivement cet objet avec confirmation"
+                              title={lang === 'fr' ? "Jeter définitivement cet objet avec confirmation" : "Discard this item permanently with confirmation"}
                             >
                               <Trash2 className="w-3.5 h-3.5 text-slate-400" />
-                              <span>Jeter</span>
+                              <span>{t.character.dropBtn}</span>
                             </button>
                           </div>
                           <span className="text-[10px] text-slate-500">
-                            Revente : {sellPrice} PO
+                            {lang === 'fr' ? 'Revente :' : 'Sell value:'} {sellPrice} {t.character.goldShort}
                           </span>
                         </div>
                       </div>
@@ -952,10 +999,13 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 <div className="p-3.5 bg-cyan-950/40 border border-cyan-500/50 rounded-xl flex items-center gap-3 text-cyan-200 text-xs">
                   <MicOff className="w-5 h-5 text-cyan-400 shrink-0 animate-pulse" />
                   <div>
-                    <div className="font-bold text-sm text-cyan-300">Silence Magique Actif (MONTINO)</div>
+                    <div className="font-bold text-sm text-cyan-300">
+                      {lang === 'fr' ? 'Silence Magique Actif (MONTINO)' : 'Magical Silence Active (MONTINO)'}
+                    </div>
                     <p className="text-slate-300 text-[11px] leading-relaxed">
-                      La voix du héros est mystiquement étouffée pour encore <strong>{hero.silencedRounds} tour(s)</strong>.
-                      Aucune incantation de Mage ou miracle de Prêtre ne peut être prononcée tant que cette bulle d'anti-magie subsiste.
+                      {lang === 'fr'
+                        ? `La voix du héros est mystiquement étouffée pour encore ${hero.silencedRounds} tour(s). Aucune incantation de Mage ou miracle de Prêtre ne peut être prononcée tant que cette bulle d'anti-magie subsiste.`
+                        : `The adventurer's voice is mystically suppressed for another ${hero.silencedRounds} round(s). No Mage spells or Priest miracles can be cast while this anti-magic field persists.`}
                     </p>
                   </div>
                 </div>
@@ -967,7 +1017,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4" />
-                    Emplacements de Sorts de Mage (Tiers 1 à 7)
+                    {lang === 'fr' ? 'Emplacements de Sorts de Mage (Tiers 1 à 7)' : 'Mage Spell Points (Tiers 1 to 7)'}
                   </h4>
                   <div className="grid grid-cols-7 gap-1.5 pt-1 text-center font-mono">
                     {[1, 2, 3, 4, 5, 6, 7].map(tier => (
@@ -986,7 +1036,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                 <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                     <BookOpen className="w-4 h-4" />
-                    Emplacements de Miracles de Prêtre (Tiers 1 à 7)
+                    {lang === 'fr' ? 'Emplacements de Miracles de Prêtre (Tiers 1 à 7)' : 'Priest Miracle Points (Tiers 1 to 7)'}
                   </h4>
                   <div className="grid grid-cols-7 gap-1.5 pt-1 text-center font-mono">
                     {[1, 2, 3, 4, 5, 6, 7].map(tier => (
@@ -1005,7 +1055,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
               {/* Known Spells List */}
               <div className="space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                  Formules Magiques Connues & Maîtrisées
+                  {lang === 'fr' ? 'Formules Magiques Connues & Maîtrisées' : 'Known & Mastered Spells'}
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1036,7 +1086,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                   ))}
                   {[...knownMageSpells, ...knownPriestSpells].length === 0 && (
                     <p className="text-xs text-slate-500 italic col-span-2 py-4 text-center">
-                      Ce personnage n'a pas encore appris de sorts. Progressez en niveau à l'Auberge pour débloquer des incantations.
+                      {t.character.noSpellsKnown}
                     </p>
                   )}
                 </div>
@@ -1049,13 +1099,17 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
         <div className="px-6 py-3 bg-slate-950 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Info className="w-4 h-4 text-amber-500" />
-            <span>Fidèle aux statistiques et formules d'origine du code Pascal de Wizardry I (1981).</span>
+            <span>
+              {lang === 'fr'
+                ? "Fidèle aux statistiques et formules d'origine du code Pascal de Wizardry I (1981)."
+                : "Faithful to the authentic statistics and mechanics of Wizardry I UCSD Pascal (1981)."}
+            </span>
           </div>
           <button
             onClick={() => { sounds.playTurn(); onClose(); }}
             className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-bold transition text-xs"
           >
-            Fermer
+            {t.common.closeBtn}
           </button>
         </div>
       </div>

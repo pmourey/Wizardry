@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
   TCharacter, 
-  GameLocation, 
   TRace, 
   TClass, 
   TAlign, 
@@ -10,17 +9,14 @@ import {
 import { 
   RACE_BASE_ATTRIBUTES, 
   ITEMS_DATABASE, 
-  EXP_TABLES, 
-  SPELLS,
-  getExpForNextLevel,
   setCharacterSpells,
   initLevel1CharacterSpells,
   levelUpCharacter,
+  getExpForNextLevel,
   formatDamageDice,
   recalculateCharacterCombatStats,
   canClassUseItem,
-  getUsableClassesList,
-  CLASS_NAMES_FR
+  getUsableClassesList
 } from '../data/provingGroundsData';
 import { CharacterSheetModal } from './CharacterSheetModal';
 import { sounds } from '../utils/soundEffects';
@@ -35,15 +31,9 @@ import {
   UserPlus, 
   Cross, 
   Coins, 
-  ChevronRight, 
-  Layers, 
   FileCode,
   Flame,
   User,
-  ArrowRight,
-  Biohazard,
-  Moon,
-  MicOff,
   Skull,
   Zap,
   CheckCircle2,
@@ -52,14 +42,13 @@ import {
   RotateCcw,
   Undo2,
   Sliders,
-  BookOpen,
-  ScrollText
+  BookOpen
 } from 'lucide-react';
 import { getActiveStatusEffects } from '../engine/statusSystem';
 import { AdventureJournal } from './AdventureJournal';
 import { AdventureLogEvent, AdventureLogCategory } from '../types/wizardry';
 import { WIZARDRY_SCENARIOS, getLocalizedScenario } from '../data/scenariosCatalog';
-import { useLanguage, UI_TEXT } from '../utils/language';
+import { useI18n } from '../i18n';
 
 interface CastleViewProps {
   activeScenarioId?: string;
@@ -95,23 +84,22 @@ export const CastleView: React.FC<CastleViewProps> = ({
   onEnterMaze,
   onOpenPySide6Export
 }) => {
-  const [lang] = useLanguage();
-  const t = UI_TEXT[lang];
+  const { t, lang } = useI18n();
 
   const rawMeta = WIZARDRY_SCENARIOS.find(s => s.id === activeScenarioId) || WIZARDRY_SCENARIOS[0];
   const scenarioMeta = getLocalizedScenario(rawMeta, lang);
   const castleName = scenarioMeta.castleName || (lang === 'fr' ? 'Château de Trebor' : 'Castle of Trebor');
   const castleSubtitle = scenarioMeta.castleSubtitle || (lang === 'fr' ? 'Cité de garnison surplombant le Labyrinthe' : 'Garrison city overlooking the Maze');
-  const castleWelcome = scenarioMeta.castleWelcome || t.welcomeFallback(scenarioMeta.title);
+  const castleWelcome = scenarioMeta.castleWelcome || t.castle.welcomeFallback;
   const castleDescription = scenarioMeta.castleDescription || scenarioMeta.description;
-  const trainingGroundsName = scenarioMeta.trainingGroundsName || (lang === 'fr' ? "Terrain d'Entraînement" : "Training Grounds");
+  const trainingGroundsName = scenarioMeta.trainingGroundsName || t.castle.training;
 
   const [currentTab, setCurrentTab] = useState<CastleTab>('COURTYARD');
-  const [message, setMessage] = useState<string>(() => t.welcomeToCastle(castleName));
+  const [message, setMessage] = useState<string>(() => t.common.welcomeToCastle(castleName));
 
   useEffect(() => {
-    setMessage(t.welcomeToCastle(castleName));
-  }, [castleName, lang]);
+    setMessage(t.common.welcomeToCastle(castleName));
+  }, [castleName, lang, t]);
 
   useEffect(() => {
     switch (currentTab) {
@@ -135,6 +123,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
         break;
     }
   }, [currentTab]);
+
   const [selectedCharIndex, setSelectedCharIndex] = useState<number>(0);
   const [inspectingPartyIndex, setInspectingPartyIndex] = useState<number | null>(null);
   const [inspectingRosterHero, setInspectingRosterHero] = useState<TCharacter | null>(null);
@@ -171,9 +160,27 @@ export const CastleView: React.FC<CastleViewProps> = ({
 
   const selectedHero = party[selectedCharIndex] || party[0];
 
+  // Helper to translate class name
+  const getHeroClassName = (cls: TClass): string => {
+    const key = cls.toLowerCase() as keyof typeof t.character.classes;
+    return t.character.classes[key] || cls;
+  };
+
+  // Helper to translate race name
+  const getHeroRaceName = (race: TRace): string => {
+    const key = race.toLowerCase() as keyof typeof t.character.races;
+    return t.character.races[key] || race;
+  };
+
+  // Helper to translate alignment
+  const getHeroAlignName = (align: TAlign): string => {
+    const key = align.toLowerCase() as keyof typeof t.character.alignments;
+    return t.character.alignments[key] || align;
+  };
+
   // Per authentic Pascal Wizardry 1: Poison only exists in the maze (POISNAMT).
   // Characters entering the castle are automatically and immediately cured of poison!
-  React.useEffect(() => {
+  useEffect(() => {
     let changed = false;
     party.forEach(h => {
       if (h.poisonAmount > 0) {
@@ -206,7 +213,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
     const { hpAdd, cost } = roomSpecs[roomType];
 
     if (cost > 0 && selectedHero.gold < cost && selectedHero.hpLeft < selectedHero.hpMax) {
-      setMessage(`Fonds insuffisants ! ${selectedHero.name} n'a pas assez d'or (${cost} PO/sem.).`);
+      setMessage(
+        lang === 'fr'
+          ? `Fonds insuffisants ! ${selectedHero.name} n'a pas assez d'or (${cost} PO/sem.).`
+          : `Insufficient funds! ${selectedHero.name} does not have enough gold (${cost} GP/wk).`
+      );
       return;
     }
 
@@ -233,22 +244,32 @@ export const CastleView: React.FC<CastleViewProps> = ({
     if (selectedHero.exp >= expNeeded) {
       const { hpGain, learnedSpells, statChanges } = levelUpCharacter(selectedHero);
       const spellsNote = learnedSpells.length > 0
-        ? ` · Nouveaux sorts appris : ${learnedSpells.join(', ')} !`
+        ? (lang === 'fr' ? ` · Nouveaux sorts appris : ${learnedSpells.join(', ')} !` : ` · New spells learned: ${learnedSpells.join(', ')}!`)
         : '';
       const statsNote = statChanges.length > 0
         ? ` (${statChanges.join(', ')})`
         : '';
-      levelUpMsg = ` 🌟 NIVEAU SUPÉRIEUR ! ${selectedHero.name} atteint le Niveau ${selectedHero.charLevel} (+${hpGain} PV / PV Max${statsNote})${spellsNote}`;
+      levelUpMsg = lang === 'fr'
+        ? ` 🌟 NIVEAU SUPÉRIEUR ! ${selectedHero.name} passe au Niveau ${selectedHero.charLevel} (+${hpGain} PV Max${statsNote})${spellsNote}`
+        : ` 🌟 LEVEL UP! ${selectedHero.name} advances to Level ${selectedHero.charLevel} (+${hpGain} Max HP${statsNote})${spellsNote}`;
       sounds.playFanfare();
       onAddAdventureEvent?.(
         'CASTLE',
-        `Montée de Niveau : ${selectedHero.name} (Niveau ${selectedHero.charLevel})`,
-        `Après son séjour à l'Auberge de l'Aventurier, ${selectedHero.name} passe au Niveau ${selectedHero.charLevel} (+${hpGain} PV / PV Max${statsNote}).${spellsNote}`,
-        `Niveau : ${selectedHero.charLevel} · PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}${learnedSpells.length > 0 ? ` · Sorts : ${learnedSpells.join(', ')}` : ''}`
+        lang === 'fr' 
+          ? `Montée de Niveau : ${selectedHero.name} (Niveau ${selectedHero.charLevel})`
+          : `Level Up: ${selectedHero.name} (Level ${selectedHero.charLevel})`,
+        lang === 'fr'
+          ? `Après son séjour à l'Auberge de l'Aventurier, ${selectedHero.name} passe au Niveau ${selectedHero.charLevel} (+${hpGain} PV Max${statsNote}).${spellsNote}`
+          : `After resting at the Adventurer's Inn, ${selectedHero.name} advances to Level ${selectedHero.charLevel} (+${hpGain} Max HP${statsNote}).${spellsNote}`,
+        lang === 'fr'
+          ? `Niveau : ${selectedHero.charLevel} · PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}${learnedSpells.length > 0 ? ` · Sorts : ${learnedSpells.join(', ')}` : ''}`
+          : `Level: ${selectedHero.charLevel} · HP: ${selectedHero.hpLeft}/${selectedHero.hpMax}${learnedSpells.length > 0 ? ` · Spells: ${learnedSpells.join(', ')}` : ''}`
       );
     } else {
       const expMissing = expNeeded - selectedHero.exp;
-      levelUpMsg = ` (Il manque ${expMissing.toLocaleString()} XP pour le Niveau ${selectedHero.charLevel + 1}).`;
+      levelUpMsg = lang === 'fr'
+        ? ` (Il manque ${expMissing.toLocaleString()} XP pour le Niveau ${selectedHero.charLevel + 1}).`
+        : ` (Needs ${expMissing.toLocaleString()} XP for Level ${selectedHero.charLevel + 1}).`;
     }
 
     // Authentic SETSPELS (CASTLE2.TEXT l. 783): recharge spell slots according to class, level & known spells
@@ -258,10 +279,16 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setAllCharacters(prev => prev.map(c => c.id === selectedHero.id ? { ...selectedHero } : c));
 
     const healNote = roomType === 'STABLES'
-      ? (levelUpMsg ? `a dormi aux Écuries (sorts restaurés, PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}).` : `a dormi aux Écuries (sorts restaurés, PV inchangés : ${selectedHero.hpLeft}/${selectedHero.hpMax}).`)
+      ? (lang === 'fr'
+          ? `a dormi aux Écuries (sorts restaurés, PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}).`
+          : `rested at the Stables (spells restored, HP: ${selectedHero.hpLeft}/${selectedHero.hpMax}).`)
       : weeksRested > 0
-      ? `s'est reposé ${weeksRested} sem. (-${totalGoldSpent} PO, +${hpHealed} PV, PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}) et a restauré ses sorts.`
-      : `a restauré ses sorts (PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}).`;
+      ? (lang === 'fr'
+          ? `s'est reposé ${weeksRested} sem. (-${totalGoldSpent} PO, +${hpHealed} PV, PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}) et a restauré ses sorts.`
+          : `rested ${weeksRested} wk(s) (-${totalGoldSpent} GP, +${hpHealed} HP, HP: ${selectedHero.hpLeft}/${selectedHero.hpMax}) and restored spells.`)
+      : (lang === 'fr'
+          ? `a restauré ses sorts (PV : ${selectedHero.hpLeft}/${selectedHero.hpMax}).`
+          : `restored spell points (HP: ${selectedHero.hpLeft}/${selectedHero.hpMax}).`);
 
     setMessage(`${selectedHero.name} ${healNote}${levelUpMsg}`);
   };
@@ -271,25 +298,26 @@ export const CastleView: React.FC<CastleViewProps> = ({
   // ==========================================
   const handleBuyItem = (item: TItem) => {
     if (selectedHero.gold < item.price) {
-      setMessage(`Vous n'avez pas assez d'or pour acheter ${item.name} (${item.price} PO).`);
+      setMessage(t.castle.buyFailGold);
       return;
     }
     if (selectedHero.possessions.length >= 8) {
-      setMessage(`L'inventaire de ${selectedHero.name} est plein (max 8 objets).`);
+      setMessage(t.castle.buyFailInventory);
       return;
     }
 
     // Authentic Pascal SHOPS.TEXT l. 323-333:
     // IF NOT (OBJECT.CLASSUSE[CHARACTR[CHARI].CLASS]) THEN UNUSABLE ITEM - CONFIRM BUY (Y/N) ?
     if (!canClassUseItem(selectedHero.class, item)) {
-      const allowed = getUsableClassesList(item).join(', ') || 'Aucune';
-      const heroClassName = CLASS_NAMES_FR[selectedHero.class] || selectedHero.class;
-      const confirmBuy = window.confirm(
-        `OBJET INUTILISABLE (UNUSABLE)\n\n${item.name} ne peut pas être équipé par ${selectedHero.name} (${heroClassName}).\nClasses autorisées : ${allowed}.\n\nConfirmer l'achat quand même ?`
-      );
+      const allowed = getUsableClassesList(item, false, lang).join(', ') || (lang === 'fr' ? 'Aucune' : 'None');
+      const heroClassName = getHeroClassName(selectedHero.class);
+      const promptText = lang === 'fr'
+        ? `OBJET INUTILISABLE (UNUSABLE)\n\n${item.name} ne peut pas être équipé par ${selectedHero.name} (${heroClassName}).\nClasses autorisées : ${allowed}.\n\nConfirmer l'achat quand même ?`
+        : `UNUSABLE ITEM\n\n${item.name} cannot be equipped by ${selectedHero.name} (${heroClassName}).\nAllowed classes: ${allowed}.\n\nConfirm purchase anyway?`;
+      const confirmBuy = window.confirm(promptText);
       if (!confirmBuy) {
         sounds.playBump();
-        setMessage(`Achat annulé : tout le monde fait des erreurs ! (WE ALL MAKE MISTAKES)`);
+        setMessage(lang === 'fr' ? 'Achat annulé : tout le monde fait des erreurs ! (WE ALL MAKE MISTAKES)' : 'Purchase cancelled: we all make mistakes! (WE ALL MAKE MISTAKES)');
         return;
       }
     }
@@ -304,7 +332,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
     });
 
     setParty([...party]);
-    setMessage(`Achat réussi : ${item.name} pour ${item.price} PO.`);
+    setMessage(t.castle.buySuccess(item.name, item.price));
   };
 
   const handleBoltacIdentify = (slotIdx: number) => {
@@ -314,14 +342,14 @@ export const CastleView: React.FC<CastleViewProps> = ({
     if (!itm) return;
 
     if (slot.identified) {
-      setMessage(`L'objet ${itm.name} est déjà identifié.`);
+      setMessage(lang === 'fr' ? `L'objet ${itm.name} est déjà identifié.` : `The item ${itm.name} is already identified.`);
       return;
     }
 
     const fee = Math.max(10, Math.floor(itm.price / 2));
     if (selectedHero.gold < fee) {
       sounds.playBump();
-      setMessage(`Fonds insuffisants : l'expertise de Boltac coûte ${fee} PO (vous avez ${selectedHero.gold} PO).`);
+      setMessage(t.castle.identifyFailGold);
       return;
     }
 
@@ -329,7 +357,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
     selectedHero.gold -= fee;
     slot.identified = true;
     setParty([...party]);
-    setMessage(`🔍 Boltac examine minutieusement l'objet : il s'agit d'un(e) ${itm.name} ! (-${fee} PO).`);
+    setMessage(t.castle.identifySuccess(itm.name));
   };
 
   const handleBoltacUncurse = (slotIdx: number) => {
@@ -339,7 +367,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
     if (!itm) return;
 
     if (!slot.cursed) {
-      setMessage(`Cet objet n'est pas maudit.`);
+      setMessage(lang === 'fr' ? "Cet objet n'est pas maudit." : "This item is not cursed.");
       return;
     }
 
@@ -347,14 +375,18 @@ export const CastleView: React.FC<CastleViewProps> = ({
     const fee = Math.max(20, itm.price);
     if (selectedHero.gold < fee) {
       sounds.playBump();
-      setMessage(`Fonds insuffisants : le désenvoûtement par Boltac coûte ${fee} PO (vous avez ${selectedHero.gold} PO).`);
+      setMessage(t.castle.uncurseFailGold);
       return;
     }
 
     const isEquipped = slot.equipped;
-    const confirmText = isEquipped
-      ? `Boltac demande ${fee} PO pour briser le sortilège et enlever définitivement "${itm.name}" scellé sur ${selectedHero.name}.\nL'objet maudit sera retiré (règle originale UCSD Pascal U)NCURSE).\n\nConfirmer le désenvoûtement ?`
-      : `Boltac demande ${fee} PO pour purifier et détruire l'objet maudit "${itm.name}".\n\nConfirmer ?`;
+    const confirmText = lang === 'fr'
+      ? (isEquipped
+          ? `Boltac demande ${fee} PO pour briser le sortilège et enlever définitivement "${itm.name}" scellé sur ${selectedHero.name}.\nL'objet maudit sera retiré (règle originale UCSD Pascal U)NCURSE).\n\nConfirmer le désenvoûtement ?`
+          : `Boltac demande ${fee} PO pour purifier et détruire l'objet maudit "${itm.name}".\n\nConfirmer ?`)
+      : (isEquipped
+          ? `Boltac charges ${fee} GP to break the curse and permanently remove "${itm.name}" bound to ${selectedHero.name}.\nThe cursed item will be removed (authentic UCSD Pascal U)NCURSE rule).\n\nConfirm uncursing?`
+          : `Boltac charges ${fee} GP to purify and discard the cursed item "${itm.name}".\n\nConfirm?`);
 
     if (!window.confirm(confirmText)) return;
 
@@ -365,7 +397,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
     recalculateCharacterCombatStats(selectedHero);
     setParty([...party]);
     setAllCharacters(prev => prev.map(c => c.id === selectedHero.id ? { ...selectedHero } : c));
-    setMessage(`✨ Boltac brise la malédiction de ${itm.name} et l'enlève ${isEquipped ? 'de votre équipement' : 'de vos possessions'} ! (-${fee} PO).`);
+    setMessage(t.castle.uncurseSuccess(itm.name));
   };
 
   const handleSellItem = (slotIdx: number) => {
@@ -377,7 +409,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
     // Authentic Pascal Wizardry (SHOPS.TEXT l. 478): "WE DONT BUY CURSED ITEMS"
     if (slot.cursed) {
       sounds.playBump();
-      setMessage(`Boltac refuse d'acheter un objet maudit ! Utilisez l'option "Enlever" pour le faire désenvoûter (Option originale U)NCURSE).`);
+      setMessage(lang === 'fr' 
+        ? "Boltac refuse d'acheter un objet maudit ! Utilisez l'option Enlever pour le faire désenvoûter (Option originale U)NCURSE)."
+        : "Boltac refuses to buy cursed items! Use the Uncurse option to remove it (authentic U)NCURSE).");
       return;
     }
 
@@ -387,8 +421,8 @@ export const CastleView: React.FC<CastleViewProps> = ({
     selectedHero.gold += sellPrice;
     selectedHero.possessions.splice(slotIdx, 1);
     setParty([...party]);
-    const soldName = slot.identified ? itm.name : (itm.nameUnknown || 'Objet inconnu');
-    setMessage(`Objet vendu : ${soldName} pour ${sellPrice} PO.`);
+    const soldName = slot.identified ? itm.name : (itm.nameUnknown || (lang === 'fr' ? 'Objet inconnu' : 'Unknown Item'));
+    setMessage(t.castle.sellSuccess(soldName, sellPrice));
   };
 
   const handlePoolGold = () => {
@@ -405,7 +439,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
       const inParty = party.find(p => p.id === c.id);
       return inParty ? { ...inParty } : c;
     }));
-    setMessage(`Tout l'or du groupe (${total.toLocaleString()} PO) a été rassemblé sur ${selectedHero.name}.`);
+    setMessage(t.castle.poolGoldSuccess(total, selectedHero.name));
   };
 
   const handleShareGold = () => {
@@ -426,12 +460,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
       const inParty = party.find(p => p.id === c.id);
       return inParty ? { ...inParty } : c;
     }));
-    setMessage(`L'or du groupe (${total.toLocaleString()} PO) a été divisé équitablement entre les ${count} membres (${share.toLocaleString()} PO chacun).`);
+    setMessage(t.castle.shareGoldSuccess(share));
   };
 
-  // ==========================================
-  // TEMPLE OF CANT (RESURRECT / CURE)
-  // ==========================================
   // ==========================================
   // TEMPLE OF CANT (RESURRECT / CURE)
   // ==========================================
@@ -449,7 +480,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
     }
 
     if (!payer) {
-      setMessage(`Dons insuffisants ! Le Temple exige ${cost} PO (Fonds indisponibles).`);
+      setMessage(t.castle.templeFailGold);
       return;
     }
 
@@ -460,31 +491,39 @@ export const CastleView: React.FC<CastleViewProps> = ({
       targetHero.status = 'OK';
       targetHero.hpLeft = 1;
       sounds.playFanfare();
-      setMessage(`« CHANT - PRIÈRE - MIRACLE ! » ${targetHero.name} revient parmi les vivants avec 1 PV !`);
+      setMessage(t.castle.resurrectSuccess(targetHero.name));
       onAddAdventureEvent?.(
         'RESCUE',
-        `Miracle au Temple de Cant : ${targetHero.name} ressuscité !`,
-        `Le rituel sacré et les prières des clercs ont arraché ${targetHero.name} aux mânes de la mort. Il se relève, prêt à combattre de nouveau.`,
-        `Offrande payée par ${payer.name} : ${cost} PO · PV actuels : 1/${targetHero.hpMax}`
+        lang === 'fr' ? `Miracle au Temple de Cant : ${targetHero.name} ressuscité !` : `Miracle at Temple of Cant: ${targetHero.name} resurrected!`,
+        lang === 'fr' 
+          ? `Le rituel sacré et les prières des clercs ont arraché ${targetHero.name} aux mânes de la mort. Il se relève, prêt à combattre de nouveau.`
+          : `Sacred rituals and clerical hymns pulled ${targetHero.name} back from death's threshold. Ready to fight anew!`,
+        lang === 'fr'
+          ? `Offrande payée par ${payer.name} : ${cost} PO · PV actuels : 1/${targetHero.hpMax}`
+          : `Tithes paid by ${payer.name}: ${cost} GP · Current HP: 1/${targetHero.hpMax}`
       );
     } else {
       if (targetHero.status === 'DEAD') {
         targetHero.status = 'ASHES';
-        setMessage(`« MALHEUR ! » Le rituel échoue, le corps de ${targetHero.name} est réduit en CENDRES !`);
+        setMessage(t.castle.resurrectFailedAshes(targetHero.name));
         onAddAdventureEvent?.(
           'LOSS',
-          `Échec du rituel divin : ${targetHero.name} réduit en Cendres`,
-          `Les prières n'ont pu retenir l'âme de ${targetHero.name}. Sa chair a été consumée en cendres sous la puissance de l'incantation.`,
-          `Statut : CENDRES (un nouveau rituel plus coûteux reste possible)`
+          lang === 'fr' ? `Échec du rituel divin : ${targetHero.name} réduit en Cendres` : `Divine ritual failed: ${targetHero.name} turned to Ashes`,
+          lang === 'fr'
+            ? `Les prières n'ont pu retenir l'âme de ${targetHero.name}. Sa chair a été consumée en cendres sous la puissance de l'incantation.`
+            : `Prayers could not bind the departing soul of ${targetHero.name}. The mortal body dissolved into ASHES.`,
+          lang === 'fr' ? `Statut : CENDRES (un nouveau rituel reste possible)` : `Status: ASHES (a second resurrection ritual is possible)`
         );
       } else {
         targetHero.status = 'LOST';
-        setMessage(`« HÉLAS ! » Les cendres se dispersent... ${targetHero.name} est PERDU À JAMAIS !`);
+        setMessage(t.castle.resurrectFailedLost(targetHero.name));
         onAddAdventureEvent?.(
           'LOSS',
-          `Drame irréversible : ${targetHero.name} perdu dans le Néant`,
-          `Les cendres se sont évanouies dans l'éther céleste. ${targetHero.name} ne foulera plus jamais les pavés du donjon.`,
-          `Statut : PERDU À JAMAIS`
+          lang === 'fr' ? `Drame irréversible : ${targetHero.name} perdu dans le Néant` : `Irreversible tragedy: ${targetHero.name} lost forever in the void`,
+          lang === 'fr'
+            ? `Les cendres se sont évanouies dans l'éther céleste. ${targetHero.name} ne foulera plus jamais les pavés du donjon.`
+            : `The ashes scattered into the astral winds. ${targetHero.name} is lost forever to the void.`,
+          lang === 'fr' ? `Statut : PERDU À JAMAIS` : `Status: LOST FOREVER`
         );
       }
     }
@@ -494,28 +533,12 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setAllCharacters(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
   };
 
-  const handleCurePoison = (targetHero: TCharacter) => {
-    sounds.playSpellCast();
-    const cost = 50;
-    let payer = (selectedHero && selectedHero.gold >= cost) ? selectedHero : (party.find(p => p.gold >= cost) || null);
-    if (!payer) {
-      setMessage(`Fonds insuffisants ! Le Temple exige ${cost} PO pour purifier le poison.`);
-      return;
-    }
-    payer.gold -= cost;
-    targetHero.poisonAmount = 0;
-    setParty(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
-    setAllCharacters(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
-    sounds.playFanfare();
-    setMessage(`Le poison a été totalement extrait du corps de ${targetHero.name}.`);
-  };
-
   const handleCureParalysis = (targetHero: TCharacter) => {
     sounds.playSpellCast();
     const cost = 100;
     let payer = (selectedHero && selectedHero.gold >= cost) ? selectedHero : (targetHero.gold >= cost ? targetHero : (party.find(p => p.gold >= cost) || allCharacters.find(c => c.gold >= cost) || null));
     if (!payer) {
-      setMessage(`Fonds insuffisants ! Le Temple exige ${cost} PO pour lever la paralysie.`);
+      setMessage(t.castle.templeFailGold);
       return;
     }
     payer.gold -= cost;
@@ -523,7 +546,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setParty(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
     setAllCharacters(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
     sounds.playFanfare();
-    setMessage(`L'onction sacrée a délié les membres de ${targetHero.name}. La paralysie est guérie !`);
+    setMessage(t.castle.cureParalysisSuccess(targetHero.name));
   };
 
   const handleCureStoned = (targetHero: TCharacter) => {
@@ -531,7 +554,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
     const cost = 200;
     let payer = (selectedHero && selectedHero.gold >= cost) ? selectedHero : (targetHero.gold >= cost ? targetHero : (party.find(p => p.gold >= cost) || allCharacters.find(c => c.gold >= cost) || null));
     if (!payer) {
-      setMessage(`Fonds insuffisants ! Le Temple exige ${cost} PO pour inverser la pétrification.`);
+      setMessage(t.castle.templeFailGold);
       return;
     }
     payer.gold -= cost;
@@ -539,20 +562,16 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setParty(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
     setAllCharacters(prev => prev.map(c => c.id === targetHero.id ? { ...targetHero } : c));
     sounds.playFanfare();
-    setMessage(`La pierre redevient chair vivante ! ${targetHero.name} est libéré de la pétrification !`);
+    setMessage(t.castle.cureStonedSuccess(targetHero.name));
   };
 
   // ==========================================
   // TRAINING GROUNDS (CREATE & RESPEC HEROES)
   // ==========================================
   const rollBonusDice = () => {
-    // Authentic Wizardry Pascal dice logic:
-    // Base 5 to 10 points
     let bonus = 5 + Math.floor(Math.random() * 6);
-    // 14% chance to get +10 points (allowing Samurai, Lord, Bishop)
     if (Math.random() < 0.14) {
       bonus += 10;
-      // If already high, 20% chance for legendary roll (Ninja: 24..29)
       if (Math.random() < 0.20) {
         bonus += 9;
       }
@@ -568,7 +587,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setBonusPoints(bonus);
     setAllocatedStats({ ...base } as any);
     setIsRollingStats(true);
-    setMessage(`🎲 Tirage des dés : ${bonus} points bonus obtenus ! Répartissez-les sur vos caractéristiques.`);
+    setMessage(
+      lang === 'fr'
+        ? `🎲 Tirage des dés : ${bonus} points bonus obtenus ! Répartissez-les sur vos caractéristiques.`
+        : `🎲 Dice rolled: ${bonus} bonus points obtained! Distribute them across your attributes.`
+    );
   };
 
   const handleRerollBonusPoints = () => {
@@ -578,7 +601,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setTotalBonusRolled(bonus);
     setBonusPoints(bonus);
     setAllocatedStats({ ...base } as any);
-    setMessage(`🎲 Relance effectuée : ${bonus} points bonus obtenus ! Répartition réinitialisée aux bases de la race.`);
+    setMessage(
+      lang === 'fr'
+        ? `🎲 Relance effectuée : ${bonus} points bonus obtenus ! Répartition réinitialisée aux bases de la race.`
+        : `🎲 Rerolled: ${bonus} bonus points obtained! Allocation reset to racial base values.`
+    );
   };
 
   const handleResetAttributeAllocation = () => {
@@ -586,7 +613,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
     const base = RACE_BASE_ATTRIBUTES[newCharRace];
     setAllocatedStats({ ...base } as any);
     setBonusPoints(totalBonusRolled);
-    setMessage(`Réinitialisation effectuée : les ${totalBonusRolled} points bonus sont à nouveau disponibles.`);
+    setMessage(
+      lang === 'fr'
+        ? `Réinitialisation effectuée : les ${totalBonusRolled} points bonus sont à nouveau disponibles.`
+        : `Reset complete: all ${totalBonusRolled} bonus points are back in reserve.`
+    );
   };
 
   const handleAddStat = (stat: keyof typeof allocatedStats) => {
@@ -610,7 +641,12 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setAllocatedStats({ ...base } as any);
     if (isRollingStats) {
       setBonusPoints(totalBonusRolled);
-      setMessage(`Race modifiée en ${race} : caractéristiques de base appliquées, ${totalBonusRolled} points bonus prêts.`);
+      const raceName = getHeroRaceName(race);
+      setMessage(
+        lang === 'fr'
+          ? `Race modifiée en ${raceName} : caractéristiques de base appliquées, ${totalBonusRolled} points bonus prêts.`
+          : `Race changed to ${raceName}: base attributes applied, ${totalBonusRolled} bonus points ready.`
+      );
     }
   };
 
@@ -621,7 +657,6 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setRespecCharId(hero.id);
     const raceBase = RACE_BASE_ATTRIBUTES[hero.race];
     
-    // Calculate total points currently invested beyond race base
     const stats: Record<string, number> = { ...hero.attrib };
     let invested = 0;
     for (const [key, baseVal] of Object.entries(raceBase)) {
@@ -636,7 +671,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setRespecBonusAvailable(Math.max(0, spare));
     setRespecTotalPoints(totalPool);
     sounds.playTurn();
-    setMessage(`Sélection de ${hero.name} (${hero.race} ${hero.class}) : ${totalPool} points de caractéristiques disponibles.`);
+    setMessage(
+      lang === 'fr'
+        ? `Sélection de ${hero.name} (${getHeroRaceName(hero.race)} ${getHeroClassName(hero.class)}) : ${totalPool} points disponibles.`
+        : `Selected ${hero.name} (${getHeroRaceName(hero.race)} ${getHeroClassName(hero.class)}): ${totalPool} attribute points available.`
+    );
   };
 
   const handleRespecAddStat = (stat: string) => {
@@ -663,7 +702,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
     const raceBase = RACE_BASE_ATTRIBUTES[hero.race];
     setRespecStats({ ...raceBase });
     setRespecBonusAvailable(respecTotalPoints);
-    setMessage(`Réinitialisation : tous les ${respecTotalPoints} points sont replacés dans la réserve.`);
+    setMessage(
+      lang === 'fr'
+        ? `Réinitialisation : tous les ${respecTotalPoints} points sont replacés dans la réserve.`
+        : `Reset complete: all ${respecTotalPoints} points returned to reserve.`
+    );
   };
 
   const handleRespecReroll = () => {
@@ -675,7 +718,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setRespecStats({ ...raceBase });
     setRespecBonusAvailable(newBonus);
     setRespecTotalPoints(newBonus);
-    setMessage(`🎲 Nouveau tirage pour ${hero.name} : ${newBonus} points bonus obtenus !`);
+    setMessage(
+      lang === 'fr'
+        ? `🎲 Nouveau tirage pour ${hero.name} : ${newBonus} points bonus obtenus !`
+        : `🎲 Rerolled for ${hero.name}: ${newBonus} bonus points rolled!`
+    );
   };
 
   const handleSaveRespec = () => {
@@ -700,12 +747,12 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setParty(prev => prev.map(updateHero));
     setAllCharacters(prev => prev.map(updateHero));
     sounds.playFanfare();
-    setMessage(`Caractéristiques mises à jour avec succès pour l'aventurier !`);
+    setMessage(lang === 'fr' ? 'Caractéristiques mises à jour avec succès pour l\'aventurier !' : 'Attributes successfully updated for this adventurer!');
   };
 
   const handleCreateNewHero = (chosenClass: TClass) => {
     if (!newCharName.trim()) {
-      setMessage('Veuillez entrer un nom pour votre héros.');
+      setMessage(lang === 'fr' ? 'Veuillez entrer un nom pour votre héros.' : 'Please enter a name for your adventurer.');
       return;
     }
     sounds.playFanfare();
@@ -781,7 +828,6 @@ export const CastleView: React.FC<CastleViewProps> = ({
       ]
     };
 
-    // Authentic KEEPCHYN Level 1 spells & spell points (MAGE/BISHOP: Halito & Katino [2 pts]; PRIEST: Dios & Badios [2 pts])
     initLevel1CharacterSpells(newHero);
     recalculateCharacterCombatStats(newHero);
 
@@ -791,7 +837,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
     }
     setNewCharName('');
     setIsRollingStats(false);
-    setMessage(`Le héros ${newHero.name} (${newHero.race} ${newHero.class}) a été créé et inscrit au registre !`);
+    setMessage(t.castle.createHeroSuccess(newHero.name, getHeroClassName(chosenClass)));
   };
 
   return (
@@ -820,11 +866,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
               sounds.playTurn();
             }}
             className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-500/30 rounded-lg text-xs font-semibold transition shadow-sm active:scale-95"
-            title="Inspecter les caractéristiques (FOR, INT, PIE, VIT, AGI, CHA) et l'équipement"
+            title={lang === 'fr' ? "Inspecter les caractéristiques et l'équipement" : "Inspect character sheet and equipment"}
           >
             <User className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Fiche Personnage</span>
-            <span className="sm:hidden">Fiche</span>
+            <span className="hidden sm:inline">{lang === 'fr' ? 'Fiche Personnage' : 'Character Sheet'}</span>
+            <span className="sm:hidden">{t.castle.sheetBtn}</span>
           </button>
           {onOpenPySide6Export && (
             <button
@@ -842,7 +888,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 onClick={() => {
                   if (!hasLivingHeroes) {
                     sounds.playBump();
-                    setMessage("Impossible d'entrer dans le donjon : formez une escouade de vivants à la taverne d'abord !");
+                    setMessage(t.castle.emptyPartyWarning);
                     return;
                   }
                   onEnterMaze();
@@ -853,11 +899,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
                     ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-950/30 active:scale-95'
                     : 'bg-slate-800 text-slate-500 border border-slate-700/60 cursor-not-allowed opacity-60'
                 }`}
-                title={hasLivingHeroes ? "Entrer dans le donjon" : "Groupe vide ou décimé : formez une escouade à la taverne d'abord !"}
+                title={hasLivingHeroes ? t.castle.enterMazeDesc : t.castle.emptyPartyWarning}
               >
                 <DoorOpen className="w-4 h-4" />
-                <span className="hidden sm:inline">Entrer dans le Donjon</span>
-                <span className="sm:hidden">Donjon</span>
+                <span className="hidden sm:inline">{t.castle.enterMazeBtn}</span>
+                <span className="sm:hidden">{lang === 'fr' ? 'Donjon' : 'Maze'}</span>
               </button>
             );
           })()}
@@ -870,44 +916,44 @@ export const CastleView: React.FC<CastleViewProps> = ({
           onClick={() => { setCurrentTab('COURTYARD'); sounds.playTurn(); }}
           className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'COURTYARD' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
-          Grande Cour
+          {t.castle.courtyard}
         </button>
         <button
           onClick={() => { setCurrentTab('INN'); sounds.playTurn(); }}
           className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'INN' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
-          Auberge
+          {t.castle.inn}
         </button>
         <button
           onClick={() => { setCurrentTab('TAVERN'); sounds.playTurn(); }}
           className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'TAVERN' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
-          Taverne
+          {t.castle.tavern}
         </button>
         <button
           onClick={() => { setCurrentTab('BOLTAC'); sounds.playTurn(); }}
           className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'BOLTAC' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
-          Comptoir de Boltac
+          {t.castle.boltac}
         </button>
         <button
           onClick={() => { setCurrentTab('TEMPLE'); sounds.playTurn(); }}
           className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'TEMPLE' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
-          Temple de Cant
+          {t.castle.temple}
         </button>
         <button
           onClick={() => { setCurrentTab('TRAINING'); sounds.playTurn(); }}
           className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 ${currentTab === 'TRAINING' ? 'bg-amber-600/20 text-amber-400 border border-amber-500/30' : 'text-slate-400 hover:text-white'}`}
         >
-          Terrains d'Entraînement
+          {t.castle.training}
         </button>
         <button
           onClick={() => { setCurrentTab('JOURNAL'); sounds.playTurn(); }}
           className={`px-3 py-1.5 min-h-[36px] rounded-md font-medium transition shrink-0 flex items-center gap-1.5 ${currentTab === 'JOURNAL' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-400/90 hover:text-amber-300 hover:bg-slate-800/60'}`}
         >
           <BookOpen className="w-3.5 h-3.5" />
-          <span>Journal</span>
+          <span>{t.castle.journal}</span>
           {adventureEvents.length > 0 && (
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold font-mono ${currentTab === 'JOURNAL' ? 'bg-amber-950 text-amber-300' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}`}>
               {Math.min(10, adventureEvents.length)}
@@ -924,12 +970,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
 
         {/* Global Party Switcher & Gold Actions in Castle */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Party Hero Dropdown Selector */}
           {party.length > 0 && (
             <div className="flex items-center gap-1.5 bg-slate-950/80 px-2 py-1 rounded-lg border border-slate-700/80 shadow-sm max-w-full">
               <label htmlFor="active-hero-select" className="text-[11px] font-bold text-amber-400 whitespace-nowrap flex items-center gap-1 cursor-pointer shrink-0">
                 <User className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Héros :</span>
+                <span className="hidden sm:inline">{t.castle.heroLabel}</span>
               </label>
               <select
                 id="active-hero-select"
@@ -943,9 +988,10 @@ export const CastleView: React.FC<CastleViewProps> = ({
               >
                 {party.map((hero, idx) => {
                   const chevrons = getCharacterChevrons(hero);
+                  const clsName = getHeroClassName(hero.class);
                   return (
                     <option key={hero.id} value={idx}>
-                      #{idx + 1} {chevrons ? `"${chevrons}" ` : ''}{hero.name} ({hero.class} Niv.{hero.charLevel} · {hero.hpLeft}/{hero.hpMax} PV · {hero.gold.toLocaleString()} PO)
+                      #{idx + 1} {chevrons ? `"${chevrons}" ` : ''}{hero.name} ({clsName} {t.character.lvlShort}{hero.charLevel} · {hero.hpLeft}/{hero.hpMax} {t.character.hpShort} · {hero.gold.toLocaleString()} {t.character.goldShort})
                     </option>
                   );
                 })}
@@ -959,21 +1005,21 @@ export const CastleView: React.FC<CastleViewProps> = ({
               <button
                 onClick={handlePoolGold}
                 className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm active:scale-95"
-                title={`Rassembler tout l'or du groupe (${party.reduce((sum, h) => sum + h.gold, 0)} PO) sur ${selectedHero?.name}`}
+                title={t.castle.poolGoldTooltip(party.reduce((sum, h) => sum + h.gold, 0), selectedHero?.name || '')}
               >
                 <Coins className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Mettre l'or en commun</span>
-                <span className="sm:hidden">Grouper l'or</span>
+                <span className="hidden sm:inline">{t.castle.poolGoldBtn}</span>
+                <span className="sm:hidden">{t.castle.poolGoldShort}</span>
               </button>
 
               <button
                 onClick={handleShareGold}
                 className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm active:scale-95"
-                title="Diviser équitablement la fortune du groupe entre tous les héros"
+                title={t.castle.shareGoldTooltip}
               >
                 <Coins className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Diviser l'or</span>
-                <span className="sm:hidden">Partager</span>
+                <span className="hidden sm:inline">{t.castle.shareGoldBtn}</span>
+                <span className="sm:hidden">{t.castle.shareGoldShort}</span>
               </button>
             </div>
           )}
@@ -986,7 +1032,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
             className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-white border border-cyan-500/30 rounded-lg text-xs font-semibold transition flex items-center gap-1 active:scale-95"
           >
             <User className="w-3 h-3" />
-            <span>Fiche</span>
+            <span>{t.castle.sheetBtn}</span>
           </button>
         </div>
       </div>
@@ -1010,9 +1056,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 >
                   <div className="text-amber-400 font-bold flex items-center gap-2 text-xs sm:text-sm">
                     <Sparkles className="w-4 h-4" />
-                    Auberge
+                    {t.castle.inn}
                   </div>
-                  <p className="text-[11px] sm:text-xs text-slate-400">Soins et montées de niveau.</p>
+                  <p className="text-[11px] sm:text-xs text-slate-400">{t.castle.innShortDesc}</p>
                 </button>
 
                 <button
@@ -1021,9 +1067,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 >
                   <div className="text-amber-400 font-bold flex items-center gap-2 text-xs sm:text-sm">
                     <Store className="w-4 h-4" />
-                    Comptoir
+                    {t.castle.boltac}
                   </div>
-                  <p className="text-[11px] sm:text-xs text-slate-400">Armes, armures et potions.</p>
+                  <p className="text-[11px] sm:text-xs text-slate-400">{t.castle.boltacShortDesc}</p>
                 </button>
 
                 <button
@@ -1032,9 +1078,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 >
                   <div className="text-amber-400 font-bold flex items-center gap-2 text-xs sm:text-sm">
                     <HeartHandshake className="w-4 h-4" />
-                    Temple
+                    {t.castle.temple}
                   </div>
-                  <p className="text-[11px] sm:text-xs text-slate-400">Résurrection et guérisons.</p>
+                  <p className="text-[11px] sm:text-xs text-slate-400">{t.castle.templeShortDesc}</p>
                 </button>
 
                 <button
@@ -1043,9 +1089,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 >
                   <div className="text-amber-300 font-bold flex items-center gap-2 text-xs sm:text-sm">
                     <BookOpen className="w-4 h-4 text-amber-400" />
-                    Journal
+                    {t.castle.journal}
                   </div>
-                  <p className="text-[11px] sm:text-xs text-amber-200/70">10 derniers événements.</p>
+                  <p className="text-[11px] sm:text-xs text-amber-200/70">{t.castle.journalShortDesc}</p>
                 </button>
               </div>
             </div>
@@ -1054,9 +1100,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
             <div className="bg-slate-900/60 border border-slate-800 p-3 sm:p-5 rounded-xl space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs sm:text-sm font-bold text-slate-200">
-                  Composition de l'Escouade ({party.length}/6)
+                  {t.castle.partyCompositionTitle(party.length)}
                 </h3>
-                <span className="text-[10px] sm:text-xs text-slate-400 hidden sm:inline">Cliquez sur un héros pour interagir dans les boutiques</span>
+                <span className="text-[10px] sm:text-xs text-slate-400 hidden sm:inline">{t.castle.partyClickHint}</span>
               </div>
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2.5">
                 {party.map((hero, idx) => (
@@ -1073,20 +1119,20 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           ) : null}
                           {hero.name}
                         </span>
-                        <span className="text-[9px] sm:text-[10px] text-amber-400">N.{hero.charLevel}</span>
+                        <span className="text-[9px] sm:text-[10px] text-amber-400">{t.character.lvlShort}{hero.charLevel}</span>
                       </div>
-                      <div className="text-[10px] sm:text-[11px] text-slate-400 truncate">{hero.class}</div>
+                      <div className="text-[10px] sm:text-[11px] text-slate-400 truncate">{getHeroClassName(hero.class)}</div>
                     </div>
                     <div className="pt-1.5 sm:pt-2">
                       <div className="flex justify-between text-[10px] sm:text-[11px]">
-                        <span className="text-slate-400">PV:</span>
+                        <span className="text-slate-400">{t.character.hpShort}:</span>
                         <span className={hero.hpLeft < hero.hpMax / 2 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
                           {hero.hpLeft}/{hero.hpMax}
                         </span>
                       </div>
                       <div className="flex justify-between text-[9px] sm:text-[10px] text-slate-400">
-                        <span>CA: {hero.armorClass}</span>
-                        <span className="text-amber-400">{hero.gold} PO</span>
+                        <span>{t.character.acShort}: {hero.armorClass}</span>
+                        <span className="text-amber-400">{hero.gold} {t.character.goldShort}</span>
                       </div>
                       {/* Active Status Badges */}
                       <div className="flex flex-wrap gap-0.5 sm:gap-1 pt-1 min-h-[16px] sm:min-h-[18px]">
@@ -1107,10 +1153,10 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           sounds.playTurn();
                         }}
                         className="mt-1.5 sm:mt-2 w-full py-1 bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white border border-amber-500/30 rounded text-[9px] sm:text-[10px] font-bold transition flex items-center justify-center gap-1 active:scale-95"
-                        title="Voir les caractéristiques FOR, INT, PIE, VIT, AGI, CHA"
+                        title={lang === 'fr' ? 'Voir la fiche complète' : 'View full character sheet'}
                       >
                         <User className="w-3 h-3" />
-                        Fiche
+                        {t.castle.sheetBtn}
                       </button>
                     </div>
                   </div>
@@ -1124,17 +1170,17 @@ export const CastleView: React.FC<CastleViewProps> = ({
         {currentTab === 'INN' && (
           <div className="max-w-3xl mx-auto bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-6">
             <div>
-              <h2 className="text-lg font-serif font-bold text-white">L'Auberge de l'Aventurier</h2>
-              <p className="text-xs text-slate-400">Reposez-vous pour restaurer vos forces et accumuler vos montées de niveau.</p>
+              <h2 className="text-lg font-serif font-bold text-white">{t.castle.innTitle}</h2>
+              <p className="text-xs text-slate-400">{t.castle.innSubtitle}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
-                { type: 'STABLES' as const, name: 'Les Écuries', cost: 0, desc: 'Gratuit. Restaure tous les sorts, aucun soin de PV.' },
-                { type: 'COTS' as const, name: 'Les Paillasses', cost: 10, desc: '10 PO / sem. Rend tous les PV et sorts.' },
-                { type: 'ECONOMY' as const, name: 'Chambres Économiques', cost: 50, desc: '50 PO / sem. Soins rapides et sorts.' },
-                { type: 'MERCHANT' as const, name: 'Suites Marchandes', cost: 200, desc: '200 PO / sem. Confort royal et soins.' },
-                { type: 'ROYAL' as const, name: 'Suites Royales', cost: 500, desc: '500 PO / sem. Le summum de la noblesse.' }
+                { type: 'STABLES' as const, name: t.castle.rooms.stables.name, desc: t.castle.rooms.stables.desc },
+                { type: 'COTS' as const, name: t.castle.rooms.cots.name, desc: t.castle.rooms.cots.desc },
+                { type: 'ECONOMY' as const, name: t.castle.rooms.economy.name, desc: t.castle.rooms.economy.desc },
+                { type: 'MERCHANT' as const, name: t.castle.rooms.merchant.name, desc: t.castle.rooms.merchant.desc },
+                { type: 'ROYAL' as const, name: t.castle.rooms.royal.name, desc: t.castle.rooms.royal.desc }
               ].map(r => (
                 <div key={r.type} className="p-3.5 bg-slate-800/60 border border-slate-700/50 rounded-lg flex items-center justify-between">
                   <div>
@@ -1145,7 +1191,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                     onClick={() => handleRestAtInn(r.type)}
                     className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-bold transition shrink-0 ml-3"
                   >
-                    Dormir
+                    {t.castle.sleepBtn}
                   </button>
                 </div>
               ))}
@@ -1158,15 +1204,15 @@ export const CastleView: React.FC<CastleViewProps> = ({
           <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900/80 border border-slate-800 p-3 sm:p-4 rounded-xl">
               <div>
-                <h2 className="text-base sm:text-lg font-serif font-bold text-white">Comptoir de Boltac</h2>
-                <p className="text-[11px] sm:text-xs text-slate-400">Armes, protections, identification (I) et désenvoûtement d'équipements maudits (U)NCURSE.</p>
+                <h2 className="text-base sm:text-lg font-serif font-bold text-white">{t.castle.boltacTitle}</h2>
+                <p className="text-[11px] sm:text-xs text-slate-400">{t.castle.boltacSubtitle}</p>
               </div>
               <button
                 onClick={handlePoolGold}
                 className="px-3 py-1.5 min-h-[36px] bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/40 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <Coins className="w-3.5 h-3.5" />
-                <span>Mettre tout l'or sur {selectedHero?.name}</span>
+                <span>{t.castle.poolAllGoldBtn(selectedHero?.name || '')}</span>
               </button>
             </div>
 
@@ -1176,11 +1222,11 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 <div className="flex items-center gap-2 font-bold text-red-200">
                   <Skull className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
                   <span className="tracking-wide uppercase">
-                    Équipement maudit scellé sur {selectedHero.name} !
+                    {t.castle.cursedWarningTitle(selectedHero.name)}
                   </span>
                 </div>
                 <p className="text-red-200/90 text-[11px] leading-relaxed">
-                  Le moteur original de Wizardry interdit de retirer soi-même un équipement maudit. Seul Boltac peut briser le sortilège et enlever l'objet grâce à l'option originale <strong>U)NCURSE</strong> (pour le prix d'achat de l'objet).
+                  {t.castle.cursedWarningBody}
                 </p>
               </div>
             )}
@@ -1188,7 +1234,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Buy catalog */}
               <div className="bg-slate-900/60 border border-slate-800 p-3 sm:p-4 rounded-xl space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">Articles en vente</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">{t.castle.catalogTitle}</h3>
                 <div className="space-y-2 max-h-[340px] sm:max-h-[380px] overflow-y-auto pr-1">
                   {ITEMS_DATABASE.filter(it => it.price > 0 && it.boltacStock !== 0 && !it.cursed).map(item => {
                     const usableByHero = !selectedHero || canClassUseItem(selectedHero.class, item);
@@ -1199,15 +1245,15 @@ export const CastleView: React.FC<CastleViewProps> = ({
                             <span>{item.name}</span>
                             {!usableByHero && (
                               <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-950/80 text-rose-300 border border-rose-800/60 uppercase">
-                                Inutilisable
+                                {t.castle.unusableBadge}
                               </span>
                             )}
                           </div>
                           <div className="text-[10px] sm:text-[11px] text-slate-400 truncate">
-                            {item.objType} {item.objType === 'WEAPON' && item.wepHpDam?.level ? `· Dégâts ${formatDamageDice(item.wepHpDam)}` : ''} {item.armorMod ? `· CA -${item.armorMod}` : ''} · {item.price} PO
+                            {item.objType} {item.objType === 'WEAPON' && item.wepHpDam?.level ? `· ${lang === 'fr' ? 'Dégâts' : 'Damage'} ${formatDamageDice(item.wepHpDam)}` : ''} {item.armorMod ? `· ${t.character.acShort} -${item.armorMod}` : ''} · {item.price} {t.character.goldShort}
                           </div>
                           <div className="text-[10px] text-slate-500">
-                            Classes : <span className={usableByHero ? "text-slate-400" : "text-rose-400 font-semibold"}>{getUsableClassesList(item, true).join(', ') || 'Aucune'}</span>
+                            {lang === 'fr' ? 'Classes :' : 'Classes:'} <span className={usableByHero ? "text-slate-400" : "text-rose-400 font-semibold"}>{getUsableClassesList(item, true, lang).join(', ') || (lang === 'fr' ? 'Aucune' : 'None')}</span>
                           </div>
                         </div>
                         <button
@@ -1217,9 +1263,9 @@ export const CastleView: React.FC<CastleViewProps> = ({
                               ? 'bg-amber-600 hover:bg-amber-500' 
                               : 'bg-slate-700 hover:bg-rose-900/60 text-slate-300 hover:text-white border border-slate-600'
                           } text-white rounded text-xs font-bold transition shrink-0 active:scale-95`}
-                          title={!usableByHero ? `Inutilisable par ${selectedHero?.name} (${selectedHero?.class})` : undefined}
+                          title={!usableByHero ? `${t.castle.unusableBadge} (${getHeroClassName(selectedHero.class)})` : undefined}
                         >
-                          Acheter
+                          {t.castle.buyBtn}
                         </button>
                       </div>
                     );
@@ -1230,17 +1276,17 @@ export const CastleView: React.FC<CastleViewProps> = ({
               {/* Player Inventory (Sell, Identify, Uncurse) */}
               <div className="bg-slate-900/60 border border-slate-800 p-3 sm:p-4 rounded-xl space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                  Inventaire de {selectedHero?.name} (Vendre, Identifier & Désenvoûter)
+                  {t.castle.heroInventoryTitle(selectedHero?.name || '')}
                 </h3>
                 <div className="space-y-2 max-h-[340px] sm:max-h-[380px] overflow-y-auto pr-1">
                   {selectedHero?.possessions.length === 0 && (
-                    <p className="text-xs text-slate-500 italic py-6 text-center">Aucun objet dans l'inventaire.</p>
+                    <p className="text-xs text-slate-500 italic py-6 text-center">{t.castle.emptyInventory}</p>
                   )}
                   {selectedHero?.possessions.map((slot, sIdx) => {
                     const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
                     if (!itm) return null;
                     const isProficient = canClassUseItem(selectedHero.class, itm);
-                    const displayName = slot.identified ? itm.name : (itm.nameUnknown || 'OBJET INCONNU');
+                    const displayName = slot.identified ? itm.name : (itm.nameUnknown || (lang === 'fr' ? 'OBJET INCONNU' : 'UNKNOWN ITEM'));
                     const sellPrice = slot.identified ? Math.max(1, Math.floor(itm.price / 2)) : 1;
                     const identifyFee = Math.max(10, Math.floor(itm.price / 2));
                     const uncurseFee = Math.max(20, itm.price);
@@ -1252,17 +1298,17 @@ export const CastleView: React.FC<CastleViewProps> = ({
                             <span className="truncate">{displayName}</span>
                             {!slot.identified && (
                               <span className="text-[9px] sm:text-[10px] text-amber-300 bg-amber-950/80 px-1.5 py-0.2 rounded border border-amber-600/40 font-bold shrink-0">
-                                [Non identifié]
+                                {t.castle.unidentBadge}
                               </span>
                             )}
-                            {slot.equipped && <span className="text-[9px] sm:text-[10px] text-emerald-400 font-bold shrink-0">[Équipé]</span>}
-                            {slot.cursed && <span className="text-[9px] sm:text-[10px] text-red-400 font-bold shrink-0">[Maudit]</span>}
-                            {slot.identified && !isProficient && <span className="text-[9px] sm:text-[10px] text-rose-400 font-bold shrink-0">[Incompatible]</span>}
+                            {slot.equipped && <span className="text-[9px] sm:text-[10px] text-emerald-400 font-bold shrink-0">{t.castle.equippedBadge}</span>}
+                            {slot.cursed && <span className="text-[9px] sm:text-[10px] text-red-400 font-bold shrink-0">{t.castle.cursedBadge}</span>}
+                            {slot.identified && !isProficient && <span className="text-[9px] sm:text-[10px] text-rose-400 font-bold shrink-0">{t.castle.incompatibleBadge}</span>}
                           </div>
                           <div className="text-[10px] sm:text-[11px] text-slate-400">
                             {slot.cursed 
-                              ? `Maudit · Coût désenvoûtement : ${uncurseFee} PO` 
-                              : `Revente : ${sellPrice} PO ${!slot.identified ? '(tarif non identifié : 1 PO)' : ''}`}
+                              ? (lang === 'fr' ? `Maudit · Coût désenvoûtement : ${uncurseFee} PO` : `Cursed · Uncurse cost: ${uncurseFee} GP`)
+                              : (lang === 'fr' ? `Revente : ${sellPrice} PO ${!slot.identified ? '(non identifié : 1 PO)' : ''}` : `Sell value: ${sellPrice} GP ${!slot.identified ? '(unidentified: 1 GP)' : ''}`)}
                           </div>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -1270,27 +1316,27 @@ export const CastleView: React.FC<CastleViewProps> = ({
                             <button
                               onClick={() => handleBoltacIdentify(sIdx)}
                               className="px-2.5 py-1.5 min-h-[32px] bg-purple-700 hover:bg-purple-600 text-white rounded text-xs font-semibold transition active:scale-95 flex items-center gap-1 shadow-sm"
-                              title={`Faire expertiser et identifier cet objet par Boltac pour ${identifyFee} PO`}
+                              title={t.castle.identifyTooltip(identifyFee)}
                             >
-                              <span>Identifier</span>
-                              <span className="text-[10px] text-purple-200 font-mono">({identifyFee} PO)</span>
+                              <span>{t.castle.buyBtn ? (lang === 'fr' ? 'Identifier' : 'Identify') : 'Identify'}</span>
+                              <span className="text-[10px] text-purple-200 font-mono">({identifyFee} {t.character.goldShort})</span>
                             </button>
                           )}
                           {slot.cursed ? (
                             <button
                               onClick={() => handleBoltacUncurse(sIdx)}
                               className="px-2.5 py-1.5 min-h-[32px] bg-red-800 hover:bg-red-700 text-white rounded text-xs font-bold transition active:scale-95 flex items-center gap-1.5 shadow-sm border border-red-500/60"
-                              title={`Faire briser la malédiction et enlever cet objet par Boltac pour ${uncurseFee} PO (Option originale U)NCURSE)`}
+                              title={t.castle.uncurseTooltip(uncurseFee)}
                             >
                               <Skull className="w-3.5 h-3.5 text-red-200 shrink-0" />
-                              <span>Enlever ({uncurseFee} PO)</span>
+                              <span>{t.castle.uncurseBtn(uncurseFee)}</span>
                             </button>
                           ) : (
                             <button
                               onClick={() => handleSellItem(sIdx)}
                               className="px-3 py-1.5 min-h-[32px] bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs font-semibold transition shrink-0 active:scale-95"
                             >
-                              Vendre
+                              {t.castle.sellBtn}
                             </button>
                           )}
                         </div>
@@ -1307,14 +1353,12 @@ export const CastleView: React.FC<CastleViewProps> = ({
         {currentTab === 'TEMPLE' && (
           <div className="max-w-3xl mx-auto bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-6">
             <div>
-              <h2 className="text-lg font-serif font-bold text-white">Le Temple Radiant de Cant</h2>
-              <p className="text-xs text-slate-400">Les prêtres invoquent les miracles divins pour relever les héros morts, lever la pétrification et guérir la paralysie (le poison est automatiquement neutralisé dès le retour au château).</p>
+              <h2 className="text-lg font-serif font-bold text-white">{t.castle.templeTitle}</h2>
+              <p className="text-xs text-slate-400">{t.castle.templeSubtitle}</p>
             </div>
 
             <div className="space-y-3">
               {(() => {
-                // Authentic Wizardry: All heroes needing resurrection or healing are treated at the Temple of Cant,
-                // including deceased heroes removed from the exploration party upon return to the castle!
                 const deceasedOrAfflictedRoster = allCharacters.filter(c => 
                   !party.some(p => p.id === c.id) && 
                   (c.status === 'DEAD' || c.status === 'ASHES' || c.status === 'PLYZE' || c.status === 'STONED')
@@ -1324,8 +1368,8 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 if (patients.length === 0) {
                   return (
                     <div className="p-8 bg-slate-800/40 border border-slate-700/40 rounded-xl text-center space-y-2">
-                      <p className="text-emerald-400 font-bold text-sm">Le Temple est paisible.</p>
-                      <p className="text-xs text-slate-400">Aucun aventurier de votre garnison n'est mort ou affligé de pétrification.</p>
+                      <p className="text-emerald-400 font-bold text-sm">{t.castle.peacefulTitle}</p>
+                      <p className="text-xs text-slate-400">{t.castle.peacefulDesc}</p>
                     </div>
                   );
                 }
@@ -1339,10 +1383,10 @@ export const CastleView: React.FC<CastleViewProps> = ({
                     <div key={h.id} className="p-3.5 bg-slate-800/60 border border-slate-700/50 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                       <div>
                         <div className="font-bold text-sm text-white flex items-center gap-2">
-                          <span>{h.name} ({h.class})</span>
+                          <span>{h.name} ({getHeroClassName(h.class)})</span>
                           {isDeceasedRoster && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-400">
-                              Déposé au Temple
+                              {t.castle.depositedAtTemple}
                             </span>
                           )}
                           <div className="flex flex-wrap gap-1">
@@ -1354,7 +1398,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           </div>
                         </div>
                         <div className="text-slate-400 pt-0.5">
-                          Santé : <strong className={h.hpLeft < h.hpMax / 2 ? 'text-red-400' : 'text-emerald-400'}>{h.hpLeft}/{h.hpMax} PV</strong> · Or : {h.gold} PO
+                          {t.castle.healthLabel(h.hpLeft, h.hpMax)} · {t.castle.goldLabel(h.gold)}
                         </div>
                       </div>
 
@@ -1365,7 +1409,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                             onClick={() => handleResurrect(h)}
                             className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg transition"
                           >
-                            Ressusciter ({h.charLevel * (h.status === 'DEAD' ? 250 : 500)} PO)
+                            {t.castle.resurrectBtn(h.charLevel * (h.status === 'DEAD' ? 250 : 500))}
                           </button>
                         )}
 
@@ -1376,7 +1420,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                             className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-lg transition flex items-center gap-1"
                           >
                             <Zap className="w-3.5 h-3.5" />
-                            Guérir Paralysie (100 PO)
+                            {t.castle.cureParalysisBtn(100)}
                           </button>
                         )}
 
@@ -1387,13 +1431,13 @@ export const CastleView: React.FC<CastleViewProps> = ({
                             className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-lg transition flex items-center gap-1"
                           >
                             <Shield className="w-3.5 h-3.5" />
-                            Lever Pétrification (200 PO)
+                            {t.castle.cureStonedBtn(200)}
                           </button>
                         )}
 
                         {!hasAilment && (
                           <span className="text-emerald-400 flex items-center gap-1 italic text-xs">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> En pleine santé
+                            <CheckCircle2 className="w-3.5 h-3.5" /> {t.castle.fullHealthNotice}
                           </span>
                         )}
                       </div>
@@ -1419,7 +1463,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 }`}
               >
                 <UserPlus className="w-4 h-4" />
-                <span>Créer un Nouveau Héros</span>
+                <span>{t.castle.modeCreateHero}</span>
               </button>
               <button
                 onClick={() => {
@@ -1436,7 +1480,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 }`}
               >
                 <Sliders className="w-4 h-4" />
-                <span>Réattribuer les Caractéristiques (Héros Existant)</span>
+                <span>{t.castle.modeRespecStats}</span>
               </button>
             </div>
 
@@ -1446,47 +1490,47 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                   <div>
                     <h2 className="text-lg font-serif font-bold text-white">{trainingGroundsName}</h2>
-                    <p className="text-xs text-slate-400">Générez un nouvel aventurier, tirez les points bonus et répartissez-les selon votre classe désirée.</p>
+                    <p className="text-xs text-slate-400">{t.castle.trainingSubtitle}</p>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1">Nom du Héros</label>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">{t.castle.nameInputLabel}</label>
                     <input
                       type="text"
                       value={newCharName}
                       onChange={e => setNewCharName(e.target.value)}
-                      placeholder="Ex: ARTHUR"
+                      placeholder={t.castle.namePlaceholder}
                       className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white uppercase focus:outline-none focus:border-amber-500 font-mono tracking-wider"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1">Race</label>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">{t.castle.raceLabel}</label>
                     <select
                       value={newCharRace}
                       onChange={e => handleRaceChange(e.target.value as TRace)}
                       className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
                     >
-                      <option value="HUMAN">Humain (Équilibré · Base 8/8/5/8/8/9)</option>
-                      <option value="ELF">Elfe (I.Q. & Piété · Base 7/10/10/6/9/6)</option>
-                      <option value="DWARF">Nain (Force & Vitalité · Base 10/7/10/10/5/6)</option>
-                      <option value="GNOME">Gnome (Piété & Agilité · Base 7/7/10/8/10/7)</option>
-                      <option value="HOBBIT">Hobbit (Chance extrême · Base 5/7/7/6/10/15)</option>
+                      <option value="HUMAN">{t.character.races.human} (8/8/5/8/8/9)</option>
+                      <option value="ELF">{t.character.races.elf} (7/10/10/6/9/6)</option>
+                      <option value="DWARF">{t.character.races.dwarf} (10/7/10/10/5/6)</option>
+                      <option value="GNOME">{t.character.races.gnome} (7/7/10/8/10/7)</option>
+                      <option value="HOBBIT">{t.character.races.hobbit} (5/7/7/6/10/15)</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1">Alignement</label>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">{t.castle.alignLabel}</label>
                     <select
                       value={newCharAlign}
                       onChange={e => setNewCharAlign(e.target.value as TAlign)}
                       className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500"
                     >
-                      <option value="GOOD">Bon (Requis pour Seigneur / Lord)</option>
-                      <option value="NEUTRAL">Neutre (Idéal pour Guerrier / Voleur)</option>
-                      <option value="EVIL">Mauvais (Requis pour Ninja)</option>
+                      <option value="GOOD">{t.character.alignments.good}</option>
+                      <option value="NEUTRAL">{t.character.alignments.neutral}</option>
+                      <option value="EVIL">{t.character.alignments.evil}</option>
                     </select>
                   </div>
                 </div>
@@ -1498,7 +1542,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                       className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-lg hover:shadow-amber-600/20"
                     >
                       <Flame className="w-4 h-4" />
-                      <span>Tirer les dés de Caractéristiques</span>
+                      <span>{t.castle.rollStatsBtn}</span>
                     </button>
                   </div>
                 ) : (
@@ -1506,13 +1550,13 @@ export const CastleView: React.FC<CastleViewProps> = ({
                     {/* Toolbar for Bonus Points Redistribution & Reroll */}
                     <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Réserve :</span>
+                        <span className="text-xs text-slate-400">{t.castle.reserveLabel}</span>
                         <span className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono border ${
                           bonusPoints > 0 
                             ? 'bg-amber-950/70 border-amber-600/60 text-amber-300 animate-pulse' 
                             : 'bg-slate-800 border-slate-700 text-slate-400'
                         }`}>
-                          {bonusPoints} point{bonusPoints > 1 ? 's' : ''} restant{bonusPoints > 1 ? 's' : ''} sur {totalBonusRolled}
+                          {t.castle.pointsRemaining(bonusPoints, totalBonusRolled)}
                         </span>
                       </div>
 
@@ -1522,20 +1566,20 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           type="button"
                           onClick={handleRerollBonusPoints}
                           className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 hover:border-amber-500"
-                          title="Relancer le tirage aléatoire des dés pour obtenir un nouveau score bonus (ex: 18-29 pour Samurai/Ninja)"
+                          title={t.castle.rerollTooltip}
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Relancer le Tirage (Dés)</span>
+                          <span>{t.castle.rerollBtn}</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={handleResetAttributeAllocation}
                           className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 hover:border-slate-500"
-                          title="Remettre les caractéristiques aux valeurs de base et replacer tous les points dans la réserve"
+                          title={t.castle.resetAllocationTooltip}
                         >
                           <Undo2 className="w-3.5 h-3.5" />
-                          <span>Réinitialiser la Répartition</span>
+                          <span>{t.castle.resetAllocationBtn}</span>
                         </button>
                       </div>
                     </div>
@@ -1545,15 +1589,8 @@ export const CastleView: React.FC<CastleViewProps> = ({
                       {Object.entries(allocatedStats).map(([st, val]) => {
                         const baseVal = RACE_BASE_ATTRIBUTES[newCharRace][st] || 8;
                         const added = val - baseVal;
-                        const statLabels: Record<string, { label: string; abbr: string }> = {
-                          STRENGTH: { label: 'Force', abbr: 'FOR' },
-                          IQ: { label: 'Intelligence', abbr: 'INT' },
-                          PIETY: { label: 'Piété', abbr: 'PIE' },
-                          VITALITY: { label: 'Vitalité', abbr: 'VIT' },
-                          AGILITY: { label: 'Agilité', abbr: 'AGI' },
-                          LUCK: { label: 'Chance', abbr: 'CHA' }
-                        };
-                        const info = statLabels[st] || { label: st, abbr: st.slice(0, 3) };
+                        const key = st === 'IQ' ? 'iq' : st.toLowerCase() as keyof typeof t.character.attributes;
+                        const info = t.character.attributes[key] || { label: st, abbr: st.slice(0, 3) };
 
                         return (
                           <div key={st} className="p-3 bg-slate-800/80 border border-slate-700/60 rounded-xl text-center flex flex-col justify-between shadow-sm">
@@ -1580,7 +1617,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                                 onClick={() => handleRemoveStat(st as any)}
                                 disabled={val <= baseVal}
                                 className="py-1.5 px-2 min-h-[36px] bg-slate-700/70 hover:bg-slate-600 active:scale-95 text-slate-200 rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-slate-600/50 flex items-center justify-center"
-                                title={`Diminuer ${info.label} (-1) et récupérer 1 point bonus`}
+                                title={`-1 ${info.label}`}
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
@@ -1589,7 +1626,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                                 onClick={() => handleAddStat(st as any)}
                                 disabled={bonusPoints <= 0 || val >= 18}
                                 className="py-1.5 px-2 min-h-[36px] bg-amber-600/80 hover:bg-amber-500 active:scale-95 text-white rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-amber-500/50 flex items-center justify-center shadow-sm"
-                                title={`Augmenter ${info.label} (+1) en dépensant 1 point bonus`}
+                                title={`+1 ${info.label}`}
                               >
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
@@ -1603,25 +1640,25 @@ export const CastleView: React.FC<CastleViewProps> = ({
                     <div className="space-y-2 pt-2">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                          Classes Éligibles selon les Caractéristiques Allouées :
+                          {lang === 'fr' ? 'Classes Éligibles selon les Caractéristiques :' : 'Eligible Classes for Attribute Allocation:'}
                         </label>
                         {bonusPoints > 0 && (
                           <span className="text-[11px] text-amber-400 font-medium italic">
-                            Astuce : dépensez tous vos points bonus pour maximiser votre héros !
+                            {lang === 'fr' ? 'Astuce : dépensez tous vos points bonus pour maximiser votre héros !' : 'Tip: spend all bonus points to maximize your adventurer!'}
                           </span>
                         )}
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {[
-                          { cls: 'FIGHTER' as const, name: 'Guerrier', req: allocatedStats.STRENGTH >= 11, desc: 'FOR 11+' },
-                          { cls: 'MAGE' as const, name: 'Mage', req: allocatedStats.IQ >= 11, desc: 'INT 11+' },
-                          { cls: 'PRIEST' as const, name: 'Prêtre', req: allocatedStats.PIETY >= 11 && newCharAlign !== 'NEUTRAL', desc: 'PIE 11+, Pas Neutre' },
-                          { cls: 'THIEF' as const, name: 'Voleur', req: allocatedStats.AGILITY >= 11 && newCharAlign !== 'GOOD', desc: 'AGI 11+, Pas Bon' },
-                          { cls: 'BISHOP' as const, name: 'Évêque', req: allocatedStats.IQ >= 12 && allocatedStats.PIETY >= 12, desc: 'INT 12+, PIE 12+' },
-                          { cls: 'SAMURAI' as const, name: 'Samouraï', req: allocatedStats.STRENGTH >= 15 && allocatedStats.VITALITY >= 14, desc: 'FOR 15+, VIT 14+' },
-                          { cls: 'LORD' as const, req: allocatedStats.STRENGTH >= 15 && allocatedStats.PIETY >= 12 && newCharAlign === 'GOOD', name: 'Seigneur', desc: 'FOR 15+, PIE 12+, Bon' },
-                          { cls: 'NINJA' as const, req: allocatedStats.STRENGTH >= 17 && allocatedStats.AGILITY >= 17 && newCharAlign === 'EVIL', name: 'Ninja', desc: 'FOR 17+, AGI 17+, Mauvais' }
+                          { cls: 'FIGHTER' as const, name: t.character.classes.fighter, req: allocatedStats.STRENGTH >= 11, desc: `${t.character.attributes.strength.abbr} 11+` },
+                          { cls: 'MAGE' as const, name: t.character.classes.mage, req: allocatedStats.IQ >= 11, desc: `${t.character.attributes.iq.abbr} 11+` },
+                          { cls: 'PRIEST' as const, name: t.character.classes.priest, req: allocatedStats.PIETY >= 11 && newCharAlign !== 'NEUTRAL', desc: `${t.character.attributes.piety.abbr} 11+, !Neut` },
+                          { cls: 'THIEF' as const, name: t.character.classes.thief, req: allocatedStats.AGILITY >= 11 && newCharAlign !== 'GOOD', desc: `${t.character.attributes.agility.abbr} 11+, !Good` },
+                          { cls: 'BISHOP' as const, name: t.character.classes.bishop, req: allocatedStats.IQ >= 12 && allocatedStats.PIETY >= 12, desc: `${t.character.attributes.iq.abbr} 12+, ${t.character.attributes.piety.abbr} 12+` },
+                          { cls: 'SAMURAI' as const, name: t.character.classes.samurai, req: allocatedStats.STRENGTH >= 15 && allocatedStats.VITALITY >= 14, desc: `${t.character.attributes.strength.abbr} 15+, ${t.character.attributes.vitality.abbr} 14+` },
+                          { cls: 'LORD' as const, name: t.character.classes.lord, req: allocatedStats.STRENGTH >= 15 && allocatedStats.PIETY >= 12 && newCharAlign === 'GOOD', desc: `${t.character.attributes.strength.abbr} 15+, ${t.character.attributes.piety.abbr} 12+, Good` },
+                          { cls: 'NINJA' as const, name: t.character.classes.ninja, req: allocatedStats.STRENGTH >= 17 && allocatedStats.AGILITY >= 17 && newCharAlign === 'EVIL', desc: `${t.character.attributes.strength.abbr} 17+, ${t.character.attributes.agility.abbr} 17+, Evil` }
                         ].map(item => (
                           <button
                             key={item.cls}
@@ -1651,13 +1688,13 @@ export const CastleView: React.FC<CastleViewProps> = ({
             {trainingMode === 'RESPEC' && (
               <div className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-5">
                 <div>
-                  <h2 className="text-lg font-serif font-bold text-white">Réattribution des Caractéristiques d'un Héros</h2>
-                  <p className="text-xs text-slate-400">Modifiez la distribution des points ou relancez le tirage pour optimiser un membre existant de votre guilde.</p>
+                  <h2 className="text-lg font-serif font-bold text-white">{t.castle.modeRespecStats}</h2>
+                  <p className="text-xs text-slate-400">{lang === 'fr' ? 'Modifiez la distribution des points ou relancez le tirage pour optimiser un membre existant de votre guilde.' : 'Reallocate attribute points or reroll bonus dice to optimize an existing guild member.'}</p>
                 </div>
 
                 {/* Hero Selector */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">Choisir l'aventurier à réentraîner :</label>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">{lang === 'fr' ? "Choisir l'aventurier à réentraîner :" : 'Choose adventurer to respec:'}</label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
                     {allCharacters.map(h => (
                       <button
@@ -1671,8 +1708,8 @@ export const CastleView: React.FC<CastleViewProps> = ({
                         }`}
                       >
                         <div className="font-bold text-xs truncate">{h.name}</div>
-                        <div className="text-[10px] text-slate-400">{h.race} · {h.class}</div>
-                        <div className="text-[9px] text-amber-400 font-mono">Niv. {h.charLevel}</div>
+                        <div className="text-[10px] text-slate-400">{getHeroRaceName(h.race)} · {getHeroClassName(h.class)}</div>
+                        <div className="text-[9px] text-amber-400 font-mono">{t.character.lvlShort} {h.charLevel}</div>
                       </button>
                     ))}
                   </div>
@@ -1683,13 +1720,13 @@ export const CastleView: React.FC<CastleViewProps> = ({
                     {/* Action Bar for Respec */}
                     <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Points disponibles :</span>
+                        <span className="text-xs text-slate-400">{lang === 'fr' ? 'Points disponibles :' : 'Points available:'}</span>
                         <span className={`px-2.5 py-1 rounded-lg text-xs font-black font-mono border ${
                           respecBonusAvailable > 0
                             ? 'bg-amber-950/70 border-amber-600/60 text-amber-300 animate-pulse'
                             : 'bg-slate-800 border-slate-700 text-slate-400'
                         }`}>
-                          {respecBonusAvailable} point{respecBonusAvailable > 1 ? 's' : ''} restant{respecBonusAvailable > 1 ? 's' : ''}
+                          {respecBonusAvailable} {lang === 'fr' ? `point${respecBonusAvailable > 1 ? 's' : ''} restant${respecBonusAvailable > 1 ? 's' : ''}` : `point${respecBonusAvailable > 1 ? 's' : ''} remaining`}
                         </span>
                       </div>
 
@@ -1698,20 +1735,20 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           type="button"
                           onClick={handleRespecReroll}
                           className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 hover:border-amber-500"
-                          title="Tirer de nouveaux dés bonus pour ce héros"
+                          title={t.castle.rerollTooltip}
                         >
                           <RotateCcw className="w-3.5 h-3.5" />
-                          <span>Relancer le Tirage</span>
+                          <span>{t.castle.rerollBtn}</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={handleRespecResetToBase}
                           className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 border border-slate-700 hover:border-slate-500"
-                          title="Remettre aux bases de la race et replacer tous les points dans la réserve"
+                          title={t.castle.resetAllocationTooltip}
                         >
                           <Undo2 className="w-3.5 h-3.5" />
-                          <span>Remettre à Zéro</span>
+                          <span>{t.castle.resetAllocationBtn}</span>
                         </button>
 
                         <button
@@ -1720,7 +1757,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-md hover:shadow-emerald-600/20"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Enregistrer</span>
+                          <span>{lang === 'fr' ? 'Enregistrer' : 'Save'}</span>
                         </button>
                       </div>
                     </div>
@@ -1732,15 +1769,8 @@ export const CastleView: React.FC<CastleViewProps> = ({
                         const hero = allCharacters.find(c => c.id === respecCharId) || party.find(c => c.id === respecCharId);
                         const raceBase = hero ? (RACE_BASE_ATTRIBUTES[hero.race][st] || 8) : 8;
                         const added = val - raceBase;
-                        const statLabels: Record<string, { label: string; abbr: string }> = {
-                          STRENGTH: { label: 'Force', abbr: 'FOR' },
-                          IQ: { label: 'Intelligence', abbr: 'INT' },
-                          PIETY: { label: 'Piété', abbr: 'PIE' },
-                          VITALITY: { label: 'Vitalité', abbr: 'VIT' },
-                          AGILITY: { label: 'Agilité', abbr: 'AGI' },
-                          LUCK: { label: 'Chance', abbr: 'CHA' }
-                        };
-                        const info = statLabels[st] || { label: st, abbr: st.slice(0, 3) };
+                        const key = st === 'IQ' ? 'iq' : st.toLowerCase() as keyof typeof t.character.attributes;
+                        const info = t.character.attributes[key] || { label: st, abbr: st.slice(0, 3) };
 
                         return (
                           <div key={st} className="p-3 bg-slate-800/80 border border-slate-700/60 rounded-xl text-center flex flex-col justify-between shadow-sm">
@@ -1766,7 +1796,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                                 onClick={() => handleRespecRemoveStat(st)}
                                 disabled={val <= raceBase}
                                 className="py-1.5 px-2 min-h-[36px] bg-slate-700/70 hover:bg-slate-600 active:scale-95 text-slate-200 rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-slate-600/50 flex items-center justify-center"
-                                title={`Diminuer ${info.label} (-1) et récupérer 1 point`}
+                                title={`-1 ${info.label}`}
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
@@ -1775,7 +1805,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                                 onClick={() => handleRespecAddStat(st)}
                                 disabled={respecBonusAvailable <= 0 || val >= 18}
                                 className="py-1.5 px-2 min-h-[36px] bg-amber-600/80 hover:bg-amber-500 active:scale-95 text-white rounded text-xs font-black disabled:opacity-20 disabled:pointer-events-none transition border border-amber-500/50 flex items-center justify-center shadow-sm"
-                                title={`Augmenter ${info.label} (+1) en dépensant 1 point`}
+                                title={`+1 ${info.label}`}
                               >
                                 <Plus className="w-3.5 h-3.5" />
                               </button>
@@ -1795,8 +1825,8 @@ export const CastleView: React.FC<CastleViewProps> = ({
         {currentTab === 'TAVERN' && (
           <div className="max-w-3xl mx-auto bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-6">
             <div>
-              <h2 className="text-lg font-serif font-bold text-white">Taverne de Gilgamesh</h2>
-              <p className="text-xs text-slate-400">Recrutez ou libérez des aventuriers pour former une équipe de 1 à 6 membres.</p>
+              <h2 className="text-lg font-serif font-bold text-white">{t.castle.tavernTitle}</h2>
+              <p className="text-xs text-slate-400">{t.castle.tavernSubtitle}</p>
             </div>
 
             <div className="space-y-3">
@@ -1813,21 +1843,21 @@ export const CastleView: React.FC<CastleViewProps> = ({
                             "{getCharacterChevrons(h)}"
                           </span>
                         )}
-                        <span>{h.name} · {h.race} {h.class} (Niv.{h.charLevel})</span>
+                        <span>{h.name} · {getHeroRaceName(h.race)} {getHeroClassName(h.class)} ({t.character.lvlShort}{h.charLevel})</span>
                         {isLostInDungeon && (
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-950/90 text-red-300 border border-red-700/60 flex items-center gap-1">
                             <Skull className="w-3 h-3 text-red-400" />
-                            Perdu dans le Donjon
+                            {t.castle.lostInDungeonBadge}
                           </span>
                         )}
                       </div>
                       <div className="text-slate-400">
                         {isLostInDungeon ? (
                           <span className="text-red-400/90 font-medium">
-                            Gît au Niveau {h.lostLocation?.level}, coordonnées ({h.lostLocation?.x}, {h.lostLocation?.y}) · Envoyez des secours !
+                            {t.castle.lostCoordinatesDesc(h.lostLocation?.level || 1, h.lostLocation?.x || 0, h.lostLocation?.y || 0)}
                           </span>
                         ) : (
-                          <span>Alignement : {h.align} · PV: {h.hpLeft}/{h.hpMax} · {h.gold} PO</span>
+                          <span>{t.castle.alignLabel} : {getHeroAlignName(h.align)} · {t.character.hpShort}: {h.hpLeft}/{h.hpMax} · {h.gold} {t.character.goldShort}</span>
                         )}
                       </div>
                     </div>
@@ -1838,18 +1868,18 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           sounds.playTurn();
                         }}
                         className="px-2.5 py-1 bg-slate-700 hover:bg-slate-600 text-cyan-300 hover:text-white rounded text-xs font-semibold transition flex items-center gap-1 border border-slate-600"
-                        title="Voir les caractéristiques FOR, INT, PIE, VIT, AGI, CHA"
+                        title={lang === 'fr' ? 'Voir la fiche complète' : 'View full character sheet'}
                       >
                         <User className="w-3 h-3" />
-                        Fiche
+                        {t.castle.sheetBtn}
                       </button>
 
                       {isLostInDungeon ? (
                         <div 
                           className="px-2.5 py-1 bg-red-950/40 border border-red-900/60 rounded text-[11px] text-red-400 font-semibold cursor-help"
-                          title="Ce héros est tombé au combat dans le dédale. Formez une escouade de secours pour rapporter sa dépouille !"
+                          title={lang === 'fr' ? 'Ce héros est tombé au combat. Envoyez une escouade le secourir !' : 'This hero fell in battle. Send a rescue squad to retrieve them!'}
                         >
-                          Corps perdu
+                          {t.castle.lostBodyNotice}
                         </div>
                       ) : isInActiveParty ? (
                         <button
@@ -1859,7 +1889,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           }}
                           className="px-3 py-1 bg-red-950/60 hover:bg-red-900 text-red-200 border border-red-700/50 rounded text-xs transition font-semibold"
                         >
-                          Retirer
+                          {t.castle.removeBtn}
                         </button>
                       ) : (h.status === 'DEAD' || h.status === 'ASHES') ? (
                         <button
@@ -1868,16 +1898,16 @@ export const CastleView: React.FC<CastleViewProps> = ({
                             sounds.playTurn();
                           }}
                           className="px-3 py-1 bg-amber-950/70 hover:bg-amber-900 text-amber-300 border border-amber-600/50 rounded text-xs font-semibold flex items-center gap-1 transition"
-                          title="Ce héros a péri. Rendez-vous au Temple de Cant pour invoquer une résurrection avant de pouvoir le recruter dans l'escouade !"
+                          title={lang === 'fr' ? 'Rendez-vous au Temple de Cant pour ressusciter ce héros.' : 'Go to the Temple of Cant to resurrect this hero.'}
                         >
                           <Cross className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Temple ({h.status === 'DEAD' ? 'Mort' : 'Cendres'})</span>
+                          <span>{t.castle.templeDeceasedBtn(h.status)}</span>
                         </button>
                       ) : (
                         <button
                           onClick={() => {
                             if (party.length >= 6) {
-                              setMessage('Le groupe est déjà au maximum de 6 aventuriers.');
+                              setMessage(t.castle.partyFullNotice);
                               return;
                             }
                             setParty([...party, h]);
@@ -1885,7 +1915,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                           }}
                           className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded text-xs transition"
                         >
-                          Recruter
+                          {t.castle.recruitBtn}
                         </button>
                       )}
                     </div>

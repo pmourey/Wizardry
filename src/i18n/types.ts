@@ -235,9 +235,250 @@ export interface VictoryTranslations {
   screenBody: string;
 }
 
+export interface CastleTranslations {
+  // Navigation & Header
+  courtyard: string;
+  inn: string;
+  tavern: string;
+  boltac: string;
+  temple: string;
+  training: string;
+  journal: string;
+  heroLabel: string;
+  sheetBtn: string;
+  poolGoldBtn: string;
+  poolGoldShort: string;
+  poolGoldTooltip: (gold: number, hero: string) => string;
+  poolGoldSuccess: (gold: number, hero: string) => string;
+  shareGoldBtn: string;
+  shareGoldShort: string;
+  shareGoldTooltip: string;
+  shareGoldSuccess: (share: number) => string;
+
+  // Courtyard
+  welcomeFallback: string;
+  descFallback: string;
+  innShortDesc: string;
+  boltacShortDesc: string;
+  templeShortDesc: string;
+  journalShortDesc: string;
+  partyCompositionTitle: (count: number) => string;
+  partyClickHint: string;
+  enterMazeBtn: string;
+  enterMazeDesc: string;
+  emptyPartyWarning: string;
+
+  // Tavern
+  tavernTitle: string;
+  tavernSubtitle: string;
+  recruitBtn: string;
+  removeBtn: string;
+  partyFullNotice: string;
+  lostInDungeonBadge: string;
+  lostCoordinatesDesc: (level: number, x: number, y: number) => string;
+  lostBodyNotice: string;
+  templeDeceasedBtn: (status: string) => string;
+
+  // Inn
+  innTitle: string;
+  innSubtitle: string;
+  sleepBtn: string;
+  rooms: {
+    stables: { name: string; desc: string };
+    cots: { name: string; desc: string };
+    economy: { name: string; desc: string };
+    merchant: { name: string; desc: string };
+    royal: { name: string; desc: string };
+  };
+  restNeedRest: string;
+  restNoExpNeeded: string;
+  restLevelUpSuccess: (name: string, newLevel: number, hpGained: number) => string;
+  restStatIncreased: (stat: string) => string;
+  restStatDecreased: (stat: string) => string;
+  restAgedYears: (name: string, years: number) => string;
+  restFinished: (name: string) => string;
+  restInsufficientGold: string;
+
+  // Boltac
+  boltacTitle: string;
+  boltacSubtitle: string;
+  poolAllGoldBtn: (hero: string) => string;
+  cursedWarningTitle: (hero: string) => string;
+  cursedWarningBody: string;
+  catalogTitle: string;
+  heroInventoryTitle: (hero: string) => string;
+  emptyInventory: string;
+  buyBtn: string;
+  sellBtn: string;
+  identifyBtn: (fee: number) => string;
+  uncurseBtn: (fee: number) => string;
+  uncurseTooltip: (fee: number) => string;
+  identifyTooltip: (fee: number) => string;
+  unidentBadge: string;
+  equippedBadge: string;
+  cursedBadge: string;
+  unusableBadge: string;
+  incompatibleBadge: string;
+  buySuccess: (item: string, price: number) => string;
+  buyFailGold: string;
+  buyFailInventory: string;
+  sellSuccess: (item: string, price: number) => string;
+  identifySuccess: (item: string) => string;
+  uncurseSuccess: (item: string) => string;
+  uncurseFailGold: string;
+  identifyFailGold: string;
+
+  // Temple of Cant
+  templeTitle: string;
+  templeSubtitle: string;
+  peacefulTitle: string;
+  peacefulDesc: string;
+  depositedAtTemple: string;
+  healthLabel: (hp: number, maxHp: number) => string;
+  goldLabel: (gold: number) => string;
+  resurrectBtn: (fee: number) => string;
+  cureParalysisBtn: (fee: number) => string;
+  cureStonedBtn: (fee: number) => string;
+  fullHealthNotice: string;
+  resurrectSuccess: (name: string) => string;
+  resurrectFailedAshes: (name: string) => string;
+  resurrectFailedLost: (name: string) => string;
+  cureParalysisSuccess: (name: string) => string;
+  cureStonedSuccess: (name: string) => string;
+  templeFailGold: string;
+
+  // Training Grounds
+  trainingTitle: string;
+  trainingSubtitle: string;
+  modeCreateHero: string;
+  modeRespecStats: string;
+  nameInputLabel: string;
+  namePlaceholder: string;
+  raceLabel: string;
+  alignLabel: string;
+  rollStatsBtn: string;
+  reserveLabel: string;
+  pointsRemaining: (remaining: number, total: number) => string;
+  rerollBtn: string;
+  rerollTooltip: string;
+  resetAllocationBtn: string;
+  resetAllocationTooltip: string;
+  createHeroBtn: string;
+  createHeroSuccess: (name: string, cls: string) => string;
+  deleteHeroBtn: string;
+  deleteConfirm: (name: string) => string;
+  cannotDeleteInParty: string;
+}
+
+export interface CharacterTranslations {
+  attributesTab: string;
+  inventoryTab: string;
+  spellsTab: string;
+  prevHeroTooltip: string;
+  nextHeroTooltip: string;
+  closeTooltip: string;
+
+  // Attributes
+  attributes: {
+    strength: { label: string; abbr: string; desc: string; effect: string };
+    iq: { label: string; abbr: string; desc: string; effect: string };
+    piety: { label: string; abbr: string; desc: string; effect: string };
+    vitality: { label: string; abbr: string; desc: string; effect: string };
+    agility: { label: string; abbr: string; desc: string; effect: string };
+    luck: { label: string; abbr: string; desc: string; effect: string };
+  };
+
+  // Statuses
+  statuses: {
+    ok: string;
+    afraid: string;
+    asleep: string;
+    paralyzed: string;
+    petrified: string;
+    dead: string;
+    ashes: string;
+    lost: string;
+  };
+
+  // Alignments
+  alignments: {
+    good: string;
+    neutral: string;
+    evil: string;
+  };
+
+  // Races
+  races: {
+    human: string;
+    elf: string;
+    dwarf: string;
+    gnome: string;
+    hobbit: string;
+  };
+
+  // Classes
+  classes: {
+    fighter: string;
+    mage: string;
+    priest: string;
+    thief: string;
+    bishop: string;
+    samurai: string;
+    lord: string;
+    ninja: string;
+  };
+
+  // Combat Stats
+  armorClass: string;
+  hitPoints: string;
+  damage: string;
+  attacks: string;
+  gold: string;
+  experience: string;
+  nextLevel: string;
+  level: string;
+  age: string;
+  years: string;
+  hpShort: string;
+  acShort: string;
+  goldShort: string;
+  lvlShort: string;
+
+  // Inventory actions & messages
+  equipBtn: string;
+  unequipBtn: string;
+  useBtn: string;
+  dropBtn: string;
+  bishopIdentifyBtn: string;
+  cursedCannotRemove: (name: string) => string;
+  equippedNotice: (name: string, ac: number, dmg: string) => string;
+  unequippedNotice: (name: string, ac: number, dmg: string) => string;
+  bishopSuccess: (bishop: string, item: string) => string;
+  bishopCurseFumble: (bishop: string, item: string) => string;
+  bishopFail: (bishop: string) => string;
+  dropConfirm: (item: string) => string;
+  dropSuccess: (item: string) => string;
+  consumableNotice: (item: string) => string;
+  notQualifiedNotice: (hero: string, cls: string, allowed: string) => string;
+
+  // Spells
+  mageSpellsTitle: string;
+  priestSpellsTitle: string;
+  spellLevel: (lvl: number) => string;
+  spellPoints: string;
+  noSpellsKnown: string;
+
+  // Awards
+  honorGuardTitle: string;
+  honorGuardDesc: string;
+  scenarioCompleted: (scenario: string) => string;
+}
+
 export interface LocaleSchema {
   common: CommonTranslations;
   journal: JournalTranslations;
   gameOver: GameOverTranslations;
   victory: VictoryTranslations;
+  castle: CastleTranslations;
+  character: CharacterTranslations;
 }

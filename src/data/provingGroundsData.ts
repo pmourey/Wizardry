@@ -1249,6 +1249,17 @@ export function formatDamageDice(d?: { level: number; hpFac: number; hpMinAdd: n
   return `${d.level}d${d.hpFac}${bonus}`;
 }
 
+export const CLASS_NAMES_EN: Record<TClass, string> = {
+  FIGHTER: 'Fighter',
+  MAGE: 'Mage',
+  PRIEST: 'Priest',
+  THIEF: 'Thief',
+  BISHOP: 'Bishop',
+  SAMURAI: 'Samurai',
+  LORD: 'Lord',
+  NINJA: 'Ninja'
+};
+
 export const CLASS_NAMES_FR: Record<TClass, string> = {
   FIGHTER: 'Guerrier',
   MAGE: 'Mage',
@@ -1286,12 +1297,12 @@ export function canClassUseItem(charClass?: TClass, itm?: TItem | null): boolean
 /**
  * Returns the list of human-readable class names that can use the item.
  */
-export function getUsableClassesList(itm?: TItem | null, useShort = false): string[] {
+export function getUsableClassesList(itm?: TItem | null, useShort = false, lang: 'fr' | 'en' = 'en'): string[] {
   if (!itm || !itm.classUse) return [];
   const classes: TClass[] = ['FIGHTER', 'MAGE', 'PRIEST', 'THIEF', 'BISHOP', 'SAMURAI', 'LORD', 'NINJA'];
   return classes
     .filter(c => itm.classUse[c])
-    .map(c => (useShort ? CLASS_SHORT_CODES[c] : CLASS_NAMES_FR[c]));
+    .map(c => (useShort ? CLASS_SHORT_CODES[c] : (lang === 'fr' ? CLASS_NAMES_FR[c] : CLASS_NAMES_EN[c])));
 }
 
 /**
@@ -1341,20 +1352,24 @@ export function isItemEquippable(itm?: TItem | null): boolean {
 /**
  * Checks if a specific hero can equip an item, verifying class proficiency and equippability.
  */
-export function canHeroEquipItem(hero: TCharacter, itm?: TItem | null): { canEquip: boolean; reason?: string } {
-  if (!itm) return { canEquip: false, reason: 'Objet introuvable.' };
+export function canHeroEquipItem(hero: TCharacter, itm?: TItem | null, lang: 'fr' | 'en' = 'en'): { canEquip: boolean; reason?: string } {
+  if (!itm) return { canEquip: false, reason: lang === 'fr' ? 'Objet introuvable.' : 'Item not found.' };
   if (!isItemEquippable(itm)) {
     return {
       canEquip: false,
-      reason: `${itm.name} est un objet consommable ou spécial qui ne peut pas être équipé comme une arme ou armure.`
+      reason: lang === 'fr'
+        ? `${itm.name} est un objet consommable ou spécial qui ne peut pas être équipé comme une arme ou armure.`
+        : `${itm.name} is a consumable or special item that cannot be equipped as armor or weapon.`
     };
   }
   if (!canClassUseItem(hero.class, itm)) {
-    const allowed = getUsableClassesList(itm).join(', ') || 'Aucune';
-    const heroClassName = CLASS_NAMES_FR[hero.class] || hero.class;
+    const allowed = getUsableClassesList(itm, false, lang).join(', ') || (lang === 'fr' ? 'Aucune' : 'None');
+    const heroClassName = lang === 'fr' ? (CLASS_NAMES_FR[hero.class] || hero.class) : (CLASS_NAMES_EN[hero.class] || hero.class);
     return {
       canEquip: false,
-      reason: `${hero.name} (${heroClassName}) n'est pas qualifié pour manier cet objet. Classes autorisées : ${allowed}.`
+      reason: lang === 'fr'
+        ? `${hero.name} (${heroClassName}) n'est pas qualifié pour manier cet objet. Classes autorisées : ${allowed}.`
+        : `${hero.name} (${heroClassName}) is not qualified to wield this item. Allowed classes: ${allowed}.`
     };
   }
   return { canEquip: true };
