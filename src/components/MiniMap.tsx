@@ -636,16 +636,16 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             if (!isValid || !isVisited) return null;
 
             const wallStroke = '#64748b';
-            const wallWidth = viewMode === 'radar' ? (variant === 'modal' ? 2.5 : 2.0) : 3.0;
-            const doorWidth = wallWidth + 1.5;
-            const aSize = cellSize > 20 ? 4.0 : 2.5;
+            const wallWidth = viewMode === 'radar' ? (variant === 'modal' ? 1.5 : 1.2) : 1.7;
+            const doorWidth = viewMode === 'radar' ? (variant === 'modal' ? 2.2 : 1.8) : 2.5;
+            const arrowLen = Math.max(3.5, cellSize * 0.35);
             const xMid = svgX + cellSize / 2;
             const yMid = svgY + cellSize / 2;
 
-            const isNorthSecretDiscovered = north === 'HIDEDOOR' && (isNorthVisited || revealAll);
-            const isSouthSecretDiscovered = south === 'HIDEDOOR' && (isSouthVisited || revealAll);
-            const isEastSecretDiscovered = east === 'HIDEDOOR' && (isEastVisited || revealAll);
-            const isWestSecretDiscovered = west === 'HIDEDOOR' && (isWestVisited || revealAll);
+            const isNorthSecretDiscovered = (north === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},0`]) && (isNorthVisited || revealAll || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},0`]);
+            const isSouthSecretDiscovered = (south === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},2`]) && (isSouthVisited || revealAll || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},2`]);
+            const isEastSecretDiscovered = (east === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},1`]) && (isEastVisited || revealAll || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},1`]);
+            const isWestSecretDiscovered = (west === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},3`]) && (isWestVisited || revealAll || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},3`]);
 
             return (
               <g key={`walls-${cell.cx}-${cell.cy}`}>
@@ -666,12 +666,19 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeDasharray={isNorthSecretDiscovered ? '2.5,2' : undefined}
                       strokeLinecap="round"
                     />
-                    {/* Directional arrow if one-way */}
+                    {/* Fine crossing directional arrow if one-way */}
                     {oppNorth === 'WALL' && (
-                      <polygon
-                        points={`${xMid},${svgY - aSize} ${xMid - aSize * 0.8},${svgY + aSize * 0.5} ${xMid + aSize * 0.8},${svgY + aSize * 0.5}`}
-                        fill={isNorthSecretDiscovered ? '#c084fc' : '#fbbf24'}
-                      />
+                      <g>
+                        <line x1={xMid} y1={svgY + arrowLen * 0.6} x2={xMid} y2={svgY - arrowLen * 0.7} stroke="#38bdf8" strokeWidth="1.1" strokeLinecap="round" />
+                        <polyline
+                          points={`${xMid - 2.2},${svgY - arrowLen * 0.7 + 2.2} ${xMid},${svgY - arrowLen * 0.7} ${xMid + 2.2},${svgY - arrowLen * 0.7 + 2.2}`}
+                          fill="none"
+                          stroke="#38bdf8"
+                          strokeWidth="1.1"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </g>
                     )}
                   </g>
                 ) : (north === 'WALL' || north === 'HIDEDOOR') ? (
@@ -702,10 +709,17 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeLinecap="round"
                     />
                     {oppSouth === 'WALL' && (
-                      <polygon
-                        points={`${xMid},${svgY + cellSize + aSize} ${xMid - aSize * 0.8},${svgY + cellSize - aSize * 0.5} ${xMid + aSize * 0.8},${svgY + cellSize - aSize * 0.5}`}
-                        fill={isSouthSecretDiscovered ? '#c084fc' : '#fbbf24'}
-                      />
+                      <g>
+                        <line x1={xMid} y1={svgY + cellSize - arrowLen * 0.6} x2={xMid} y2={svgY + cellSize + arrowLen * 0.7} stroke="#38bdf8" strokeWidth="1.1" strokeLinecap="round" />
+                        <polyline
+                          points={`${xMid - 2.2},${svgY + cellSize + arrowLen * 0.7 - 2.2} ${xMid},${svgY + cellSize + arrowLen * 0.7} ${xMid + 2.2},${svgY + cellSize + arrowLen * 0.7 - 2.2}`}
+                          fill="none"
+                          stroke="#38bdf8"
+                          strokeWidth="1.1"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </g>
                     )}
                   </g>
                 ) : (south === 'WALL' || south === 'HIDEDOOR') ? (
@@ -736,10 +750,17 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeLinecap="round"
                     />
                     {oppEast === 'WALL' && (
-                      <polygon
-                        points={`${svgX + cellSize + aSize},${yMid} ${svgX + cellSize - aSize * 0.5},${yMid - aSize * 0.8} ${svgX + cellSize - aSize * 0.5},${yMid + aSize * 0.8}`}
-                        fill={isEastSecretDiscovered ? '#c084fc' : '#fbbf24'}
-                      />
+                      <g>
+                        <line x1={svgX + cellSize - arrowLen * 0.6} y1={yMid} x2={svgX + cellSize + arrowLen * 0.7} stroke="#38bdf8" strokeWidth="1.1" strokeLinecap="round" />
+                        <polyline
+                          points={`${svgX + cellSize + arrowLen * 0.7 - 2.2},${yMid - 2.2} ${svgX + cellSize + arrowLen * 0.7},${yMid} ${svgX + cellSize + arrowLen * 0.7 - 2.2},${yMid + 2.2}`}
+                          fill="none"
+                          stroke="#38bdf8"
+                          strokeWidth="1.1"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </g>
                     )}
                   </g>
                 ) : (east === 'WALL' || east === 'HIDEDOOR') ? (
@@ -770,10 +791,17 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeLinecap="round"
                     />
                     {oppWest === 'WALL' && (
-                      <polygon
-                        points={`${svgX - aSize},${yMid} ${svgX + aSize * 0.5},${yMid - aSize * 0.8} ${svgX + aSize * 0.5},${yMid + aSize * 0.8}`}
-                        fill={isWestSecretDiscovered ? '#c084fc' : '#fbbf24'}
-                      />
+                      <g>
+                        <line x1={svgX + arrowLen * 0.6} y1={yMid} x2={svgX - arrowLen * 0.7} y2={yMid} stroke="#38bdf8" strokeWidth="1.1" strokeLinecap="round" />
+                        <polyline
+                          points={`${svgX - arrowLen * 0.7 + 2.2},${yMid - 2.2} ${svgX - arrowLen * 0.7},${yMid} ${svgX - arrowLen * 0.7 + 2.2},${yMid + 2.2}`}
+                          fill="none"
+                          stroke="#38bdf8"
+                          strokeWidth="1.1"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </g>
                     )}
                   </g>
                 ) : (west === 'WALL' || west === 'HIDEDOOR') ? (
@@ -859,20 +887,24 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       {showLegend && (
         <div className="mt-2 sm:mt-3 pt-2 border-t border-slate-800 text-[10px] sm:text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-slate-300">
           <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-1 bg-slate-400 rounded-sm inline-block" />
+            <span className="w-3.5 h-0.5 bg-slate-400 rounded-sm inline-block" />
             <span>Mur</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-1.5 bg-amber-400 rounded-sm inline-block shadow-sm" />
+            <span className="w-3.5 h-1 bg-amber-400 rounded-sm inline-block shadow-sm" />
             <span>Porte</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-1 border-t-2 border-dashed border-purple-400 inline-block" />
+            <span className="w-3.5 h-0.5 border-t-2 border-dashed border-purple-400 inline-block" />
             <span>Porte secrète</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-amber-400 font-bold text-xs">▲</span>
-            <span>Sens unique</span>
+            <svg width="14" height="10" viewBox="0 0 14 10" className="inline-block shrink-0">
+              <line x1="7" y1="1" x2="7" y2="9" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" />
+              <line x1="2" y1="5" x2="12" y2="5" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" />
+              <polyline points="9.5,2.5 12,5 9.5,7.5" fill="none" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>Porte 1-sens</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-emerald-400 font-bold">▲</span>

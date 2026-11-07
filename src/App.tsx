@@ -1068,6 +1068,46 @@ export default function App() {
     setDirection((direction + delta) % 4);
   };
 
+  const revealSecretDoor = (x: number, y: number, dir: number) => {
+    const dx = dir === 1 ? 1 : dir === 3 ? -1 : 0;
+    const dy = dir === 0 ? 1 : dir === 2 ? -1 : 0;
+    const nx = x + dx;
+    const ny = y + dy;
+    const oppDir = (dir + 2) % 4;
+
+    setMaze(prevMaze => {
+      const newN = prevMaze.n.map(col => [...col]);
+      const newE = prevMaze.e.map(col => [...col]);
+      const newS = prevMaze.s.map(col => [...col]);
+      const newW = prevMaze.w.map(col => [...col]);
+
+      const wallCols = [newN, newE, newS, newW];
+      wallCols[dir][x][y] = 'DOOR';
+
+      if (nx >= 0 && nx < 20 && ny >= 0 && ny < 20) {
+        const oppCols = [newN, newE, newS, newW];
+        oppCols[oppDir][nx][ny] = 'DOOR';
+      }
+
+      const key1 = `${x},${y},${dir}`;
+      const key2 = `${nx},${ny},${oppDir}`;
+      const updatedSecrets = {
+        ...(prevMaze.discoveredSecrets || {}),
+        [key1]: true,
+        [key2]: true
+      };
+
+      return {
+        ...prevMaze,
+        n: newN,
+        e: newE,
+        s: newS,
+        w: newW,
+        discoveredSecrets: updatedSecrets
+      };
+    });
+  };
+
   const handleKickDoor = () => {
     const wall = [maze.n, maze.e, maze.s, maze.w][direction][posX][posY];
     const dx = direction === 1 ? 1 : direction === 3 ? -1 : 0;
@@ -1081,7 +1121,7 @@ export default function App() {
       if (oppWall === 'DOOR' || oppWall === 'HIDEDOOR') {
         sounds.playBump();
         announce(
-          "Passage bloqué",
+          "Passage à sens unique",
           [
             "Vous tentez d'enfoncer la porte, mais elle résiste comme un mur d'acier massif.",
             "Cette porte ne s'ouvre que depuis l'autre côté (passage à sens unique)."
@@ -1099,6 +1139,25 @@ export default function App() {
       sounds.playBump();
       return;
     }
+
+    // If kicking a secret door, reveal it permanently and move through
+    if (wall === 'HIDEDOOR') {
+      revealSecretDoor(posX, posY, direction);
+      sounds.playDoor();
+      announce(
+        "Porte secrète enfoncée !",
+        [
+          "D'un coup vigoureux, vous forcez le panneau secret camouflé dans la pierre !",
+          "La porte dérobée cède : le passage restera désormais ouvert et praticable pour le groupe."
+        ],
+        undefined,
+        posX,
+        posY
+      );
+      handleMove(dx, dy, true);
+      return;
+    }
+
     sounds.playDoor();
     handleMove(
       dx,
@@ -1643,17 +1702,59 @@ export default function App() {
       : 'WALL';
 
     if (facingWall === 'HIDEDOOR') {
-      announce(
-        "Porte secrète détectée !",
-        [
-          "En tâtant attentivement les blocs de pierre, vos doigts trouvent un interstice dissimulé.",
-          "Une porte secrète est camouflée dans cette paroi !",
-          "Pour l'ouvrir, appuyez sur la touche Enfoncer (K) ou avancez vers elle."
-        ],
-        undefined,
-        posX,
-        posY
-      );
+      // Authentic Wizardry detection check
+      const activeParty = party.filter(c => c.status === 'OK');
+      let detectChance = 50; // base 50%
+      const scout = activeParty.find(c => c.class === 'THIEF' || c.class === 'NINJA');
+      if (scout?.class === 'THIEF') detectChance += 35;
+      else if (scout?.class === 'NINJA') detectChance += 25;
+      else if (activeParty.some(c => c.class === 'BISHOP')) detectChance += 15;
+
+      // Light spell bonus (Milwa / Lomilwa)
+      if (lightLevel > 0) detectChance += 30;
+
+      // Scout agility bonus
+      const maxAgil = Math.max(...activeParty.map(c => c.attrib.AGILITY || 8), 8);
+      detectChance += (maxAgil - 8) * 2;
+      detectChance = Math.min(100, Math.max(25, detectChance));
+
+      const roll = Math.random() * 100;
+      if (roll < detectChance) {
+        revealSecretDoor(posX, posY, direction);
+        sounds.playDoor();
+        const scoutName = scout ? scout.name : 'Le groupe';
+        announce(
+          "Porte secrète découverte !",
+          [
+            `${scoutName} examine attentivement les blocs de pierre et décèle un interstice dissimulé.`,
+            "Un panneau secret pivote doucement et le passage est désormais ouvert !",
+            "Vous pouvez à présent franchir cette porte librement (en avançant normalement)."
+          ],
+          undefined,
+          posX,
+          posY
+        );
+        addAdventureEvent(
+          'DISCOVERY',
+          'Porte secrète découverte',
+          `Une porte dérobée a été trouvée en (${posX}, ${posY}) par ${scoutName}. Le passage reste désormais ouvert et praticable.`,
+          undefined,
+          dungeonLevel,
+          { x: posX, y: posY }
+        );
+      } else {
+        sounds.playBump();
+        announce(
+          "Inspection de la paroi",
+          [
+            "Vous tâtez attentivement la surface de la roche à la recherche d'une aspérité ou d'une fente.",
+            "La paroi semble solide et aucun mécanisme n'apparaît pour l'instant."
+          ],
+          undefined,
+          posX,
+          posY
+        );
+      }
       return;
     }
 
@@ -1953,6 +2054,7 @@ export default function App() {
             onMove={handleMove}
             onRotate={handleRotate}
             onKickDoor={handleKickDoor}
+            onRevealSecretDoor={revealSecretDoor}
             onInspectArea={handleInspectArea}
             onReturnToCastle={handleReturnPartyToCastle}
             onTakeStairs={handleTakeStairs}

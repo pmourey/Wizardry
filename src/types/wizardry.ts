@@ -220,6 +220,7 @@ export interface TMazeFloor {
     percWorse: number;
   }>;
   events?: TMazeEvent[]; // decoded special squares (stairs, teleporters, messages, fixed fights...)
+  discoveredSecrets?: Record<string, boolean>; // discovered secret doors by key "x,y,dir"
 }
 
 export type TSpecialKind =

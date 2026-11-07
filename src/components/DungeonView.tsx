@@ -89,6 +89,7 @@ interface DungeonViewProps {
   onMove: (dx: number, dy: number, isDoor: boolean) => void;
   onRotate: (deltaDir: number) => void;
   onKickDoor: () => void;
+  onRevealSecretDoor?: (x: number, y: number, dir: number) => void;
   onInspectArea: () => void;
   onReturnToCastle: () => void;
   onTakeStairs?: (targetLevel: number, targetX: number, targetY: number) => void;
@@ -116,6 +117,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   onMove,
   onRotate,
   onKickDoor,
+  onRevealSecretDoor,
   onInspectArea,
   onReturnToCastle,
   onTakeStairs,
@@ -302,6 +304,9 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
     const canPass = wall === 'OPEN' || wall === 'DOOR' || (isKick && wall === 'HIDEDOOR');
     if (canPass) {
+      if (wall === 'HIDEDOOR' && isKick && onRevealSecretDoor) {
+        onRevealSecretDoor(x, y, direction);
+      }
       if (wall === 'DOOR' || wall === 'HIDEDOOR') {
         sounds.playDoor();
       } else {
