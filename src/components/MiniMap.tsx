@@ -636,62 +636,45 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             if (!isValid || !isVisited) return null;
 
             const wallStroke = '#64748b';
-            const wallWidth = viewMode === 'radar' ? 2.5 : 1.5;
-            const aSize = cellSize > 20 ? 3.5 : 2.2;
+            const wallWidth = viewMode === 'radar' ? (variant === 'modal' ? 2.5 : 2.0) : 3.0;
+            const doorWidth = wallWidth + 1.5;
+            const aSize = cellSize > 20 ? 4.0 : 2.5;
             const xMid = svgX + cellSize / 2;
             const yMid = svgY + cellSize / 2;
+
+            const isNorthSecretDiscovered = north === 'HIDEDOOR' && (isNorthVisited || revealAll);
+            const isSouthSecretDiscovered = south === 'HIDEDOOR' && (isSouthVisited || revealAll);
+            const isEastSecretDiscovered = east === 'HIDEDOOR' && (isEastVisited || revealAll);
+            const isWestSecretDiscovered = west === 'HIDEDOOR' && (isWestVisited || revealAll);
 
             return (
               <g key={`walls-${cell.cx}-${cell.cy}`}>
                 {/* North Wall / Door */}
-                {(north === 'DOOR' || (north === 'HIDEDOOR' && revealAll)) ? (
+                {(north === 'DOOR' || isNorthSecretDiscovered) ? (
                   <g>
                     {/* Door posts */}
-                    <line x1={svgX} y1={svgY} x2={svgX + cellSize * 0.25} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize * 0.75} y1={svgY} x2={svgX + cellSize} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
-                    {/* Door center marker */}
+                    <line x1={svgX} y1={svgY} x2={svgX + cellSize * 0.2} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize * 0.8} y1={svgY} x2={svgX + cellSize} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
+                    {/* Door bar */}
                     <line
-                      x1={svgX + cellSize * 0.25}
+                      x1={svgX + cellSize * 0.2}
                       y1={svgY}
-                      x2={svgX + cellSize * 0.75}
+                      x2={svgX + cellSize * 0.8}
                       y2={svgY}
-                      stroke={north === 'HIDEDOOR' ? '#c084fc' : (oppNorth === 'WALL' ? '#fbbf24' : '#f59e0b')}
-                      strokeWidth={wallWidth + 1}
-                      strokeDasharray={north === 'HIDEDOOR' ? '2,2' : undefined}
+                      stroke={isNorthSecretDiscovered ? '#c084fc' : '#f59e0b'}
+                      strokeWidth={doorWidth}
+                      strokeDasharray={isNorthSecretDiscovered ? '2.5,2' : undefined}
+                      strokeLinecap="round"
                     />
                     {/* Directional arrow if one-way */}
                     {oppNorth === 'WALL' && (
                       <polygon
-                        points={`${xMid},${svgY - aSize} ${xMid - aSize * 0.8},${svgY + aSize * 0.6} ${xMid + aSize * 0.8},${svgY + aSize * 0.6}`}
-                        fill={north === 'HIDEDOOR' ? '#c084fc' : '#fbbf24'}
+                        points={`${xMid},${svgY - aSize} ${xMid - aSize * 0.8},${svgY + aSize * 0.5} ${xMid + aSize * 0.8},${svgY + aSize * 0.5}`}
+                        fill={isNorthSecretDiscovered ? '#c084fc' : '#fbbf24'}
                       />
                     )}
                   </g>
-                ) : north === 'WALL' && (oppNorth === 'DOOR' || (oppNorth === 'HIDEDOOR' && revealAll)) ? (
-                  /* Blocked side of one-way door: continuous solid wall + red blocked accent if opposite is known */
-                  <g>
-                    <line
-                      x1={svgX}
-                      y1={svgY}
-                      x2={svgX + cellSize}
-                      y2={svgY}
-                      stroke={wallStroke}
-                      strokeWidth={wallWidth}
-                      strokeLinecap="square"
-                    />
-                    {(isNorthVisited || revealAll) && (
-                      <line
-                        x1={xMid - cellSize * 0.2}
-                        y1={svgY}
-                        x2={xMid + cellSize * 0.2}
-                        y2={svgY}
-                        stroke="#ef4444"
-                        strokeWidth={wallWidth + 1.2}
-                        strokeLinecap="round"
-                      />
-                    )}
-                  </g>
-                ) : north === 'WALL' ? (
+                ) : (north === 'WALL' || north === 'HIDEDOOR') ? (
                   <line
                     x1={svgX}
                     y1={svgY}
@@ -704,50 +687,28 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 ) : null}
 
                 {/* South Wall / Door */}
-                {(south === 'DOOR' || (south === 'HIDEDOOR' && revealAll)) ? (
+                {(south === 'DOOR' || isSouthSecretDiscovered) ? (
                   <g>
-                    <line x1={svgX} y1={svgY + cellSize} x2={svgX + cellSize * 0.25} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize * 0.75} y1={svgY + cellSize} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX} y1={svgY + cellSize} x2={svgX + cellSize * 0.2} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize * 0.8} y1={svgY + cellSize} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
                     <line
-                      x1={svgX + cellSize * 0.25}
+                      x1={svgX + cellSize * 0.2}
                       y1={svgY + cellSize}
-                      x2={svgX + cellSize * 0.75}
+                      x2={svgX + cellSize * 0.8}
                       y2={svgY + cellSize}
-                      stroke={south === 'HIDEDOOR' ? '#c084fc' : (oppSouth === 'WALL' ? '#fbbf24' : '#f59e0b')}
-                      strokeWidth={wallWidth + 1}
-                      strokeDasharray={south === 'HIDEDOOR' ? '2,2' : undefined}
+                      stroke={isSouthSecretDiscovered ? '#c084fc' : '#f59e0b'}
+                      strokeWidth={doorWidth}
+                      strokeDasharray={isSouthSecretDiscovered ? '2.5,2' : undefined}
+                      strokeLinecap="round"
                     />
                     {oppSouth === 'WALL' && (
                       <polygon
-                        points={`${xMid},${svgY + cellSize + aSize} ${xMid - aSize},${svgY + cellSize - aSize * 0.8} ${xMid + aSize},${svgY + cellSize - aSize * 0.8}`}
-                        fill={south === 'HIDEDOOR' ? '#c084fc' : '#fbbf24'}
+                        points={`${xMid},${svgY + cellSize + aSize} ${xMid - aSize * 0.8},${svgY + cellSize - aSize * 0.5} ${xMid + aSize * 0.8},${svgY + cellSize - aSize * 0.5}`}
+                        fill={isSouthSecretDiscovered ? '#c084fc' : '#fbbf24'}
                       />
                     )}
                   </g>
-                ) : south === 'WALL' && (oppSouth === 'DOOR' || (oppSouth === 'HIDEDOOR' && revealAll)) ? (
-                  <g>
-                    <line
-                      x1={svgX}
-                      y1={svgY + cellSize}
-                      x2={svgX + cellSize}
-                      y2={svgY + cellSize}
-                      stroke={wallStroke}
-                      strokeWidth={wallWidth}
-                      strokeLinecap="square"
-                    />
-                    {(isSouthVisited || revealAll) && (
-                      <line
-                        x1={xMid - cellSize * 0.2}
-                        y1={svgY + cellSize}
-                        x2={xMid + cellSize * 0.2}
-                        y2={svgY + cellSize}
-                        stroke="#ef4444"
-                        strokeWidth={wallWidth + 1.2}
-                        strokeLinecap="round"
-                      />
-                    )}
-                  </g>
-                ) : south === 'WALL' ? (
+                ) : (south === 'WALL' || south === 'HIDEDOOR') ? (
                   <line
                     x1={svgX}
                     y1={svgY + cellSize}
@@ -760,50 +721,28 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 ) : null}
 
                 {/* East Wall / Door */}
-                {(east === 'DOOR' || (east === 'HIDEDOOR' && revealAll)) ? (
+                {(east === 'DOOR' || isEastSecretDiscovered) ? (
                   <g>
-                    <line x1={svgX + cellSize} y1={svgY} x2={svgX + cellSize} y2={svgY + cellSize * 0.25} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize} y1={svgY + cellSize * 0.75} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize} y1={svgY} x2={svgX + cellSize} y2={svgY + cellSize * 0.2} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize} y1={svgY + cellSize * 0.8} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
                     <line
                       x1={svgX + cellSize}
-                      y1={svgY + cellSize * 0.25}
+                      y1={svgY + cellSize * 0.2}
                       x2={svgX + cellSize}
-                      y2={svgY + cellSize * 0.75}
-                      stroke={east === 'HIDEDOOR' ? '#c084fc' : (oppEast === 'WALL' ? '#fbbf24' : '#f59e0b')}
-                      strokeWidth={wallWidth + 1}
-                      strokeDasharray={east === 'HIDEDOOR' ? '2,2' : undefined}
+                      y2={svgY + cellSize * 0.8}
+                      stroke={isEastSecretDiscovered ? '#c084fc' : '#f59e0b'}
+                      strokeWidth={doorWidth}
+                      strokeDasharray={isEastSecretDiscovered ? '2.5,2' : undefined}
+                      strokeLinecap="round"
                     />
                     {oppEast === 'WALL' && (
                       <polygon
-                        points={`${svgX + cellSize + aSize},${yMid} ${svgX + cellSize - aSize * 0.8},${yMid - aSize} ${svgX + cellSize - aSize * 0.8},${yMid + aSize}`}
-                        fill={east === 'HIDEDOOR' ? '#c084fc' : '#fbbf24'}
+                        points={`${svgX + cellSize + aSize},${yMid} ${svgX + cellSize - aSize * 0.5},${yMid - aSize * 0.8} ${svgX + cellSize - aSize * 0.5},${yMid + aSize * 0.8}`}
+                        fill={isEastSecretDiscovered ? '#c084fc' : '#fbbf24'}
                       />
                     )}
                   </g>
-                ) : east === 'WALL' && (oppEast === 'DOOR' || (oppEast === 'HIDEDOOR' && revealAll)) ? (
-                  <g>
-                    <line
-                      x1={svgX + cellSize}
-                      y1={svgY}
-                      x2={svgX + cellSize}
-                      y2={svgY + cellSize}
-                      stroke={wallStroke}
-                      strokeWidth={wallWidth}
-                      strokeLinecap="square"
-                    />
-                    {(isEastVisited || revealAll) && (
-                      <line
-                        x1={svgX + cellSize}
-                        y1={yMid - cellSize * 0.2}
-                        x2={svgX + cellSize}
-                        y2={yMid + cellSize * 0.2}
-                        stroke="#ef4444"
-                        strokeWidth={wallWidth + 1.2}
-                        strokeLinecap="round"
-                      />
-                    )}
-                  </g>
-                ) : east === 'WALL' ? (
+                ) : (east === 'WALL' || east === 'HIDEDOOR') ? (
                   <line
                     x1={svgX + cellSize}
                     y1={svgY}
@@ -816,50 +755,28 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 ) : null}
 
                 {/* West Wall / Door */}
-                {(west === 'DOOR' || (west === 'HIDEDOOR' && revealAll)) ? (
+                {(west === 'DOOR' || isWestSecretDiscovered) ? (
                   <g>
-                    <line x1={svgX} y1={svgY} x2={svgX} y2={svgY + cellSize * 0.25} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX} y1={svgY + cellSize * 0.75} x2={svgX} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX} y1={svgY} x2={svgX} y2={svgY + cellSize * 0.2} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX} y1={svgY + cellSize * 0.8} x2={svgX} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
                     <line
                       x1={svgX}
-                      y1={svgY + cellSize * 0.25}
+                      y1={svgY + cellSize * 0.2}
                       x2={svgX}
-                      y2={svgY + cellSize * 0.75}
-                      stroke={west === 'HIDEDOOR' ? '#c084fc' : (oppWest === 'WALL' ? '#fbbf24' : '#f59e0b')}
-                      strokeWidth={wallWidth + 1}
-                      strokeDasharray={west === 'HIDEDOOR' ? '2,2' : undefined}
+                      y2={svgY + cellSize * 0.8}
+                      stroke={isWestSecretDiscovered ? '#c084fc' : '#f59e0b'}
+                      strokeWidth={doorWidth}
+                      strokeDasharray={isWestSecretDiscovered ? '2.5,2' : undefined}
+                      strokeLinecap="round"
                     />
                     {oppWest === 'WALL' && (
                       <polygon
-                        points={`${svgX - aSize},${yMid} ${svgX + aSize * 0.8},${yMid - aSize} ${svgX + aSize * 0.8},${yMid + aSize}`}
-                        fill={west === 'HIDEDOOR' ? '#c084fc' : '#fbbf24'}
+                        points={`${svgX - aSize},${yMid} ${svgX + aSize * 0.5},${yMid - aSize * 0.8} ${svgX + aSize * 0.5},${yMid + aSize * 0.8}`}
+                        fill={isWestSecretDiscovered ? '#c084fc' : '#fbbf24'}
                       />
                     )}
                   </g>
-                ) : west === 'WALL' && (oppWest === 'DOOR' || (oppWest === 'HIDEDOOR' && revealAll)) ? (
-                  <g>
-                    <line
-                      x1={svgX}
-                      y1={svgY}
-                      x2={svgX}
-                      y2={svgY + cellSize}
-                      stroke={wallStroke}
-                      strokeWidth={wallWidth}
-                      strokeLinecap="square"
-                    />
-                    {(isWestVisited || revealAll) && (
-                      <line
-                        x1={svgX}
-                        y1={yMid - cellSize * 0.2}
-                        x2={svgX}
-                        y2={yMid + cellSize * 0.2}
-                        stroke="#ef4444"
-                        strokeWidth={wallWidth + 1.2}
-                        strokeLinecap="round"
-                      />
-                    )}
-                  </g>
-                ) : west === 'WALL' ? (
+                ) : (west === 'WALL' || west === 'HIDEDOOR') ? (
                   <line
                     x1={svgX}
                     y1={svgY}
@@ -942,24 +859,20 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       {showLegend && (
         <div className="mt-2 sm:mt-3 pt-2 border-t border-slate-800 text-[10px] sm:text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-slate-300">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-1 bg-slate-400 rounded-sm inline-block" />
-            <span>Mur plein</span>
+            <span className="w-3.5 h-1 bg-slate-400 rounded-sm inline-block" />
+            <span>Mur</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-1 bg-amber-500 rounded-sm inline-block" />
+            <span className="w-3.5 h-1.5 bg-amber-400 rounded-sm inline-block shadow-sm" />
             <span>Porte</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-1 bg-amber-500 inline-flex items-center justify-end text-[7px] text-amber-950 font-bold pr-0.5">►</span>
-            <span>Porte 1-sens</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-1 bg-slate-400 border-t-2 border-red-500 inline-block" />
-            <span>Sens interdit ⛔</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-1 border-t-2 border-dashed border-purple-400 inline-block" />
+            <span className="w-3.5 h-1 border-t-2 border-dashed border-purple-400 inline-block" />
             <span>Porte secrète</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-amber-400 font-bold text-xs">▲</span>
+            <span>Sens unique</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-emerald-400 font-bold">▲</span>

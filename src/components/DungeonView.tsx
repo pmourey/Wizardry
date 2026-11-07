@@ -329,7 +329,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           if (onAddAdventureEvent) {
             onAddAdventureEvent(
               'DISCOVERY',
-              'Passage à sens unique (sens interdit)',
+              'Passage à sens unique',
               `La paroi en (${x}, ${y}) est un mur plein : ce passage ne s'ouvre que depuis l'autre côté (${nx}, ${ny}).`,
               undefined,
               maze.level,

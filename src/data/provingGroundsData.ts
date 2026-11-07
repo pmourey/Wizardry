@@ -1484,15 +1484,26 @@ export function getMazeForFloor(level: number, scenarioId?: string): TMazeFloor 
   const eWalls = walls(raw.e);
   const nWalls = walls(raw.n);
 
-  // Harmonize internal shared walls where one side had a wall/door/secret door and the other was OPEN
-  // (Fixes raw dump gaps like (10,0) E=WALL vs (11,0) W=OPEN, (19,0) N=WALL vs (19,1) S=OPEN, etc.)
-  // Note: Authentic one-way doors (DOOR vs WALL) and one-way secret doors (HIDEDOOR vs WALL) are preserved!
+  // Harmonize internal shared walls between adjacent cells
+  // Repairs raw Apple II data dump asymmetries where a door or secret door was defined on only one side:
+  // - If one side is DOOR and the other is WALL -> both become DOOR (e.g. Lvl 3 (10,11) & (9,11), Lvl 1 (0,17))
+  // - If one side is HIDEDOOR and the other is WALL -> both become HIDEDOOR (e.g. Lvl 1 (0,13), (15,4), (12,2)-(15,2))
+  // - If one side is an obstacle (WALL/DOOR/HIDEDOOR) and the other was left OPEN -> harmonize boundary
   for (let x = 0; x < 20; x++) {
     for (let y = 0; y < 19; y++) {
       const n = nWalls[x][y];
       const s = sWalls[x][y + 1];
-      if (n !== 'OPEN' && s === 'OPEN') sWalls[x][y + 1] = 'WALL';
-      if (n === 'OPEN' && s !== 'OPEN') nWalls[x][y] = 'WALL';
+      if ((n === 'DOOR' && s === 'WALL') || (s === 'DOOR' && n === 'WALL')) {
+        nWalls[x][y] = 'DOOR';
+        sWalls[x][y + 1] = 'DOOR';
+      } else if ((n === 'HIDEDOOR' && s === 'WALL') || (s === 'HIDEDOOR' && n === 'WALL')) {
+        nWalls[x][y] = 'HIDEDOOR';
+        sWalls[x][y + 1] = 'HIDEDOOR';
+      } else if (n !== 'OPEN' && s === 'OPEN') {
+        sWalls[x][y + 1] = n;
+      } else if (n === 'OPEN' && s !== 'OPEN') {
+        nWalls[x][y] = s;
+      }
     }
   }
 
@@ -1500,8 +1511,17 @@ export function getMazeForFloor(level: number, scenarioId?: string): TMazeFloor 
     for (let y = 0; y < 20; y++) {
       const e = eWalls[x][y];
       const w = wWalls[x + 1][y];
-      if (e !== 'OPEN' && w === 'OPEN') wWalls[x + 1][y] = 'WALL';
-      if (e === 'OPEN' && w !== 'OPEN') eWalls[x][y] = 'WALL';
+      if ((e === 'DOOR' && w === 'WALL') || (w === 'DOOR' && e === 'WALL')) {
+        eWalls[x][y] = 'DOOR';
+        wWalls[x + 1][y] = 'DOOR';
+      } else if ((e === 'HIDEDOOR' && w === 'WALL') || (w === 'HIDEDOOR' && e === 'WALL')) {
+        eWalls[x][y] = 'HIDEDOOR';
+        wWalls[x + 1][y] = 'HIDEDOOR';
+      } else if (e !== 'OPEN' && w === 'OPEN') {
+        wWalls[x + 1][y] = e;
+      } else if (e === 'OPEN' && w !== 'OPEN') {
+        eWalls[x][y] = w;
+      }
     }
   }
 
