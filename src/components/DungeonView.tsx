@@ -775,11 +775,6 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       const ty = y + dn;
       const tl = maze.level + dl;
       setParty([...party]);
-      const maxL = getActiveMaxFloors();
-      if (tl < 0 || tl > maxL || tx < 0 || tx > 19 || ty < 0 || ty > 19) {
-        setCampMessage('MALOR : le sort échoue.');
-        return;
-      }
       setShowCamp(false);
       onTakeStairs?.(tl, tx, ty);
       return;

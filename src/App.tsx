@@ -15,6 +15,7 @@ import {
   DEFAULT_PARTY, 
   generateLevel1Maze, 
   getMazeForFloor,
+  getActiveMaxFloors,
   getActiveScenarioEventItemIds,
   MONSTERS_DATABASE,
   ITEMS_DATABASE,
@@ -191,7 +192,7 @@ interface TDungeonSession {
   combatGroups?: CombatGroup[];
   combatSurprise?: 'PARTY' | 'MONSTERS' | 'NONE';
   chestReward?: ChestReward | null;
-  lastWipeoutInfo?: { x: number; y: number; level: number; heroes: string[] } | null;
+  lastWipeoutInfo?: { x: number; y: number; level: number; heroes: string[]; reason?: 'COMBAT' | 'ROCK' | 'POISON' } | null;
 }
 
 export default function App() {
@@ -357,7 +358,7 @@ export default function App() {
   const [manualsScenarioTarget, setManualsScenarioTarget] = useState<string | undefined>(undefined);
   const [soundOn, setSoundOn] = useState<boolean>(true);
   const [musicOn, setMusicOn] = useState<boolean>(() => music.isEnabled());
-  const [lastWipeoutInfo, setLastWipeoutInfo] = useState<{ x: number; y: number; level: number; heroes: string[] } | null>(
+  const [lastWipeoutInfo, setLastWipeoutInfo] = useState<{ x: number; y: number; level: number; heroes: string[]; reason?: 'COMBAT' | 'ROCK' | 'POISON' } | null>(
     () => savedSession?.lastWipeoutInfo || null
   );
 
@@ -966,6 +967,17 @@ export default function App() {
       }
     }
 
+    // Check if target tile is solid rock (ROCKWATE)
+    const isRockTile = sqrDef?.type === 'ROCKWATE' || 
+                       maze.events?.some(e => e.x === newX && e.y === newY && e.type === 'ROCKWATE');
+    if (isRockTile) {
+      sounds.playBump();
+      setPosX(newX);
+      setPosY(newY);
+      handlePartyWipedOut(party, newX, newY, dungeonLevel, 'ROCK');
+      return;
+    }
+
     if (sqrDef) {
       if (sqrDef.type === 'DARK') {
         // Authentic Wizardry (P010E15 VERYDARK): entering darkness instantly extinguishes light spells and torches
@@ -1018,6 +1030,15 @@ export default function App() {
         sounds.playSpellCast();
         if (sqrDef.aux0 !== dungeonLevel && sqrDef.aux0 >= 0) {
           handleTakeStairs(sqrDef.aux0, sqrDef.aux2, sqrDef.aux1);
+          return;
+        }
+        const destCode = maze.sqrExtra?.[sqrDef.aux2]?.[sqrDef.aux1];
+        const destDef = destCode !== undefined ? maze.extraDefs?.[destCode] : undefined;
+        const destIsRock = destDef?.type === 'ROCKWATE' || maze.events?.some(ev => ev.x === sqrDef.aux2 && ev.y === sqrDef.aux1 && ev.type === 'ROCKWATE');
+        if (destIsRock) {
+          setPosX(sqrDef.aux2);
+          setPosY(sqrDef.aux1);
+          handlePartyWipedOut(party, sqrDef.aux2, sqrDef.aux1, dungeonLevel, 'ROCK');
           return;
         }
         setPosX(sqrDef.aux2);
@@ -1224,11 +1245,17 @@ export default function App() {
     setLocation('COMBAT');
   };
 
-  const handlePartyWipedOut = (fallenParty: TCharacter[], wipeX: number, wipeY: number, wipeLevel: number) => {
+  const handlePartyWipedOut = (
+    fallenParty: TCharacter[], 
+    wipeX: number, 
+    wipeY: number, 
+    wipeLevel: number,
+    reason: 'COMBAT' | 'ROCK' | 'POISON' = 'COMBAT'
+  ) => {
     sounds.playBell();
     const deadHeroes: TCharacter[] = fallenParty.map(h => ({
       ...h,
-      status: (h.status === 'ASHES' ? 'ASHES' : 'DEAD') as 'DEAD' | 'ASHES',
+      status: (h.status === 'ASHES' ? 'ASHES' : (reason === 'ROCK' ? 'ASHES' : 'DEAD')) as 'DEAD' | 'ASHES',
       hpLeft: 0,
       lostLocation: { x: wipeX, y: wipeY, level: wipeLevel },
       inMaze: false
@@ -1244,13 +1271,20 @@ export default function App() {
       x: wipeX,
       y: wipeY,
       level: wipeLevel,
-      heroes: deadHeroes.map(h => h.name)
+      heroes: deadHeroes.map(h => h.name),
+      reason
     });
 
     addAdventureEvent(
       'LOSS',
-      "Décimation complète de l'escouade au combat",
-      `Tous vos aventuriers ont succombé. Leurs corps sans vie gisent dans les ténèbres du donjon.`,
+      reason === 'ROCK'
+        ? "VOUS VOUS ÊTES TÉLÉPORTÉ DANS LA ROCHE SOLIDE !"
+        : (reason === 'POISON' ? "Hécatombe causée par le poison" : "Décimation complète de l'escouade au combat"),
+      reason === 'ROCK'
+        ? "YOU HAVE TELEPORTED INTO SOLID ROCK! L'escouade entière a été instantanément broyée et anéantie dans la pierre compacte. Il n'y a aucun survivant ! (OOPS!)"
+        : (reason === 'POISON'
+            ? "Le venin a insidieusement drainé les dernières forces de l'escouade. Tous vos héros se sont effondrés."
+            : "Tous vos aventuriers ont succombé. Leurs corps sans vie gisent dans les ténèbres du donjon."),
       `Victimes : ${deadHeroes.map(h => h.name).join(', ')} · Lieu : Niveau ${wipeLevel}, position (${wipeX}, ${wipeY})`,
       wipeLevel,
       { x: wipeX, y: wipeY }
@@ -1588,6 +1622,14 @@ export default function App() {
       return;
     }
 
+    const maxL = getActiveMaxFloors(activeScenarioId);
+    // Out of bounds check: if target floor or coordinates are outside dungeon bounds, it's solid rock!
+    if (targetLevel < 0 || targetLevel > maxL || targetX < 0 || targetX > 19 || targetY < 0 || targetY > 19) {
+      sounds.playBump();
+      handlePartyWipedOut(party, targetX, targetY, targetLevel, 'ROCK');
+      return;
+    }
+
     sounds.playFootstep();
 
     // Preserve visited tiles for current floor
@@ -1602,14 +1644,19 @@ export default function App() {
     let finalX = targetX;
     let finalY = targetY;
 
-    // Safety check: if target destination is walled in, find the real stairs on targetMaze connecting back to dungeonLevel
+    // Check if target square is solid rock (ROCKWATE) or completely walled in
+    const sqrCode = targetMaze.sqrExtra?.[finalX]?.[finalY];
+    const sqrDef = sqrCode !== undefined ? targetMaze.extraDefs?.[sqrCode] : undefined;
+    const isRockTile = sqrDef?.type === 'ROCKWATE' || 
+                       targetMaze.events?.some(e => e.x === finalX && e.y === finalY && e.type === 'ROCKWATE');
+
     const isWalledIn = targetMaze.w[finalX]?.[finalY] === 'WALL' &&
                        targetMaze.e[finalX]?.[finalY] === 'WALL' &&
                        targetMaze.s[finalX]?.[finalY] === 'WALL' &&
                        targetMaze.n[finalX]?.[finalY] === 'WALL';
 
-    if (isWalledIn) {
-      // Find the connecting stairs on the target floor
+    if (isRockTile || isWalledIn) {
+      // Find connecting stairs if arriving via stairs navigation
       const destStairs = targetMaze.events?.find(e => e.type === 'STAIRS' && e.aux0 === dungeonLevel);
       if (destStairs) {
         finalX = destStairs.x;
@@ -1621,6 +1668,15 @@ export default function App() {
           else if (targetLevel === 9) { finalX = dungeonLevel === 10 ? 10 : 14; finalY = dungeonLevel === 10 ? 18 : 14; }
           else if (targetLevel % 2 === 0) { finalX = 14; finalY = 14; }
           else { finalX = 6; finalY = 6; }
+        } else {
+          // Authentic Wizardry: Teleporting into solid rock (ROCKWATE or solid stone block) kills the entire party!
+          sounds.playBump();
+          setDungeonLevel(targetLevel);
+          setPosX(finalX);
+          setPosY(finalY);
+          setMaze(targetMaze);
+          handlePartyWipedOut(party, finalX, finalY, targetLevel, 'ROCK');
+          return;
         }
       }
     }
@@ -2158,7 +2214,9 @@ export default function App() {
             <div className={`p-4 rounded-full animate-pulse border-2 ${
               activeScenarioId === 'return-of-werdna' 
                 ? 'bg-rose-950/80 border-rose-600 text-rose-500' 
-                : 'bg-red-950/80 border-red-700 text-red-500'
+                : (lastWipeoutInfo?.reason === 'ROCK'
+                    ? 'bg-amber-950/80 border-amber-500 text-amber-400'
+                    : 'bg-red-950/80 border-red-700 text-red-500')
             }`}>
               <Skull className="w-14 h-14" />
             </div>
@@ -2166,7 +2224,9 @@ export default function App() {
               <h2 className="text-2xl font-serif font-black text-white tracking-widest uppercase">
                 {activeScenarioId === 'return-of-werdna'
                   ? "L'Archi-Mage Werdna a été Terrassé !"
-                  : "Escouade Décimée dans le Dédale"}
+                  : (lastWipeoutInfo?.reason === 'ROCK'
+                      ? "YOU HAVE TELEPORTED INTO SOLID ROCK !"
+                      : "Escouade Décimée dans le Dédale")}
               </h2>
 
               {activeScenarioId === 'return-of-werdna' ? (
@@ -2181,7 +2241,22 @@ export default function App() {
                 </div>
               ) : (
                 <>
-                  {lastWipeoutInfo ? (
+                  {lastWipeoutInfo?.reason === 'ROCK' ? (
+                    <div className="p-4 bg-stone-950/90 border-2 border-amber-600/80 rounded-xl text-xs space-y-2 shadow-2xl">
+                      <div className="text-amber-400 font-black text-sm uppercase tracking-wider">
+                        *** VOUS VOUS ÊTES TÉLÉPORTÉ DANS LA ROCHE SOLIDE ! (OOPS!) ***
+                      </div>
+                      <p className="text-slate-200 leading-relaxed font-sans">
+                        L'escouade s'est matérialisée dans la masse minérale compacte. Tous vos aventuriers ont été instantanément broyés et réduits en cendres dans la roche.
+                      </p>
+                      <div className="font-mono text-xs text-amber-300">
+                        Tombeau de pierre : Niveau {lastWipeoutInfo.level}, position ({lastWipeoutInfo.x}, {lastWipeoutInfo.y})
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Héros anéantis : {lastWipeoutInfo.heroes.join(', ')}
+                      </div>
+                    </div>
+                  ) : lastWipeoutInfo ? (
                     <div className="p-3 bg-red-950/40 border border-red-900/60 rounded-xl text-xs text-red-300 space-y-1">
                       <div className="font-bold text-red-200">
                         Dernières coordonnées connues : Niveau {lastWipeoutInfo.level}, position ({lastWipeoutInfo.x}, {lastWipeoutInfo.y})
