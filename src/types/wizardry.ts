@@ -299,7 +299,7 @@ export type GameLocation =
   | 'VICTORY'
   | 'PYSIDE6_EXPORT';
 
-export type AdventureLogCategory = 'COMBAT' | 'DISCOVERY' | 'LOSS' | 'RESCUE' | 'CASTLE';
+export type AdventureLogCategory = 'COMBAT' | 'DISCOVERY' | 'LOSS' | 'RESCUE' | 'CASTLE' | 'VICTORY';
 
 export interface AdventureLogEvent {
   id: string;

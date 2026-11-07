@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { TMazeFloor } from '../types/wizardry';
+import { TMazeFloor, TWall } from '../types/wizardry';
 import { 
   Compass, 
   Eye, 
@@ -146,17 +146,35 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       return {
         isValid: false,
         isVisited: false,
-        north: 'WALL',
-        south: 'WALL',
-        east: 'WALL',
-        west: 'WALL',
-        specialType: 'NORMAL'
+        north: 'WALL' as TWall,
+        south: 'WALL' as TWall,
+        east: 'WALL' as TWall,
+        west: 'WALL' as TWall,
+        oppNorth: 'WALL' as TWall,
+        oppSouth: 'WALL' as TWall,
+        oppEast: 'WALL' as TWall,
+        oppWest: 'WALL' as TWall,
+        specialType: 'NORMAL',
+        description: '',
+        aux0: undefined as number | undefined,
+        aux1: undefined as number | undefined,
+        aux2: undefined as number | undefined
       };
     }
 
     const isVisited = visitedTiles[cx]?.[cy] || revealAll;
-    const sqrCode = maze.sqrExtra[cx]?.[cy] || 0;
-    const specialDef = maze.extraDefs[sqrCode];
+    const sqrCode = maze.sqrExtra?.[cx]?.[cy] || 0;
+    const specialDef = maze.extraDefs?.[sqrCode];
+    const eventDef = maze.events?.find(ev => ev.x === cx && ev.y === cy);
+
+    let specialType = specialDef?.type && specialDef.type !== 'NORMAL' ? specialDef.type : 'NORMAL';
+    if (eventDef?.type && eventDef.type !== 'NORMAL') {
+      specialType = eventDef.type;
+    }
+    const aux0 = eventDef?.aux0 ?? specialDef?.aux0;
+    const aux1 = eventDef?.aux1 ?? specialDef?.aux1;
+    const aux2 = eventDef?.aux2 ?? specialDef?.aux2;
+    const description = eventDef?.description || '';
 
     return {
       isValid: true,
@@ -165,10 +183,15 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       south: maze.s[cx][cy],
       east: maze.e[cx][cy],
       west: maze.w[cx][cy],
-      specialType: specialDef?.type || 'NORMAL',
-      aux0: specialDef?.aux0,
-      aux1: specialDef?.aux1,
-      aux2: specialDef?.aux2
+      oppNorth: cy < 19 ? maze.s[cx][cy + 1] : ('WALL' as TWall),
+      oppSouth: cy > 0 ? maze.n[cx][cy - 1] : ('WALL' as TWall),
+      oppEast: cx < 19 ? maze.w[cx + 1][cy] : ('WALL' as TWall),
+      oppWest: cx > 0 ? maze.e[cx - 1][cy] : ('WALL' as TWall),
+      specialType,
+      aux0,
+      aux1,
+      aux2,
+      description
     };
   };
 
@@ -351,7 +374,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
 
           {/* 1. Cell Floor Fills & Special Symbols */}
           {gridCells.map((cell) => {
-            const { svgX, svgY, isVisited, isValid, isPlayer, specialType, cx, cy } = cell;
+            const { svgX, svgY, isVisited, isValid, specialType, cx, cy, aux0, description } = cell;
 
             if (!isValid) {
               // Outside dungeon boundaries
@@ -390,8 +413,20 @@ export const MiniMap: React.FC<MiniMapProps> = ({
 
             if (specialType === 'STAIRS') {
               specialFill = '#3b2506';
-              iconText = cx === 0 && cy === 0 ? '▲' : '▼';
+              iconText = (aux0 === 0 || (cx === 0 && cy === 0)) ? '▲' : '▼';
               iconColor = '#fbbf24';
+            } else if (specialType === 'TRANSFER') {
+              specialFill = '#2e1065';
+              iconText = '⚡';
+              iconColor = '#c084fc';
+            } else if (specialType === 'BUTTONZ') {
+              specialFill = '#082f49';
+              iconText = '🛗';
+              iconColor = '#38bdf8';
+            } else if (specialType === 'CHUTE') {
+              specialFill = '#3f0d12';
+              iconText = '⤓';
+              iconColor = '#f43f5e';
             } else if (specialType === 'PIT') {
               specialFill = '#3f0d12';
               iconText = '☠';
@@ -405,9 +440,16 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               iconText = '●';
               iconColor = '#818cf8';
             } else if (specialType === 'SCNMSG') {
-              specialFill = '#1c1917';
-              iconText = '§';
-              iconColor = '#a8a29e';
+              const desc = (description || '').toLowerCase();
+              if (desc.includes('castle') || desc.includes('château')) {
+                specialFill = '#14532d';
+                iconText = '🏰';
+                iconColor = '#4ade80';
+              } else {
+                specialFill = '#1c1917';
+                iconText = '§';
+                iconColor = '#a8a29e';
+              }
             } else if (specialType === 'ENCOUNTE') {
               specialFill = '#2d1515';
               iconText = '⚔';
@@ -458,27 +500,19 @@ export const MiniMap: React.FC<MiniMapProps> = ({
 
           {/* 2. Walls and Doors */}
           {gridCells.map((cell) => {
-            const { svgX, svgY, isVisited, isValid, north, south, east, west } = cell;
+            const { svgX, svgY, isVisited, isValid, north, south, east, west, oppNorth, oppSouth, oppEast, oppWest } = cell;
             if (!isValid || !isVisited) return null;
 
             const wallStroke = '#64748b';
             const wallWidth = viewMode === 'radar' ? 2.5 : 1.5;
+            const aSize = cellSize > 20 ? 3.5 : 2.2;
+            const xMid = svgX + cellSize / 2;
+            const yMid = svgY + cellSize / 2;
 
             return (
               <g key={`walls-${cell.cx}-${cell.cy}`}>
                 {/* North Wall / Door */}
-                {north === 'WALL' && (
-                  <line
-                    x1={svgX}
-                    y1={svgY}
-                    x2={svgX + cellSize}
-                    y2={svgY}
-                    stroke={wallStroke}
-                    strokeWidth={wallWidth}
-                    strokeLinecap="square"
-                  />
-                )}
-                {(north === 'DOOR' || (north === 'HIDEDOOR' && revealAll)) && (
+                {(north === 'DOOR' || (north === 'HIDEDOOR' && revealAll)) ? (
                   <g>
                     {/* Door posts */}
                     <line x1={svgX} y1={svgY} x2={svgX + cellSize * 0.25} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
@@ -489,15 +523,81 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       y1={svgY}
                       x2={svgX + cellSize * 0.75}
                       y2={svgY}
-                      stroke={north === 'HIDEDOOR' ? '#c084fc' : '#f59e0b'}
+                      stroke={north === 'HIDEDOOR' ? '#c084fc' : (oppNorth === 'WALL' ? '#fbbf24' : '#f59e0b')}
                       strokeWidth={wallWidth + 1}
                       strokeDasharray={north === 'HIDEDOOR' ? '2,2' : undefined}
                     />
+                    {/* Directional arrow if one-way */}
+                    {oppNorth === 'WALL' && (
+                      <polygon
+                        points={`${xMid},${svgY - aSize} ${xMid - aSize},${svgY + aSize * 0.8} ${xMid + aSize},${svgY + aSize * 0.8}`}
+                        fill={north === 'HIDEDOOR' ? '#c084fc' : '#fbbf24'}
+                      />
+                    )}
                   </g>
-                )}
+                ) : north === 'WALL' && (oppNorth === 'DOOR' || (oppNorth === 'HIDEDOOR' && revealAll)) ? (
+                  /* Blocked side of one-way door (légèrement grisée) */
+                  <g>
+                    <line x1={svgX} y1={svgY} x2={svgX + cellSize * 0.25} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize * 0.75} y1={svgY} x2={svgX + cellSize} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line
+                      x1={svgX + cellSize * 0.25}
+                      y1={svgY}
+                      x2={svgX + cellSize * 0.75}
+                      y2={svgY}
+                      stroke="#78716c"
+                      strokeWidth={wallWidth + 0.5}
+                      strokeDasharray="2,2"
+                    />
+                  </g>
+                ) : north === 'WALL' ? (
+                  <line
+                    x1={svgX}
+                    y1={svgY}
+                    x2={svgX + cellSize}
+                    y2={svgY}
+                    stroke={wallStroke}
+                    strokeWidth={wallWidth}
+                    strokeLinecap="square"
+                  />
+                ) : null}
 
                 {/* South Wall / Door */}
-                {south === 'WALL' && (
+                {(south === 'DOOR' || (south === 'HIDEDOOR' && revealAll)) ? (
+                  <g>
+                    <line x1={svgX} y1={svgY + cellSize} x2={svgX + cellSize * 0.25} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize * 0.75} y1={svgY + cellSize} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line
+                      x1={svgX + cellSize * 0.25}
+                      y1={svgY + cellSize}
+                      x2={svgX + cellSize * 0.75}
+                      y2={svgY + cellSize}
+                      stroke={south === 'HIDEDOOR' ? '#c084fc' : (oppSouth === 'WALL' ? '#fbbf24' : '#f59e0b')}
+                      strokeWidth={wallWidth + 1}
+                      strokeDasharray={south === 'HIDEDOOR' ? '2,2' : undefined}
+                    />
+                    {oppSouth === 'WALL' && (
+                      <polygon
+                        points={`${xMid},${svgY + cellSize + aSize} ${xMid - aSize},${svgY + cellSize - aSize * 0.8} ${xMid + aSize},${svgY + cellSize - aSize * 0.8}`}
+                        fill={south === 'HIDEDOOR' ? '#c084fc' : '#fbbf24'}
+                      />
+                    )}
+                  </g>
+                ) : south === 'WALL' && (oppSouth === 'DOOR' || (oppSouth === 'HIDEDOOR' && revealAll)) ? (
+                  <g>
+                    <line x1={svgX} y1={svgY + cellSize} x2={svgX + cellSize * 0.25} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize * 0.75} y1={svgY + cellSize} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line
+                      x1={svgX + cellSize * 0.25}
+                      y1={svgY + cellSize}
+                      x2={svgX + cellSize * 0.75}
+                      y2={svgY + cellSize}
+                      stroke="#78716c"
+                      strokeWidth={wallWidth + 0.5}
+                      strokeDasharray="2,2"
+                    />
+                  </g>
+                ) : south === 'WALL' ? (
                   <line
                     x1={svgX}
                     y1={svgY + cellSize}
@@ -507,25 +607,44 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                     strokeWidth={wallWidth}
                     strokeLinecap="square"
                   />
-                )}
-                {(south === 'DOOR' || (south === 'HIDEDOOR' && revealAll)) && (
-                  <g>
-                    <line x1={svgX} y1={svgY + cellSize} x2={svgX + cellSize * 0.25} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize * 0.75} y1={svgY + cellSize} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line
-                      x1={svgX + cellSize * 0.25}
-                      y1={svgY + cellSize}
-                      x2={svgX + cellSize * 0.75}
-                      y2={svgY + cellSize}
-                      stroke={south === 'HIDEDOOR' ? '#c084fc' : '#f59e0b'}
-                      strokeWidth={wallWidth + 1}
-                      strokeDasharray={south === 'HIDEDOOR' ? '2,2' : undefined}
-                    />
-                  </g>
-                )}
+                ) : null}
 
                 {/* East Wall / Door */}
-                {east === 'WALL' && (
+                {(east === 'DOOR' || (east === 'HIDEDOOR' && revealAll)) ? (
+                  <g>
+                    <line x1={svgX + cellSize} y1={svgY} x2={svgX + cellSize} y2={svgY + cellSize * 0.25} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize} y1={svgY + cellSize * 0.75} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line
+                      x1={svgX + cellSize}
+                      y1={svgY + cellSize * 0.25}
+                      x2={svgX + cellSize}
+                      y2={svgY + cellSize * 0.75}
+                      stroke={east === 'HIDEDOOR' ? '#c084fc' : (oppEast === 'WALL' ? '#fbbf24' : '#f59e0b')}
+                      strokeWidth={wallWidth + 1}
+                      strokeDasharray={east === 'HIDEDOOR' ? '2,2' : undefined}
+                    />
+                    {oppEast === 'WALL' && (
+                      <polygon
+                        points={`${svgX + cellSize + aSize},${yMid} ${svgX + cellSize - aSize * 0.8},${yMid - aSize} ${svgX + cellSize - aSize * 0.8},${yMid + aSize}`}
+                        fill={east === 'HIDEDOOR' ? '#c084fc' : '#fbbf24'}
+                      />
+                    )}
+                  </g>
+                ) : east === 'WALL' && (oppEast === 'DOOR' || (oppEast === 'HIDEDOOR' && revealAll)) ? (
+                  <g>
+                    <line x1={svgX + cellSize} y1={svgY} x2={svgX + cellSize} y2={svgY + cellSize * 0.25} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize} y1={svgY + cellSize * 0.75} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line
+                      x1={svgX + cellSize}
+                      y1={svgY + cellSize * 0.25}
+                      x2={svgX + cellSize}
+                      y2={svgY + cellSize * 0.75}
+                      stroke="#78716c"
+                      strokeWidth={wallWidth + 0.5}
+                      strokeDasharray="2,2"
+                    />
+                  </g>
+                ) : east === 'WALL' ? (
                   <line
                     x1={svgX + cellSize}
                     y1={svgY}
@@ -535,25 +654,44 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                     strokeWidth={wallWidth}
                     strokeLinecap="square"
                   />
-                )}
-                {(east === 'DOOR' || (east === 'HIDEDOOR' && revealAll)) && (
-                  <g>
-                    <line x1={svgX + cellSize} y1={svgY} x2={svgX + cellSize} y2={svgY + cellSize * 0.25} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize} y1={svgY + cellSize * 0.75} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line
-                      x1={svgX + cellSize}
-                      y1={svgY + cellSize * 0.25}
-                      x2={svgX + cellSize}
-                      y2={svgY + cellSize * 0.75}
-                      stroke={east === 'HIDEDOOR' ? '#c084fc' : '#f59e0b'}
-                      strokeWidth={wallWidth + 1}
-                      strokeDasharray={east === 'HIDEDOOR' ? '2,2' : undefined}
-                    />
-                  </g>
-                )}
+                ) : null}
 
                 {/* West Wall / Door */}
-                {west === 'WALL' && (
+                {(west === 'DOOR' || (west === 'HIDEDOOR' && revealAll)) ? (
+                  <g>
+                    <line x1={svgX} y1={svgY} x2={svgX} y2={svgY + cellSize * 0.25} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX} y1={svgY + cellSize * 0.75} x2={svgX} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line
+                      x1={svgX}
+                      y1={svgY + cellSize * 0.25}
+                      x2={svgX}
+                      y2={svgY + cellSize * 0.75}
+                      stroke={west === 'HIDEDOOR' ? '#c084fc' : (oppWest === 'WALL' ? '#fbbf24' : '#f59e0b')}
+                      strokeWidth={wallWidth + 1}
+                      strokeDasharray={west === 'HIDEDOOR' ? '2,2' : undefined}
+                    />
+                    {oppWest === 'WALL' && (
+                      <polygon
+                        points={`${svgX - aSize},${yMid} ${svgX + aSize * 0.8},${yMid - aSize} ${svgX + aSize * 0.8},${yMid + aSize}`}
+                        fill={west === 'HIDEDOOR' ? '#c084fc' : '#fbbf24'}
+                      />
+                    )}
+                  </g>
+                ) : west === 'WALL' && (oppWest === 'DOOR' || (oppWest === 'HIDEDOOR' && revealAll)) ? (
+                  <g>
+                    <line x1={svgX} y1={svgY} x2={svgX} y2={svgY + cellSize * 0.25} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX} y1={svgY + cellSize * 0.75} x2={svgX} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line
+                      x1={svgX}
+                      y1={svgY + cellSize * 0.25}
+                      x2={svgX}
+                      y2={svgY + cellSize * 0.75}
+                      stroke="#78716c"
+                      strokeWidth={wallWidth + 0.5}
+                      strokeDasharray="2,2"
+                    />
+                  </g>
+                ) : west === 'WALL' ? (
                   <line
                     x1={svgX}
                     y1={svgY}
@@ -563,22 +701,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                     strokeWidth={wallWidth}
                     strokeLinecap="square"
                   />
-                )}
-                {(west === 'DOOR' || (west === 'HIDEDOOR' && revealAll)) && (
-                  <g>
-                    <line x1={svgX} y1={svgY} x2={svgX} y2={svgY + cellSize * 0.25} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX} y1={svgY + cellSize * 0.75} x2={svgX} y2={svgY + cellSize * 0.75} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line
-                      x1={svgX}
-                      y1={svgY + cellSize * 0.25}
-                      x2={svgX}
-                      y2={svgY + cellSize * 0.75}
-                      stroke={west === 'HIDEDOOR' ? '#c084fc' : '#f59e0b'}
-                      strokeWidth={wallWidth + 1}
-                      strokeDasharray={west === 'HIDEDOOR' ? '2,2' : undefined}
-                    />
-                  </g>
-                )}
+                ) : null}
               </g>
             );
           })}
@@ -659,8 +782,28 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             <span>Porte</span>
           </div>
           <div className="flex items-center gap-1.5">
+            <span className="w-3 h-1 bg-stone-500 border-t border-dashed border-stone-400 inline-block" />
+            <span>1-sens (grisée)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-1 border-t-2 border-dashed border-purple-400 inline-block" />
+            <span>Porte secrète</span>
+          </div>
+          <div className="flex items-center gap-1.5">
             <span className="text-amber-400 font-bold">▲/▼</span>
             <span>Escalier</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-purple-400 font-bold">⚡</span>
+            <span>Téléporteur</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sky-400 font-bold">🛗</span>
+            <span>Ascenseur</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-rose-400 font-bold">⤓</span>
+            <span>Chute / Trappe</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-red-400 font-bold">☠</span>
@@ -674,7 +817,11 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             <span className="text-purple-400 font-bold">●</span>
             <span>Ténèbres</span>
           </div>
-          <div className="flex items-center gap-1.5 text-red-300 font-bold col-span-2 sm:col-span-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-emerald-400 font-bold">🏰</span>
+            <span>Château</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-red-300 font-bold">
             <span>💀</span>
             <span>Dépouille</span>
           </div>

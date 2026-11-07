@@ -1484,16 +1484,15 @@ export function getMazeForFloor(level: number, scenarioId?: string): TMazeFloor 
   const eWalls = walls(raw.e);
   const nWalls = walls(raw.n);
 
-  // Harmonize internal shared walls where one side was marked DOOR and the other WALL
-  // (Fixes Apple II disk dump artifacts where adjacent cell nibbles were not kept symmetric)
+  // Harmonize internal shared walls where one side had a wall/door/secret door and the other was OPEN
+  // (Fixes raw dump gaps like (10,0) E=WALL vs (11,0) W=OPEN, (19,0) N=WALL vs (19,1) S=OPEN, etc.)
+  // Note: Authentic one-way doors (DOOR vs WALL) and one-way secret doors (HIDEDOOR vs WALL) are preserved!
   for (let x = 0; x < 20; x++) {
     for (let y = 0; y < 19; y++) {
       const n = nWalls[x][y];
       const s = sWalls[x][y + 1];
-      if ((n === 'DOOR' && s === 'WALL') || (n === 'WALL' && s === 'DOOR')) {
-        nWalls[x][y] = 'DOOR';
-        sWalls[x][y + 1] = 'DOOR';
-      }
+      if (n !== 'OPEN' && s === 'OPEN') sWalls[x][y + 1] = 'WALL';
+      if (n === 'OPEN' && s !== 'OPEN') nWalls[x][y] = 'WALL';
     }
   }
 
@@ -1501,10 +1500,8 @@ export function getMazeForFloor(level: number, scenarioId?: string): TMazeFloor 
     for (let y = 0; y < 20; y++) {
       const e = eWalls[x][y];
       const w = wWalls[x + 1][y];
-      if ((e === 'DOOR' && w === 'WALL') || (e === 'WALL' && w === 'DOOR')) {
-        eWalls[x][y] = 'DOOR';
-        wWalls[x + 1][y] = 'DOOR';
-      }
+      if (e !== 'OPEN' && w === 'OPEN') wWalls[x + 1][y] = 'WALL';
+      if (e === 'OPEN' && w !== 'OPEN') eWalls[x][y] = 'WALL';
     }
   }
 

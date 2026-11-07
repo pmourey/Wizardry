@@ -1061,20 +1061,31 @@ export default function App() {
   };
 
   const handleKickDoor = () => {
-    let wall = [maze.n, maze.e, maze.s, maze.w][direction][posX][posY];
-    // Check opposite wall if current cell is WALL but neighbor is DOOR or HIDEDOOR
-    if (wall === 'WALL') {
-      const dx = direction === 1 ? 1 : direction === 3 ? -1 : 0;
-      const dy = direction === 0 ? 1 : direction === 2 ? -1 : 0;
-      const nx = posX + dx;
-      const ny = posY + dy;
-      if (nx >= 0 && nx < 20 && ny >= 0 && ny < 20) {
-        const oppWall = [maze.s, maze.w, maze.n, maze.e][direction][nx][ny];
-        if (oppWall === 'DOOR' || oppWall === 'HIDEDOOR') {
-          wall = oppWall;
-        }
+    const wall = [maze.n, maze.e, maze.s, maze.w][direction][posX][posY];
+    const dx = direction === 1 ? 1 : direction === 3 ? -1 : 0;
+    const dy = direction === 0 ? 1 : direction === 2 ? -1 : 0;
+    const nx = posX + dx;
+    const ny = posY + dy;
+
+    // Check if player is facing the blocked side of a one-way door or secret door
+    if (wall === 'WALL' && nx >= 0 && nx < 20 && ny >= 0 && ny < 20) {
+      const oppWall = [maze.s, maze.w, maze.n, maze.e][direction][nx][ny];
+      if (oppWall === 'DOOR' || oppWall === 'HIDEDOOR') {
+        sounds.playBump();
+        announce(
+          "Passage bloqué",
+          [
+            "Vous tentez d'enfoncer la porte, mais elle résiste comme un mur d'acier massif.",
+            "Cette porte ne s'ouvre que depuis l'autre côté (passage à sens unique)."
+          ],
+          undefined,
+          posX,
+          posY
+        );
+        return;
       }
     }
+
     // Kicking only works on a door (visible or secret), never on a plain wall or open passage
     if (wall !== 'DOOR' && wall !== 'HIDEDOOR') {
       sounds.playBump();
@@ -1082,8 +1093,8 @@ export default function App() {
     }
     sounds.playDoor();
     handleMove(
-      direction === 1 ? 1 : direction === 3 ? -1 : 0,
-      direction === 0 ? 1 : direction === 2 ? -1 : 0,
+      dx,
+      dy,
       true
     );
   };
@@ -1613,7 +1624,46 @@ export default function App() {
       return;
     }
 
-    // 3. Wandering encounter check or inspection feedback on empty tile
+    // 3. Facing wall check: Secret doors (HIDEDOOR) or one-way doors
+    const facingWall = [maze.n, maze.e, maze.s, maze.w][direction]?.[posX]?.[posY];
+    const dx = direction === 1 ? 1 : direction === 3 ? -1 : 0;
+    const dy = direction === 0 ? 1 : direction === 2 ? -1 : 0;
+    const nx = posX + dx;
+    const ny = posY + dy;
+    const oppWall = (nx >= 0 && nx < 20 && ny >= 0 && ny < 20)
+      ? [maze.s, maze.w, maze.n, maze.e][direction]?.[nx]?.[ny]
+      : 'WALL';
+
+    if (facingWall === 'HIDEDOOR') {
+      announce(
+        "Porte secrète détectée !",
+        [
+          "En tâtant attentivement les blocs de pierre, vos doigts trouvent un interstice dissimulé.",
+          "Une porte secrète est camouflée dans cette paroi !",
+          "Pour l'ouvrir, appuyez sur la touche Enfoncer (K) ou avancez vers elle."
+        ],
+        undefined,
+        posX,
+        posY
+      );
+      return;
+    }
+
+    if (facingWall === 'WALL' && (oppWall === 'DOOR' || oppWall === 'HIDEDOOR')) {
+      announce(
+        "Passage à sens unique",
+        [
+          "Vous examinez attentivement les joints de la paroi rocheuse.",
+          "Vous distinguez la découpe d'un ancien passage scellé, mais aucun mécanisme n'existe de ce côté : il s'agit d'un passage à sens unique, accessible uniquement depuis l'autre côté !"
+        ],
+        undefined,
+        posX,
+        posY
+      );
+      return;
+    }
+
+    // 4. Wandering encounter check or inspection feedback on empty tile
     if (Math.random() < 0.25) {
       triggerBattleEncounter();
     } else {

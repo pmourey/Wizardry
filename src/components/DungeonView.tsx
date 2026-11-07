@@ -3,6 +3,7 @@ import {
   TCharacter, 
   TMazeFloor, 
   TItem,
+  TWall,
   AdventureLogCategory
 } from '../types/wizardry';
 import { DungeonRenderer3D } from '../engine/dungeonRenderer3D';
@@ -282,17 +283,8 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     else if (direction === 2) { wall = maze.s[x][y]; dy = -1; }
     else if (direction === 3) { wall = maze.w[x][y]; dx = -1; }
 
-    // Fallback: check opposite wall of neighbor tile if current cell had WALL
-    if (wall === 'WALL') {
-      const nx = x + dx;
-      const ny = y + dy;
-      if (nx >= 0 && nx < 20 && ny >= 0 && ny < 20) {
-        const oppWall = [maze.s, maze.w, maze.n, maze.e][direction][nx][ny];
-        if (oppWall === 'DOOR' || (isKick && oppWall === 'HIDEDOOR')) {
-          wall = oppWall;
-        }
-      }
-    }
+    const nx = x + dx;
+    const ny = y + dy;
 
     const canPass = wall === 'OPEN' || wall === 'DOOR' || (isKick && wall === 'HIDEDOOR');
     if (canPass) {
@@ -304,6 +296,22 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       onMove(dx, dy, wall === 'DOOR' || wall === 'HIDEDOOR');
     } else {
       sounds.playBump();
+      // If facing the blocked side of a one-way door or secret door
+      if (wall === 'WALL' && nx >= 0 && nx < 20 && ny >= 0 && ny < 20) {
+        const oppWall = [maze.s, maze.w, maze.n, maze.e][direction]?.[nx]?.[ny];
+        if (oppWall === 'DOOR' || oppWall === 'HIDEDOOR') {
+          if (onAddAdventureEvent) {
+            onAddAdventureEvent(
+              'DISCOVERY',
+              'Passage à sens unique',
+              `La paroi en (${x}, ${y}) ne s'ouvre que depuis l'autre côté (passage à sens unique).`,
+              undefined,
+              maze.level,
+              { x, y }
+            );
+          }
+        }
+      }
     }
   };
 

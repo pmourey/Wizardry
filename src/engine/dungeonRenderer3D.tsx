@@ -480,19 +480,45 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     });
     const retroSecretLineMat = retroWallLineMat; // secret doors look identical to regular walls
 
-    const createWallMesh = (isDoor: boolean, isSecret: boolean) => {
+    const createWallMesh = (sideA: TWall = 'WALL', sideB: TWall = 'WALL') => {
+      const isDoorA = sideA === 'DOOR';
+      const isSecretA = sideA === 'HIDEDOOR';
+      const isDoorB = sideB === 'DOOR';
+      const isSecretB = sideB === 'HIDEDOOR';
+
       if (wireframeMode) {
         // Authentic Apple II: 100% solid black occlusion plane (no seeing through) + crisp bright vector lines (no z-fighting)
         const mesh = new THREE.Mesh(retroOcclusionPlaneGeo, retroBlackMat);
-        const lineGeo = isDoor ? doorLineGeo : wallLineGeo;
-        const lineMat = isDoor ? retroDoorLineMat : (isSecret ? retroSecretLineMat : retroWallLineMat);
-        const lines = new THREE.LineSegments(lineGeo, lineMat);
-        mesh.add(lines);
+
+        // Side A (+Z face in local coords)
+        const lineGeoA = isDoorA ? doorLineGeo : wallLineGeo;
+        const lineMatA = isDoorA ? retroDoorLineMat : (isSecretA ? retroSecretLineMat : retroWallLineMat);
+        const linesA = new THREE.LineSegments(lineGeoA, lineMatA);
+        linesA.position.z = 0.01;
+        mesh.add(linesA);
+
+        // Side B (-Z face in local coords)
+        const lineGeoB = isDoorB ? doorLineGeo : wallLineGeo;
+        const lineMatB = isDoorB ? retroDoorLineMat : (isSecretB ? retroSecretLineMat : retroWallLineMat);
+        const linesB = new THREE.LineSegments(lineGeoB, lineMatB);
+        linesB.rotation.y = Math.PI;
+        linesB.position.z = -0.01;
+        mesh.add(linesB);
+
         return mesh;
       } else {
-        // 3D Pierre Réaliste: 100% opaque, heavy solid stone block
-        const mat = isDoor ? doorMat : (isSecret ? secretDoorMat : stoneWallMat);
-        return new THREE.Mesh(isDoor ? doorBoxGeo : wallBoxGeo, mat);
+        // 3D Pierre Réaliste: Box with separate materials for front (+Z) and back (-Z) faces
+        const matA = isDoorA ? doorMat : (isSecretA ? secretDoorMat : stoneWallMat);
+        const matB = isDoorB ? doorMat : (isSecretB ? secretDoorMat : stoneWallMat);
+        const materials = [
+          stoneWallMat, // +X
+          stoneWallMat, // -X
+          stoneWallMat, // +Y
+          stoneWallMat, // -Y
+          matA,         // +Z (Front)
+          matB          // -Z (Back)
+        ];
+        return new THREE.Mesh(wallBoxGeo, materials);
       }
     };
 
@@ -527,23 +553,21 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     // =========================================================================
     for (let cx = 0; cx < 20; cx++) {
       for (let gy = 0; gy <= 20; gy++) {
-        let wallType: TWall = 'OPEN';
+        let sideA: TWall = 'OPEN';
+        let sideB: TWall = 'OPEN';
         if (gy === 0) {
-          wallType = maze.s[cx]?.[0] || 'WALL';
+          sideA = 'WALL';
+          sideB = maze.s[cx]?.[0] || 'WALL';
         } else if (gy === 20) {
-          wallType = maze.n[cx]?.[19] || 'WALL';
+          sideA = maze.n[cx]?.[19] || 'WALL';
+          sideB = 'WALL';
         } else {
-          const nFromSouth = maze.n[cx]?.[gy - 1];
-          const sFromNorth = maze.s[cx]?.[gy];
-          if (nFromSouth === 'DOOR' || sFromNorth === 'DOOR') wallType = 'DOOR';
-          else if (nFromSouth === 'HIDEDOOR' || sFromNorth === 'HIDEDOOR') wallType = 'HIDEDOOR';
-          else if (nFromSouth === 'WALL' || sFromNorth === 'WALL') wallType = 'WALL';
+          sideA = maze.n[cx]?.[gy - 1] || 'OPEN';
+          sideB = maze.s[cx]?.[gy] || 'OPEN';
         }
 
-        if (wallType !== 'OPEN') {
-          const isDoor = wallType === 'DOOR';
-          const isSecret = wallType === 'HIDEDOOR';
-          const mesh = createWallMesh(isDoor, isSecret);
+        if (sideA !== 'OPEN' || sideB !== 'OPEN') {
+          const mesh = createWallMesh(sideA, sideB);
           mesh.position.set(cx * 4, 1.6, -gy * 4 + 2);
           group.add(mesh);
         }
@@ -555,23 +579,21 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
     // =========================================================================
     for (let cy = 0; cy < 20; cy++) {
       for (let gx = 0; gx <= 20; gx++) {
-        let wallType: TWall = 'OPEN';
+        let sideA: TWall = 'OPEN';
+        let sideB: TWall = 'OPEN';
         if (gx === 0) {
-          wallType = maze.w[0]?.[cy] || 'WALL';
+          sideA = maze.w[0]?.[cy] || 'WALL';
+          sideB = 'WALL';
         } else if (gx === 20) {
-          wallType = maze.e[19]?.[cy] || 'WALL';
+          sideA = 'WALL';
+          sideB = maze.e[19]?.[cy] || 'WALL';
         } else {
-          const eFromWest = maze.e[gx - 1]?.[cy];
-          const wFromEast = maze.w[gx]?.[cy];
-          if (eFromWest === 'DOOR' || wFromEast === 'DOOR') wallType = 'DOOR';
-          else if (eFromWest === 'HIDEDOOR' || wFromEast === 'HIDEDOOR') wallType = 'HIDEDOOR';
-          else if (eFromWest === 'WALL' || wFromEast === 'WALL') wallType = 'WALL';
+          sideA = maze.w[gx]?.[cy] || 'OPEN';
+          sideB = maze.e[gx - 1]?.[cy] || 'OPEN';
         }
 
-        if (wallType !== 'OPEN') {
-          const isDoor = wallType === 'DOOR';
-          const isSecret = wallType === 'HIDEDOOR';
-          const mesh = createWallMesh(isDoor, isSecret);
+        if (sideA !== 'OPEN' || sideB !== 'OPEN') {
+          const mesh = createWallMesh(sideA, sideB);
           mesh.rotation.y = Math.PI / 2;
           mesh.position.set(gx * 4 - 2, 1.6, -cy * 4);
           group.add(mesh);
