@@ -169,10 +169,10 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     }
 
     const isVisited = visitedTiles[cx]?.[cy] || revealAll;
-    const isNorthVisited = cy < 19 ? (visitedTiles[cx]?.[cy + 1] || revealAll) : false;
-    const isSouthVisited = cy > 0 ? (visitedTiles[cx]?.[cy - 1] || revealAll) : false;
-    const isEastVisited = cx < 19 ? (visitedTiles[cx + 1]?.[cy] || revealAll) : false;
-    const isWestVisited = cx > 0 ? (visitedTiles[cx - 1]?.[cy] || revealAll) : false;
+    const isNorthVisited = visitedTiles[cx]?.[(cy + 1) % 20] || revealAll;
+    const isSouthVisited = visitedTiles[cx]?.[(cy - 1 + 20) % 20] || revealAll;
+    const isEastVisited = visitedTiles[(cx + 1) % 20]?.[cy] || revealAll;
+    const isWestVisited = visitedTiles[(cx - 1 + 20) % 20]?.[cy] || revealAll;
     const sqrCode = maze.sqrExtra?.[cx]?.[cy] || 0;
     const specialDef = maze.extraDefs?.[sqrCode];
     const eventDef = maze.events?.find(ev => ev.x === cx && ev.y === cy);
@@ -197,10 +197,10 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       south: maze.s[cx][cy],
       east: maze.e[cx][cy],
       west: maze.w[cx][cy],
-      oppNorth: cy < 19 ? maze.s[cx][cy + 1] : ('WALL' as TWall),
-      oppSouth: cy > 0 ? maze.n[cx][cy - 1] : ('WALL' as TWall),
-      oppEast: cx < 19 ? maze.w[cx + 1][cy] : ('WALL' as TWall),
-      oppWest: cx > 0 ? maze.e[cx - 1][cy] : ('WALL' as TWall),
+      oppNorth: maze.s[cx]?.[(cy + 1) % 20] || ('WALL' as TWall),
+      oppSouth: maze.n[cx]?.[(cy - 1 + 20) % 20] || ('WALL' as TWall),
+      oppEast: maze.w[(cx + 1) % 20]?.[cy] || ('WALL' as TWall),
+      oppWest: maze.e[(cx - 1 + 20) % 20]?.[cy] || ('WALL' as TWall),
       specialType,
       aux0,
       aux1,
@@ -666,15 +666,15 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeDasharray={isNorthSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {/* Fine crossing directional arrow if one-way (inside maze only) */}
-                    {oppNorth === 'WALL' && cell.cy < 19 && (
+                    {/* Fine crossing directional arrow if one-way */}
+                    {oppNorth === 'WALL' && (
                       <g>
-                        <line x1={xMid} y1={svgY + arrowLen * 0.55} x2={xMid} y2={svgY - arrowLen * 0.65} stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" />
+                        <line x1={xMid} y1={svgY + arrowLen * 0.55} x2={xMid} y2={svgY - arrowLen * 0.65} stroke="#38bdf8" strokeWidth="1.0" strokeLinecap="round" />
                         <polyline
-                          points={`${xMid - 1.8},${svgY - arrowLen * 0.65 + 1.8} ${xMid},${svgY - arrowLen * 0.65} ${xMid + 1.8},${svgY - arrowLen * 0.65 + 1.8}`}
+                          points={`${xMid - 2.0},${svgY - arrowLen * 0.65 + 2.0} ${xMid},${svgY - arrowLen * 0.65} ${xMid + 2.0},${svgY - arrowLen * 0.65 + 2.0}`}
                           fill="none"
                           stroke="#38bdf8"
-                          strokeWidth="0.9"
+                          strokeWidth="1.0"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
@@ -708,14 +708,14 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeDasharray={isSouthSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {oppSouth === 'WALL' && cell.cy > 0 && (
+                    {oppSouth === 'WALL' && (
                       <g>
-                        <line x1={xMid} y1={svgY + cellSize - arrowLen * 0.55} x2={xMid} y2={svgY + cellSize + arrowLen * 0.65} stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" />
+                        <line x1={xMid} y1={svgY + cellSize - arrowLen * 0.55} x2={xMid} y2={svgY + cellSize + arrowLen * 0.65} stroke="#38bdf8" strokeWidth="1.0" strokeLinecap="round" />
                         <polyline
-                          points={`${xMid - 1.8},${svgY + cellSize + arrowLen * 0.65 - 1.8} ${xMid},${svgY + cellSize + arrowLen * 0.65} ${xMid + 1.8},${svgY + cellSize + arrowLen * 0.65 - 1.8}`}
+                          points={`${xMid - 2.0},${svgY + cellSize + arrowLen * 0.65 - 2.0} ${xMid},${svgY + cellSize + arrowLen * 0.65} ${xMid + 2.0},${svgY + cellSize + arrowLen * 0.65 - 2.0}`}
                           fill="none"
                           stroke="#38bdf8"
-                          strokeWidth="0.9"
+                          strokeWidth="1.0"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
@@ -749,14 +749,14 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeDasharray={isEastSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {oppEast === 'WALL' && cell.cx < 19 && (
+                    {oppEast === 'WALL' && (
                       <g>
-                        <line x1={svgX + cellSize - arrowLen * 0.55} y1={yMid} x2={svgX + cellSize + arrowLen * 0.65} stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" />
+                        <line x1={svgX + cellSize - arrowLen * 0.55} y1={yMid} x2={svgX + cellSize + arrowLen * 0.65} stroke="#38bdf8" strokeWidth="1.0" strokeLinecap="round" />
                         <polyline
-                          points={`${svgX + cellSize + arrowLen * 0.65 - 1.8},${yMid - 1.8} ${svgX + cellSize + arrowLen * 0.65},${yMid} ${svgX + cellSize + arrowLen * 0.65 - 1.8},${yMid + 1.8}`}
+                          points={`${svgX + cellSize + arrowLen * 0.65 - 2.0},${yMid - 2.0} ${svgX + cellSize + arrowLen * 0.65},${yMid} ${svgX + cellSize + arrowLen * 0.65 - 2.0},${yMid + 2.0}`}
                           fill="none"
                           stroke="#38bdf8"
-                          strokeWidth="0.9"
+                          strokeWidth="1.0"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
@@ -790,14 +790,14 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeDasharray={isWestSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {oppWest === 'WALL' && cell.cx > 0 && (
+                    {oppWest === 'WALL' && (
                       <g>
-                        <line x1={svgX + arrowLen * 0.55} y1={yMid} x2={svgX - arrowLen * 0.65} y2={yMid} stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" />
+                        <line x1={svgX + arrowLen * 0.55} y1={yMid} x2={svgX - arrowLen * 0.65} y2={yMid} stroke="#38bdf8" strokeWidth="1.0" strokeLinecap="round" />
                         <polyline
-                          points={`${svgX - arrowLen * 0.65 + 1.8},${yMid - 1.8} ${svgX - arrowLen * 0.65},${yMid} ${svgX - arrowLen * 0.65 + 1.8},${yMid + 1.8}`}
+                          points={`${svgX - arrowLen * 0.65 + 2.0},${yMid - 2.0} ${svgX - arrowLen * 0.65},${yMid} ${svgX - arrowLen * 0.65 + 2.0},${yMid + 2.0}`}
                           fill="none"
                           stroke="#38bdf8"
-                          strokeWidth="0.9"
+                          strokeWidth="1.0"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />

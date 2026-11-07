@@ -1071,8 +1071,8 @@ export default function App() {
   const revealSecretDoor = (x: number, y: number, dir: number) => {
     const dx = dir === 1 ? 1 : dir === 3 ? -1 : 0;
     const dy = dir === 0 ? 1 : dir === 2 ? -1 : 0;
-    const nx = x + dx;
-    const ny = y + dy;
+    const nx = (x + dx + 20) % 20;
+    const ny = (y + dy + 20) % 20;
     const oppDir = (dir + 2) % 4;
 
     setMaze(prevMaze => {
@@ -1084,18 +1084,22 @@ export default function App() {
       const wallCols = [newN, newE, newS, newW];
       wallCols[dir][x][y] = 'DOOR';
 
-      if (nx >= 0 && nx < 20 && ny >= 0 && ny < 20) {
-        const oppCols = [newN, newE, newS, newW];
-        oppCols[oppDir][nx][ny] = 'DOOR';
+      // If the opposite wall is also HIDEDOOR (symmetric secret door), reveal it as well.
+      // If the opposite wall is a solid WALL (one-way secret door), keep it as WALL so it remains one-way.
+      const oppWall = wallCols[oppDir][nx][ny];
+      if (oppWall === 'HIDEDOOR') {
+        wallCols[oppDir][nx][ny] = 'DOOR';
       }
 
       const key1 = `${x},${y},${dir}`;
-      const key2 = `${nx},${ny},${oppDir}`;
       const updatedSecrets = {
         ...(prevMaze.discoveredSecrets || {}),
-        [key1]: true,
-        [key2]: true
+        [key1]: true
       };
+      if (oppWall === 'HIDEDOOR') {
+        const key2 = `${nx},${ny},${oppDir}`;
+        updatedSecrets[key2] = true;
+      }
 
       return {
         ...prevMaze,

@@ -328,14 +328,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
         }
       }
       // If facing the blocked side of a one-way door or secret door
-      if (wall === 'WALL' && nx >= 0 && nx < 20 && ny >= 0 && ny < 20) {
-        const oppWall = [maze.s, maze.w, maze.n, maze.e][direction]?.[nx]?.[ny];
+      const tx = (nx + 20) % 20;
+      const ty = (ny + 20) % 20;
+      if (wall === 'WALL') {
+        const oppWall = [maze.s, maze.w, maze.n, maze.e][direction]?.[tx]?.[ty];
         if (oppWall === 'DOOR' || oppWall === 'HIDEDOOR') {
           if (onAddAdventureEvent) {
             onAddAdventureEvent(
               'DISCOVERY',
               'Passage à sens unique',
-              `La paroi en (${x}, ${y}) est un mur plein : ce passage ne s'ouvre que depuis l'autre côté (${nx}, ${ny}).`,
+              `La paroi en (${x}, ${y}) est un mur plein : ce passage ne s'ouvre que depuis l'autre côté (${tx}, ${ty}).`,
               undefined,
               maze.level,
               { x, y }
