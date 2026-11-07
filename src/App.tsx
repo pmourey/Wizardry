@@ -934,8 +934,17 @@ export default function App() {
         }
       } else if (sqrDef.type === 'CHUTE') {
         sounds.playBump();
-        addAdventureEvent('LOSS', 'Chute dans un puits !', `Le sol cède : l'escouade tombe au niveau ${sqrDef.aux0}.`, undefined, dungeonLevel, { x: newX, y: newY });
-        handleTakeStairs(sqrDef.aux0, newX, newY);
+        const targetX = (sqrDef.aux2 !== undefined && sqrDef.aux2 !== -1) ? sqrDef.aux2 : newX;
+        const targetY = (sqrDef.aux1 !== undefined && sqrDef.aux1 !== -1) ? sqrDef.aux1 : newY;
+        addAdventureEvent(
+          'LOSS', 
+          'Chute dans un puits !', 
+          `Le sol cède : l'escouade tombe au niveau ${sqrDef.aux0}.`, 
+          `Arrivée en coordonnées (E${targetX}, N${targetY})`, 
+          dungeonLevel, 
+          { x: newX, y: newY }
+        );
+        handleTakeStairs(sqrDef.aux0, targetX, targetY);
         return;
       } else if (sqrDef.type === 'BUTTONZ') {
         // Elevator (BUTTONZ): Reachable levels (aux2..aux1) are handled interactively via the rich graphical ElevatorModal in DungeonView.
@@ -1590,11 +1599,11 @@ export default function App() {
       const existing = visitedTilesByLevel[targetLevel];
       if (existing) {
         const next = existing.map(r => [...r]);
-        if (next[targetX]) next[targetX][targetY] = true;
+        if (next[finalX]) next[finalX][finalY] = true;
         return next;
       }
       const fresh = Array.from({ length: 20 }, () => Array(20).fill(false));
-      if (fresh[targetX]) fresh[targetX][targetY] = true;
+      if (fresh[finalX]) fresh[finalX][finalY] = true;
       return fresh;
     });
 
@@ -1604,10 +1613,15 @@ export default function App() {
       isDescending 
         ? `L'escouade a franchi l'escalier menant au ${targetLevel}e sous-sol du Labyrinthe. Les dangers s'intensifient.`
         : `L'escouade a gravi les marches pour remonter au ${targetLevel}e sous-sol.`,
-      `Coordonnées d'arrivée : (${targetX}, ${targetY})`,
+      `Coordonnées d'arrivée : (${finalX}, ${finalY})`,
       targetLevel,
-      { x: targetX, y: targetY }
+      { x: finalX, y: finalY }
     );
+
+    const arrivalEv = targetMaze.events?.find(ev => ev.x === finalX && ev.y === finalY);
+    if (arrivalEv && arrivalEv.kind === 'MESSAGE') {
+      handleSquareEvent(arrivalEv, finalX, finalY, false);
+    }
   };
 
   const handleInspectArea = () => {

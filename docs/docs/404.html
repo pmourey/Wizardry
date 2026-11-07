@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="0; url=./">
+    <title>Wizardry I - Redirection...</title>
+    <script>
+      // Redirection automatique pour GitHub Pages en cas d'accès direct ou 404
+      var path = window.location.pathname;
+      var basePath = path.substring(0, path.lastIndexOf('/') + 1);
+      window.location.replace(basePath || './');
+    </script>
+  </head>
+  <body>
+    <p>Redirection vers le jeu... <a href="./">Cliquez ici si la redirection ne démarre pas</a>.</p>
+  </body>
+</html>
