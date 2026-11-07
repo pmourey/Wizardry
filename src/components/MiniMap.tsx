@@ -253,6 +253,103 @@ export const MiniMap: React.FC<MiniMapProps> = ({
     }
   }, [viewMode, x, y, radarMinX, radarMinY, cellSize, rows]);
 
+  // Gather all one-way directional arrows in a dedicated collection for top-layer rendering
+  const oneWayArrows = useMemo(() => {
+    const arrows: Array<{
+      key: string;
+      x1: number;
+      y1: number;
+      x2: number;
+      y2: number;
+      headPoints: string;
+    }> = [];
+
+    const shaftLen = Math.max(3.2, cellSize * 0.32);
+    const headLen = Math.max(2.4, cellSize * 0.20);
+    const headHalfWidth = Math.max(1.8, cellSize * 0.15);
+
+    for (const cell of gridCells) {
+      if (!cell.isValid || !cell.isVisited) continue;
+      const { 
+        svgX, svgY, cx, cy, 
+        north, south, east, west, 
+        oppNorth, oppSouth, oppEast, oppWest, 
+        isNorthVisited, isSouthVisited, isEastVisited, isWestVisited 
+      } = cell;
+
+      const isNorthSecretDiscovered = (north === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cx},${cy},0`]) && (isNorthVisited || revealAll || !!maze.discoveredSecrets?.[`${cx},${cy},0`]);
+      const isSouthSecretDiscovered = (south === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cx},${cy},2`]) && (isSouthVisited || revealAll || !!maze.discoveredSecrets?.[`${cx},${cy},2`]);
+      const isEastSecretDiscovered = (east === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cx},${cy},1`]) && (isEastVisited || revealAll || !!maze.discoveredSecrets?.[`${cx},${cy},1`]);
+      const isWestSecretDiscovered = (west === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cx},${cy},3`]) && (isWestVisited || revealAll || !!maze.discoveredSecrets?.[`${cx},${cy},3`]);
+
+      const xMid = svgX + cellSize / 2;
+      const yMid = svgY + cellSize / 2;
+
+      // North one-way door (traversing upward)
+      if ((north === 'DOOR' || isNorthSecretDiscovered) && oppNorth === 'WALL') {
+        const tipY = svgY - shaftLen * 0.8;
+        const startY = svgY + shaftLen * 0.5;
+        arrows.push({
+          key: `arrow-n-${cx}-${cy}`,
+          x1: xMid,
+          y1: startY,
+          x2: xMid,
+          y2: tipY + headLen * 0.5,
+          headPoints: `${xMid},${tipY} ${xMid - headHalfWidth},${tipY + headLen} ${xMid + headHalfWidth},${tipY + headLen}`
+        });
+      }
+
+      // South one-way door (traversing downward)
+      if ((south === 'DOOR' || isSouthSecretDiscovered) && oppSouth === 'WALL') {
+        const tipY = svgY + cellSize + shaftLen * 0.8;
+        const startY = svgY + cellSize - shaftLen * 0.5;
+        arrows.push({
+          key: `arrow-s-${cx}-${cy}`,
+          x1: xMid,
+          y1: startY,
+          x2: xMid,
+          y2: tipY - headLen * 0.5,
+          headPoints: `${xMid},${tipY} ${xMid - headHalfWidth},${tipY - headLen} ${xMid + headHalfWidth},${tipY - headLen}`
+        });
+      }
+
+      // East one-way door (traversing rightward)
+      if ((east === 'DOOR' || isEastSecretDiscovered) && oppEast === 'WALL') {
+        const tipX = svgX + cellSize + shaftLen * 0.8;
+        const startX = svgX + cellSize - shaftLen * 0.5;
+        arrows.push({
+          key: `arrow-e-${cx}-${cy}`,
+          x1: startX,
+          y1: yMid,
+          x2: tipX - headLen * 0.5,
+          y2: yMid,
+          headPoints: `${tipX},${yMid} ${tipX - headLen},${yMid - headHalfWidth} ${tipX - headLen},${yMid + headHalfWidth}`
+        });
+      }
+
+      // West one-way door (traversing leftward)
+      if ((west === 'DOOR' || isWestSecretDiscovered) && oppWest === 'WALL') {
+        const tipX = svgX - shaftLen * 0.8;
+        const startX = svgX + shaftLen * 0.5;
+        arrows.push({
+          key: `arrow-w-${cx}-${cy}`,
+          x1: startX,
+          y1: yMid,
+          x2: tipX + headLen * 0.5,
+          y2: yMid,
+          headPoints: `${tipX},${yMid} ${tipX + headLen},${yMid - headHalfWidth} ${tipX + headLen},${yMid + headHalfWidth}`
+        });
+      }
+    }
+
+    return arrows;
+  }, [gridCells, cellSize, maze, revealAll]);
+
+  // ViewBox padding to prevent any edge clipping for toroidal perimeter doors and arrows
+  const svgPad = viewMode === 'radar' ? (variant === 'modal' ? 10 : 8) : (variant === 'modal' ? 7 : 6);
+  const totalSvgWidth = svgWidth + svgPad * 2;
+  const totalSvgHeight = svgHeight + svgPad * 2;
+
   return (
     <div className={`select-none transition-all flex flex-col ${
       variant === 'modal' 
@@ -368,9 +465,9 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       {/* Map Viewport Area */}
       <div className="flex flex-col items-center justify-center overflow-hidden bg-slate-950 rounded-lg p-1.5 sm:p-2 border border-slate-800/80 relative w-full">
         <svg
-          viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-          width={svgWidth}
-          height={svgHeight}
+          viewBox={`-${svgPad} -${svgPad} ${totalSvgWidth} ${totalSvgHeight}`}
+          width={totalSvgWidth}
+          height={totalSvgHeight}
           className="max-w-full h-auto aspect-square overflow-visible"
           style={{ imageRendering: 'pixelated' }}
         >
@@ -390,7 +487,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           </defs>
 
           {/* Background grid */}
-          <rect width={svgWidth} height={svgHeight} fill="url(#gridPattern)" />
+          <rect x={-svgPad} y={-svgPad} width={totalSvgWidth} height={totalSvgHeight} fill="url(#gridPattern)" />
 
           {/* 1. Cell Floor Fills & Special Symbols */}
           {gridCells.map((cell) => {
@@ -628,7 +725,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           {/* 2. Walls and Doors */}
           {gridCells.map((cell) => {
             const { 
-              svgX, svgY, isVisited, isValid, 
+              svgX, svgY, cx, cy, isVisited, isValid, 
               north, south, east, west, 
               oppNorth, oppSouth, oppEast, oppWest,
               isNorthVisited, isSouthVisited, isEastVisited, isWestVisited 
@@ -638,17 +735,20 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             const wallStroke = '#64748b';
             const wallWidth = viewMode === 'radar' ? (variant === 'modal' ? 1.1 : 0.9) : 1.3;
             const doorWidth = viewMode === 'radar' ? (variant === 'modal' ? 1.2 : 1.0) : 1.3;
-            const arrowLen = Math.max(3, cellSize * 0.32);
-            const xMid = svgX + cellSize / 2;
-            const yMid = svgY + cellSize / 2;
 
-            const isNorthSecretDiscovered = (north === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},0`]) && (isNorthVisited || revealAll || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},0`]);
-            const isSouthSecretDiscovered = (south === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},2`]) && (isSouthVisited || revealAll || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},2`]);
-            const isEastSecretDiscovered = (east === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},1`]) && (isEastVisited || revealAll || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},1`]);
-            const isWestSecretDiscovered = (west === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},3`]) && (isWestVisited || revealAll || !!maze.discoveredSecrets?.[`${cell.cx},${cell.cy},3`]);
+            const isNorthSecretDiscovered = (north === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cx},${cy},0`]) && (isNorthVisited || revealAll || !!maze.discoveredSecrets?.[`${cx},${cy},0`]);
+            const isSouthSecretDiscovered = (south === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cx},${cy},2`]) && (isSouthVisited || revealAll || !!maze.discoveredSecrets?.[`${cx},${cy},2`]);
+            const isEastSecretDiscovered = (east === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cx},${cy},1`]) && (isEastVisited || revealAll || !!maze.discoveredSecrets?.[`${cx},${cy},1`]);
+            const isWestSecretDiscovered = (west === 'HIDEDOOR' || !!maze.discoveredSecrets?.[`${cx},${cy},3`]) && (isWestVisited || revealAll || !!maze.discoveredSecrets?.[`${cx},${cy},3`]);
+
+            // Check if opposite side is a known door (so solid side of one-way door leaves doorway open)
+            const isOppNorthKnownDoor = (oppNorth === 'DOOR' || (oppNorth === 'HIDEDOOR' && (isNorthVisited || revealAll || !!maze.discoveredSecrets?.[`${cx},${(cy + 1) % 20},2`])));
+            const isOppSouthKnownDoor = (oppSouth === 'DOOR' || (oppSouth === 'HIDEDOOR' && (isSouthVisited || revealAll || !!maze.discoveredSecrets?.[`${cx},${(cy - 1 + 20) % 20},0`])));
+            const isOppEastKnownDoor = (oppEast === 'DOOR' || (oppEast === 'HIDEDOOR' && (isEastVisited || revealAll || !!maze.discoveredSecrets?.[`${(cx + 1) % 20},${cy},3`])));
+            const isOppWestKnownDoor = (oppWest === 'DOOR' || (oppWest === 'HIDEDOOR' && (isWestVisited || revealAll || !!maze.discoveredSecrets?.[`${(cx - 1 + 20) % 20},${cy},1`])));
 
             return (
-              <g key={`walls-${cell.cx}-${cell.cy}`}>
+              <g key={`walls-${cx}-${cy}`}>
                 {/* North Wall / Door */}
                 {(north === 'DOOR' || isNorthSecretDiscovered) ? (
                   <g>
@@ -666,31 +766,25 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeDasharray={isNorthSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {/* Fine crossing directional arrow if one-way */}
-                    {oppNorth === 'WALL' && (
-                      <g>
-                        <line x1={xMid} y1={svgY + arrowLen * 0.55} x2={xMid} y2={svgY - arrowLen * 0.65} stroke="#38bdf8" strokeWidth="1.0" strokeLinecap="round" />
-                        <polyline
-                          points={`${xMid - 2.0},${svgY - arrowLen * 0.65 + 2.0} ${xMid},${svgY - arrowLen * 0.65} ${xMid + 2.0},${svgY - arrowLen * 0.65 + 2.0}`}
-                          fill="none"
-                          stroke="#38bdf8"
-                          strokeWidth="1.0"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </g>
-                    )}
                   </g>
                 ) : (north === 'WALL' || north === 'HIDEDOOR') ? (
-                  <line
-                    x1={svgX}
-                    y1={svgY}
-                    x2={svgX + cellSize}
-                    y2={svgY}
-                    stroke={wallStroke}
-                    strokeWidth={wallWidth}
-                    strokeLinecap="square"
-                  />
+                  isOppNorthKnownDoor ? (
+                    /* Leave doorway open on solid side of one-way door */
+                    <g>
+                      <line x1={svgX} y1={svgY} x2={svgX + cellSize * 0.3} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
+                      <line x1={svgX + cellSize * 0.7} y1={svgY} x2={svgX + cellSize} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
+                    </g>
+                  ) : (
+                    <line
+                      x1={svgX}
+                      y1={svgY}
+                      x2={svgX + cellSize}
+                      y2={svgY}
+                      stroke={wallStroke}
+                      strokeWidth={wallWidth}
+                      strokeLinecap="square"
+                    />
+                  )
                 ) : null}
 
                 {/* South Wall / Door */}
@@ -708,30 +802,24 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeDasharray={isSouthSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {oppSouth === 'WALL' && (
-                      <g>
-                        <line x1={xMid} y1={svgY + cellSize - arrowLen * 0.55} x2={xMid} y2={svgY + cellSize + arrowLen * 0.65} stroke="#38bdf8" strokeWidth="1.0" strokeLinecap="round" />
-                        <polyline
-                          points={`${xMid - 2.0},${svgY + cellSize + arrowLen * 0.65 - 2.0} ${xMid},${svgY + cellSize + arrowLen * 0.65} ${xMid + 2.0},${svgY + cellSize + arrowLen * 0.65 - 2.0}`}
-                          fill="none"
-                          stroke="#38bdf8"
-                          strokeWidth="1.0"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </g>
-                    )}
                   </g>
                 ) : (south === 'WALL' || south === 'HIDEDOOR') ? (
-                  <line
-                    x1={svgX}
-                    y1={svgY + cellSize}
-                    x2={svgX + cellSize}
-                    y2={svgY + cellSize}
-                    stroke={wallStroke}
-                    strokeWidth={wallWidth}
-                    strokeLinecap="square"
-                  />
+                  isOppSouthKnownDoor ? (
+                    <g>
+                      <line x1={svgX} y1={svgY + cellSize} x2={svgX + cellSize * 0.3} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                      <line x1={svgX + cellSize * 0.7} y1={svgY + cellSize} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    </g>
+                  ) : (
+                    <line
+                      x1={svgX}
+                      y1={svgY + cellSize}
+                      x2={svgX + cellSize}
+                      y2={svgY + cellSize}
+                      stroke={wallStroke}
+                      strokeWidth={wallWidth}
+                      strokeLinecap="square"
+                    />
+                  )
                 ) : null}
 
                 {/* East Wall / Door */}
@@ -749,30 +837,24 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeDasharray={isEastSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {oppEast === 'WALL' && (
-                      <g>
-                        <line x1={svgX + cellSize - arrowLen * 0.55} y1={yMid} x2={svgX + cellSize + arrowLen * 0.65} stroke="#38bdf8" strokeWidth="1.0" strokeLinecap="round" />
-                        <polyline
-                          points={`${svgX + cellSize + arrowLen * 0.65 - 2.0},${yMid - 2.0} ${svgX + cellSize + arrowLen * 0.65},${yMid} ${svgX + cellSize + arrowLen * 0.65 - 2.0},${yMid + 2.0}`}
-                          fill="none"
-                          stroke="#38bdf8"
-                          strokeWidth="1.0"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </g>
-                    )}
                   </g>
                 ) : (east === 'WALL' || east === 'HIDEDOOR') ? (
-                  <line
-                    x1={svgX + cellSize}
-                    y1={svgY}
-                    x2={svgX + cellSize}
-                    y2={svgY + cellSize}
-                    stroke={wallStroke}
-                    strokeWidth={wallWidth}
-                    strokeLinecap="square"
-                  />
+                  isOppEastKnownDoor ? (
+                    <g>
+                      <line x1={svgX + cellSize} y1={svgY} x2={svgX + cellSize} y2={svgY + cellSize * 0.3} stroke={wallStroke} strokeWidth={wallWidth} />
+                      <line x1={svgX + cellSize} y1={svgY + cellSize * 0.7} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    </g>
+                  ) : (
+                    <line
+                      x1={svgX + cellSize}
+                      y1={svgY}
+                      x2={svgX + cellSize}
+                      y2={svgY + cellSize}
+                      stroke={wallStroke}
+                      strokeWidth={wallWidth}
+                      strokeLinecap="square"
+                    />
+                  )
                 ) : null}
 
                 {/* West Wall / Door */}
@@ -790,34 +872,49 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                       strokeDasharray={isWestSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {oppWest === 'WALL' && (
-                      <g>
-                        <line x1={svgX + arrowLen * 0.55} y1={yMid} x2={svgX - arrowLen * 0.65} y2={yMid} stroke="#38bdf8" strokeWidth="1.0" strokeLinecap="round" />
-                        <polyline
-                          points={`${svgX - arrowLen * 0.65 + 2.0},${yMid - 2.0} ${svgX - arrowLen * 0.65},${yMid} ${svgX - arrowLen * 0.65 + 2.0},${yMid + 2.0}`}
-                          fill="none"
-                          stroke="#38bdf8"
-                          strokeWidth="1.0"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </g>
-                    )}
                   </g>
                 ) : (west === 'WALL' || west === 'HIDEDOOR') ? (
-                  <line
-                    x1={svgX}
-                    y1={svgY}
-                    x2={svgX}
-                    y2={svgY + cellSize}
-                    stroke={wallStroke}
-                    strokeWidth={wallWidth}
-                    strokeLinecap="square"
-                  />
+                  isOppWestKnownDoor ? (
+                    <g>
+                      <line x1={svgX} y1={svgY} x2={svgX} y2={svgY + cellSize * 0.3} stroke={wallStroke} strokeWidth={wallWidth} />
+                      <line x1={svgX} y1={svgY + cellSize * 0.7} x2={svgX} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    </g>
+                  ) : (
+                    <line
+                      x1={svgX}
+                      y1={svgY}
+                      x2={svgX}
+                      y2={svgY + cellSize}
+                      stroke={wallStroke}
+                      strokeWidth={wallWidth}
+                      strokeLinecap="square"
+                    />
+                  )
                 ) : null}
               </g>
             );
           })}
+
+          {/* 3. Dedicated Top Layer: One-Way Directional Arrows (Never covered by walls or doors) */}
+          <g id="minimap-one-way-arrows">
+            {oneWayArrows.map((arrow) => (
+              <g key={arrow.key}>
+                <line
+                  x1={arrow.x1}
+                  y1={arrow.y1}
+                  x2={arrow.x2}
+                  y2={arrow.y2}
+                  stroke="#38bdf8"
+                  strokeWidth={viewMode === 'radar' ? (variant === 'modal' ? 1.4 : 1.2) : 1.0}
+                  strokeLinecap="round"
+                />
+                <polygon
+                  points={arrow.headPoints}
+                  fill="#38bdf8"
+                />
+              </g>
+            ))}
+          </g>
 
           {/* 2.5 Fallen Heroes / Corpses on Floor */}
           {fallenMarkers.map((marker, idx) => {
@@ -899,10 +996,10 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             <span>Porte secrète</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <svg width="15" height="10" viewBox="0 0 15 10" className="inline-block shrink-0">
-              <line x1="7.5" y1="1" x2="7.5" y2="9" stroke="#f59e0b" strokeWidth="1.1" strokeLinecap="round" />
-              <line x1="2" y1="5" x2="13" y2="5" stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" />
-              <polyline points="10.5,3 13,5 10.5,7" fill="none" stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="16" height="12" viewBox="0 0 16 12" className="inline-block shrink-0">
+              <line x1="8" y1="1" x2="8" y2="11" stroke="#f59e0b" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="2" y1="6" x2="11.5" y2="6" stroke="#38bdf8" strokeWidth="1.1" strokeLinecap="round" />
+              <polygon points="14,6 10.5,3.8 10.5,8.2" fill="#38bdf8" />
             </svg>
             <span>Porte 1-sens</span>
           </div>
