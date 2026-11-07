@@ -102,7 +102,8 @@ export function attemptPartyRun(
 export function checkMonsterIdentification(
   party: TCharacter[],
   groups: CombatGroup[],
-  log?: string[]
+  log?: string[],
+  isEn = false
 ): { newlyIdentifiedCount: number } {
   let newlyIdentifiedCount = 0;
 
@@ -130,7 +131,9 @@ export function checkMonsterIdentification(
             ? (targetGroup.monster.namePlural || targetGroup.monster.name) 
             : targetGroup.monster.name;
           if (log) {
-            log.push(`🔍 ${hero.name} observe attentivement l'ennemi et identifie : ${trueName} !`);
+            log.push(isEn 
+              ? `🔍 ${hero.name} carefully observes and identifies: ${trueName}!` 
+              : `🔍 ${hero.name} observe attentivement l'ennemi et identifie : ${trueName} !`);
           }
         }
       }
@@ -477,6 +480,8 @@ export function executeCombatRound(
   turnQueue.sort((a, b) => a.speed - b.speed);
 
   // 2. Process actions in turn
+  const isEn = ctx.lang === 'en';
+
   for (const unit of turnQueue) {
     // Check if battle still ongoing (any party member alive to be targeted)
     const partyHasLiving = party.some(p => p.status !== 'DEAD' && p.status !== 'ASHES' && p.hpLeft > 0);
@@ -492,15 +497,15 @@ export function executeCombatRound(
 
       if (action.actionType === 'RUN') {
         if (attemptPartyRun(party, groups, ctx.mazeLevel)) {
-          log.push(`🏃 L'escouade parvient à décrocher et s'enfuit du combat !`);
+          log.push(isEn ? `🏃 Party successfully disengages and flees from combat!` : `🏃 L'escouade parvient à décrocher et s'enfuit du combat !`);
           fled = true;
           break;
         } else {
-          log.push(`⚠️ La tentative de fuite du groupe échoue ! Les monstres bloquent toute retraite !`);
+          log.push(isEn ? `⚠️ Party flee attempt failed! The monsters block all retreat!` : `⚠️ La tentative de fuite du groupe échoue ! Les monstres bloquent toute retraite !`);
         }
       } else if (action.actionType === 'PARRY') {
         parryingHeroIds.add(hero.id);
-        log.push(`🛡️ ${hero.name} se met en garde défensive (-2 CA pour ce tour uniquement).`);
+        log.push(isEn ? `🛡️ ${hero.name} enters defensive stance (-2 AC this round only).` : `🛡️ ${hero.name} se met en garde défensive (-2 CA pour ce tour uniquement).`);
       } else if (action.actionType === 'DISPELL') {
         // Dispell undead ability for Priest, Bishop, Lord
         const targetGroup = groups[action.targetGroupIndex ?? 0];
@@ -508,7 +513,7 @@ export function executeCombatRound(
           const groupName = targetGroup.identified
             ? (targetGroup.aliveCount > 1 ? (targetGroup.monster.namePlural || targetGroup.monster.name) : targetGroup.monster.name)
             : (targetGroup.aliveCount > 1 ? (targetGroup.monster.nameUnknownPlural || targetGroup.monster.nameUnknown) : targetGroup.monster.nameUnknown);
-          log.push(`${hero.name} brandit son symbole sacré et exorcise ${groupName} !`);
+          log.push(isEn ? `${hero.name} raises holy symbol and dispells ${groupName}!` : `${hero.name} brandit son symbole sacré et exorcise ${groupName} !`);
           if (targetGroup.monster.monsterClass === 10) { // Undead
             let dispelledCount = 0;
             targetGroup.instances.forEach(inst => {
@@ -519,41 +524,45 @@ export function executeCombatRound(
               }
             });
             targetGroup.aliveCount -= dispelledCount;
-            log.push(dispelledCount > 0 ? `${dispelledCount} mort(s)-vivant(s) se désintègrent en poussière !` : `L’exorcisme n’a aucun effet.`);
+            log.push(dispelledCount > 0 
+              ? (isEn ? `${dispelledCount} undead disintegrated into dust!` : `${dispelledCount} mort(s)-vivant(s) se désintègrent en poussière !`)
+              : (isEn ? `The dispell has no effect.` : `L’exorcisme n’a aucun effet.`));
           } else {
-            log.push(`Ces créatures ne sont pas des morts-vivants.`);
+            log.push(isEn ? `These creatures are not undead.` : `Ces créatures ne sont pas des morts-vivants.`);
           }
         }
       } else if (action.actionType === 'SPELL') {
         const spell = SPELLS.find(s => s.id === action.spellId);
         if (spell) {
-          log.push(`${hero.name} entonne le sort ${spell.name} !`);
+          log.push(isEn ? `${hero.name} begins chanting ${spell.name}!` : `${hero.name} entonne le sort ${spell.name} !`);
           castCombatSpell(hero, spell, action, groups, party, log, ctx, effects);
         }
       } else if (action.actionType === 'USE_ITEM') {
         const slotIdx = action.inventorySlotIndex ?? -1;
         const slot = hero.possessions[slotIdx];
         if (!slot) {
-          log.push(`${hero.name} cherche un objet dans son inventaire mais ne trouve rien.`);
+          log.push(isEn ? `${hero.name} searches inventory but finds nothing.` : `${hero.name} cherche un objet dans son inventaire mais ne trouve rien.`);
           continue;
         }
         const itm = ITEMS_DATABASE.find(i => i.id === slot.itemIndex);
         if (!itm) {
-          log.push(`${hero.name} ne parvient pas à utiliser l'objet.`);
+          log.push(isEn ? `${hero.name} fails to use the item.` : `${hero.name} ne parvient pas à utiliser l'objet.`);
           continue;
         }
 
         if (!canClassUseItem(hero.class, itm)) {
-          log.push(`${hero.name} tente d'utiliser ${itm.name}, mais sa classe (${hero.class}) ne maîtrise pas cet objet !`);
+          log.push(isEn 
+            ? `${hero.name} attempts to use ${itm.name}, but class (${hero.class}) cannot wield it!` 
+            : `${hero.name} tente d'utiliser ${itm.name}, mais sa classe (${hero.class}) ne maîtrise pas cet objet !`);
           continue;
         }
 
-        log.push(`✨ ${hero.name} utilise ${itm.name} !`);
+        log.push(isEn ? `✨ ${hero.name} uses ${itm.name}!` : `✨ ${hero.name} utilise ${itm.name} !`);
 
         if (itm.spellPower && itm.spellPower > 0) {
           const spell = SPELLS.find(s => s.id === itm.spellPower);
           if (spell) {
-            log.push(`Le pouvoir magique de ${spell.name} jaillit de l'objet !`);
+            log.push(isEn ? `The magical power of ${spell.name} bursts forth!` : `Le pouvoir magique de ${spell.name} jaillit de l'objet !`);
             castCombatSpell(hero, spell, action, groups, party, log, ctx, effects);
           }
         } else if (itm.healPts && itm.healPts > 0) {
@@ -561,23 +570,23 @@ export function executeCombatRound(
           if (target.status === 'OK' || target.status === 'AFRAID' || target.status === 'ASLEEP') {
             const healAmt = itm.healPts * 6 + Math.floor(Math.random() * 8);
             target.hpLeft = Math.min(target.hpMax, target.hpLeft + healAmt);
-            log.push(`💚 ${target.name} récupère ${healAmt} PV (${target.hpLeft}/${target.hpMax}).`);
+            log.push(isEn ? `💚 ${target.name} recovers ${healAmt} HP (${target.hpLeft}/${target.hpMax}).` : `💚 ${target.name} récupère ${healAmt} PV (${target.hpLeft}/${target.hpMax}).`);
           }
         } else if (itm.name.toUpperCase().includes('LATUMOFIS') || itm.name.toUpperCase().includes('POISON')) {
           const target = party[action.targetCharIndex ?? unit.charIndex] || hero;
           target.poisonAmount = 0;
-          log.push(`💚 Le poison dans les veines de ${target.name} est neutralisé.`);
+          log.push(isEn ? `💚 Poison coursing through ${target.name} is neutralized.` : `💚 Le poison dans les veines de ${target.name} est neutralisé.`);
         }
 
         // Consumption or degradation
         if (itm.changeChance > 0 && Math.random() * 100 < itm.changeChance) {
           if (!itm.changeTo || itm.changeTo === 0) {
             hero.possessions.splice(slotIdx, 1);
-            log.push(`L'objet ${itm.name} a été entièrement consommé.`);
+            log.push(isEn ? `The item ${itm.name} was completely consumed.` : `L'objet ${itm.name} a été entièrement consommé.`);
           } else {
             slot.itemIndex = itm.changeTo;
             const newItem = ITEMS_DATABASE.find(i => i.id === itm.changeTo);
-            log.push(`L'objet s'est transformé en ${newItem?.name || 'objet inerte'}.`);
+            log.push(isEn ? `The item transformed into ${newItem?.name || 'an inert object'}.` : `L'objet s'est transformé en ${newItem?.name || 'objet inerte'}.`);
           }
           recalculateCharacterCombatStats(hero);
         }
@@ -585,7 +594,7 @@ export function executeCombatRound(
         // According to Pascal Wizardry 1 (line 4446: IF MYCHARX < 3 THEN FIGHT):
         // Only the first 3 characters (front rank) can execute a melee attack
         if (action.charIndex >= 3) {
-          log.push(`${hero.name} est en arrière-garde (rang ${action.charIndex + 1}) et ne peut pas frapper en mêlée.`);
+          log.push(isEn ? `${hero.name} is in the back row (rank ${action.charIndex + 1}) and cannot attack in melee.` : `${hero.name} est en arrière-garde (rang ${action.charIndex + 1}) et ne peut pas frapper en mêlée.`);
           continue;
         }
 
@@ -604,7 +613,7 @@ export function executeCombatRound(
           // Target any living monster in the group (OK, ASLEEP, or PLYZE)
           const livingTarget = targetGroup.instances.find(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0);
           if (livingTarget) {
-            executeHeroAttack(hero, livingTarget, targetGroup, log);
+            executeHeroAttack(hero, livingTarget, targetGroup, log, isEn);
           }
         }
       }
@@ -622,7 +631,8 @@ export function executeCombatRound(
         log,
         () => { alarmTriggered = true; },
         ctx.acModifier + (effects.acModifier ?? 0),
-        parryingHeroIds
+        parryingHeroIds,
+        isEn
       );
     }
   }
@@ -633,11 +643,13 @@ export function executeCombatRound(
     if (h.poisonAmount && h.poisonAmount > 0 && h.status !== 'DEAD' && h.status !== 'ASHES') {
       const pDmg = h.poisonAmount;
       h.hpLeft = Math.max(0, h.hpLeft - pDmg);
-      log.push(`☣️ Le poison ronge ${h.name} pour ${pDmg} dégât(s) (${h.hpLeft}/${h.hpMax} PV) !`);
+      log.push(isEn 
+        ? `☣️ Poison affects ${h.name} for ${pDmg} damage (${h.hpLeft}/${h.hpMax} HP)!` 
+        : `☣️ Le poison ronge ${h.name} pour ${pDmg} dégât(s) (${h.hpLeft}/${h.hpMax} PV) !`);
       if (h.hpLeft <= 0) {
         h.status = 'DEAD';
         h.hpLeft = 0;
-        log.push(`💀 ${h.name} a succombé aux effets du poison !`);
+        log.push(isEn ? `💀 ${h.name} died from poison!` : `💀 ${h.name} a succombé aux effets du poison !`);
       }
     }
 
@@ -645,14 +657,14 @@ export function executeCombatRound(
     if (h.silencedRounds && h.silencedRounds > 0) {
       h.silencedRounds--;
       if (h.silencedRounds === 0) {
-        log.push(`✨ Le silence magique (MONTINO) entourant ${h.name} s'est dissipé.`);
+        log.push(isEn ? `✨ Silence (MONTINO) on ${h.name} wore off.` : `✨ Le silence magique (MONTINO) entourant ${h.name} s'est dissipé.`);
       }
     }
 
     // C. Natural wake-up roll from sleep (30% chance per round)
     if (h.status === 'ASLEEP' && Math.random() * 100 < 30) {
       h.status = 'OK';
-      log.push(`☀️ ${h.name} se réveille de son sommeil !`);
+      log.push(isEn ? `☀️ ${h.name} woke up from sleep!` : `☀️ ${h.name} se réveille de son sommeil !`);
     }
   });
 
@@ -676,7 +688,9 @@ export function executeCombatRound(
   // Shift any fallen heroes to the rear of the party so living heroes step up to the front rank
   const shiftResult = shiftDeadHeroesToEnd(party);
   if (shiftResult.changed) {
-    log.push(`🔄 Les héros tombés (${shiftResult.movedNames.join(', ')}) sont placés en queue de groupe ; les survivants avancent en première ligne.`);
+    log.push(isEn 
+      ? `🔄 Fallen heroes (${shiftResult.movedNames.join(', ')}) moved to the rear; survivors step up to the front.` 
+      : `🔄 Les héros tombés (${shiftResult.movedNames.join(', ')}) sont placés en queue de groupe ; les survivants avancent en première ligne.`);
   }
 
   const partyAlive = party.some(p => p.status !== 'DEAD' && p.status !== 'ASHES' && p.hpLeft > 0);
@@ -684,7 +698,7 @@ export function executeCombatRound(
 
   // Turn preparation / Monster identification check for next round (pascal_source DSPPARTY l. 5268-5274)
   if (partyAlive && monstersAlive && !fled) {
-    checkMonsterIdentification(party, groups, log);
+    checkMonsterIdentification(party, groups, log, isEn);
   }
 
   let expGainedPerSurvivor = 0;
@@ -692,7 +706,9 @@ export function executeCombatRound(
     const { totalExp, survivorCount, expPerSurvivor } = calculateVictoryExp(party, groups);
     expGainedPerSurvivor = expPerSurvivor;
     if (survivorCount > 0 && expPerSurvivor > 0) {
-      log.push(`🏆 VICTOIRE ! Pour avoir éliminé les monstres (${totalExp.toLocaleString()} XP au total), chacun des ${survivorCount} survivant(s) (statut OK) reçoit +${expPerSurvivor.toLocaleString()} XP !`);
+      log.push(isEn 
+        ? `🏆 VICTORY! For defeating the monsters (${totalExp.toLocaleString()} XP total), each of the ${survivorCount} survivor(s) receives +${expPerSurvivor.toLocaleString()} XP!` 
+        : `🏆 VICTOIRE ! Pour avoir éliminé les monstres (${totalExp.toLocaleString()} XP au total), chacun des ${survivorCount} survivant(s) (statut OK) reçoit +${expPerSurvivor.toLocaleString()} XP !`);
     }
   }
 
@@ -711,7 +727,8 @@ function executeHeroAttack(
   hero: TCharacter,
   target: CombatMonsterInstance,
   group: CombatGroup,
-  log: string[]
+  log: string[],
+  isEn = false
 ) {
   const monster = group.monster;
   const isHelpless = target.status === 'ASLEEP' || target.status === 'PLYZE';
@@ -749,27 +766,31 @@ function executeHeroAttack(
   const targetName = group.identified ? monster.name : monster.nameUnknown;
 
   if (hitsLanded === 0) {
-    log.push(`${hero.name} attaque ${targetName} mais manque son coup.`);
+    log.push(isEn ? `${hero.name} attacks ${targetName} but misses.` : `${hero.name} attaque ${targetName} mais manque son coup.`);
   } else {
     // Wake up if sleeping and took damage
     if (target.status === 'ASLEEP') {
       target.status = 'OK';
-      log.push(`⚡ Le coup réveille ${targetName} de son sommeil !`);
+      log.push(isEn ? `⚡ The blow awakens ${targetName} from sleep!` : `⚡ Le coup réveille ${targetName} de son sommeil !`);
     }
 
     if (criticalHit) {
       target.hpLeft = 0;
       target.status = 'DEAD';
       group.aliveCount = group.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length;
-      log.push(`⚡ COUP CRITIQUE ! ${hero.name} décapite net ${targetName} d’un coup magistral !`);
+      log.push(isEn 
+        ? `⚡ CRITICAL HIT! ${hero.name} cleanly decapitates ${targetName} with a master strike!` 
+        : `⚡ COUP CRITIQUE ! ${hero.name} décapite net ${targetName} d’un coup magistral !`);
     } else {
       target.hpLeft = Math.max(0, target.hpLeft - totalDamage);
-      log.push(`${hero.name} frappe ${targetName} ${hitsLanded} fois pour ${totalDamage} points de dégâts !`);
+      log.push(isEn 
+        ? `${hero.name} hits ${targetName} ${hitsLanded} time(s) for ${totalDamage} damage!` 
+        : `${hero.name} frappe ${targetName} ${hitsLanded} fois pour ${totalDamage} points de dégâts !`);
       if (target.hpLeft <= 0) {
         target.status = 'DEAD';
         target.hpLeft = 0;
         group.aliveCount = group.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length;
-        log.push(`${targetName} s’effondre sans vie !`);
+        log.push(isEn ? `${targetName} collapses lifeless!` : `${targetName} s’effondre sans vie !`);
       }
     }
   }
@@ -782,7 +803,8 @@ function executeMonsterTurn(
   log: string[],
   onAlarm: () => void,
   acModifier = 0,
-  parryingHeroIds: Set<string> = new Set()
+  parryingHeroIds: Set<string> = new Set(),
+  isEn = false
 ) {
   const monster = group.monster;
   const monsterName = group.identified 
@@ -793,7 +815,7 @@ function executeMonsterTurn(
   if (monster.healPts > 0 && inst.hpLeft > 0 && inst.hpLeft < inst.maxHp) {
     const healed = Math.min(monster.healPts, inst.maxHp - inst.hpLeft);
     inst.hpLeft += healed;
-    log.push(`💚 ${monsterName} régénère ses chairs blessées (+${healed} PV) !`);
+    log.push(isEn ? `💚 ${monsterName} regenerates (+${healed} HP)!` : `💚 ${monsterName} régénère ses chairs blessées (+${healed} PV) !`);
   }
 
   // Conscious living heroes
@@ -811,21 +833,27 @@ function executeMonsterTurn(
     // Monster Silence spell (MONTINO)
     if (spellRoll < 25 && (!target.silencedRounds || target.silencedRounds <= 0)) {
       target.silencedRounds = 3;
-      log.push(`🔇 ${monsterName} invoque MONTINO ! ${target.name} est frappé de mutisme magique (Silence 3 tours) !`);
+      log.push(isEn 
+        ? `🔇 ${monsterName} casts MONTINO! ${target.name} is silenced (3 rounds)!` 
+        : `🔇 ${monsterName} invoque MONTINO ! ${target.name} est frappé de mutisme magique (Silence 3 tours) !`);
       return;
     }
     
     // Monster Sleep spell (KATINO)
     if (spellRoll < 50 && target.status === 'OK') {
       target.status = 'ASLEEP';
-      log.push(`💤 ${monsterName} souffle la brume de KATINO ! ${target.name} sombre dans un profond sommeil !`);
+      log.push(isEn 
+        ? `💤 ${monsterName} casts KATINO! ${target.name} falls into a deep sleep!` 
+        : `💤 ${monsterName} souffle la brume de KATINO ! ${target.name} sombre dans un profond sommeil !`);
       return;
     }
 
     // Monster Paralyze spell (MANIFO)
     if (spellRoll < 70 && target.status === 'OK') {
       target.status = 'PLYZE';
-      log.push(`⚡ ${monsterName} projette des rets de MANIFO ! ${target.name} est pétrifié de paralysie !`);
+      log.push(isEn 
+        ? `⚡ ${monsterName} casts MANIFO! ${target.name} is paralyzed!` 
+        : `⚡ ${monsterName} projette des rets de MANIFO ! ${target.name} est pétrifié de paralysie !`);
       return;
     }
 
@@ -836,13 +864,21 @@ function executeMonsterTurn(
     if (spellTier >= 7) {
       spellName = 'TILTOWAI';
       spellDmg = rollDice({ level: 10, hpFac: 15, hpMinAdd: 0 });
-      log.push(`💥 ${monsterName} déchaîne l'apocalypse de TILTOWAI sur toute l'escouade !`);
+      log.push(isEn 
+        ? `💥 ${monsterName} unleashes the apocalypse of TILTOWAI on the whole party!` 
+        : `💥 ${monsterName} déchaîne l'apocalypse de TILTOWAI sur toute l'escouade !`);
       livingHeroes.forEach(({ hero: h }) => {
         const saved = Math.random() * 20 < (h.luckSkill?.[3] ?? 10);
         const actualDmg = saved ? Math.floor(spellDmg / 2) : spellDmg;
         h.hpLeft -= actualDmg;
-        log.push(`${h.name} subit ${actualDmg} dégâts dévastateurs (${h.hpLeft}/${h.hpMax} PV) !`);
-        if (h.hpLeft <= 0) { h.status = 'DEAD'; h.hpLeft = 0; log.push(`💀 ${h.name} est désintégré !`); }
+        log.push(isEn 
+          ? `${h.name} takes ${actualDmg} devastating damage (${h.hpLeft}/${h.hpMax} HP)!` 
+          : `${h.name} subit ${actualDmg} dégâts dévastateurs (${h.hpLeft}/${h.hpMax} PV) !`);
+        if (h.hpLeft <= 0) { 
+          h.status = 'DEAD'; 
+          h.hpLeft = 0; 
+          log.push(isEn ? `💀 ${h.name} is disintegrated!` : `💀 ${h.name} est désintégré !`); 
+        }
       });
       return;
     } else if (spellTier >= 5) {
@@ -853,13 +889,15 @@ function executeMonsterTurn(
       spellDmg = rollDice({ level: 4, hpFac: 6, hpMinAdd: 0 });
     }
 
-    log.push(`⚡ ${monsterName} incante ${spellName} !`);
+    log.push(isEn ? `⚡ ${monsterName} incants ${spellName}!` : `⚡ ${monsterName} incante ${spellName} !`);
     target.hpLeft -= spellDmg;
-    log.push(`${target.name} est frappé de plein fouet pour ${spellDmg} dégâts (${target.hpLeft}/${target.hpMax} PV) !`);
+    log.push(isEn 
+      ? `${target.name} is hit directly for ${spellDmg} damage (${target.hpLeft}/${target.hpMax} HP)!` 
+      : `${target.name} est frappé de plein fouet pour ${spellDmg} dégâts (${target.hpLeft}/${target.hpMax} PV) !`);
     if (target.hpLeft <= 0) {
       target.status = 'DEAD';
       target.hpLeft = 0;
-      log.push(`💀 ${target.name} est terrassé !`);
+      log.push(isEn ? `💀 ${target.name} is slain!` : `💀 ${target.name} est terrassé !`);
     }
     return;
   }
@@ -867,17 +905,19 @@ function executeMonsterTurn(
   // 2. Dragon breath weapon check (BREATHES, Pascal COMBAT2.TEXT l. 633)
   if (monster.breathe > 0 && Math.random() * 100 < 60) {
     const breathDmg = Math.max(1, Math.floor(inst.hpLeft / 2));
-    log.push(`🔥 ${monsterName} souffle un cône d'énergie destructrice !`);
+    log.push(isEn ? `🔥 ${monsterName} breathes a cone of destructive energy!` : `🔥 ${monsterName} souffle un cône d'énergie destructrice !`);
     livingHeroes.forEach(({ hero }) => {
       // Save vs breath using Luck
       const saved = Math.random() * 20 < (hero.luckSkill?.[3] ?? 10);
       const actualDmg = saved ? Math.floor(breathDmg / 2) : breathDmg;
       hero.hpLeft -= actualDmg;
-      log.push(`${hero.name} subit ${actualDmg} dégâts${saved ? ' (jet de sauvegarde réussi)' : ''} !`);
+      log.push(isEn 
+        ? `${hero.name} takes ${actualDmg} damage${saved ? ' (saving throw succeeded)' : ''}!` 
+        : `${hero.name} subit ${actualDmg} dégâts${saved ? ' (jet de sauvegarde réussi)' : ''} !`);
       if (hero.hpLeft <= 0) {
         hero.status = 'DEAD';
         hero.hpLeft = 0;
-        log.push(`💀 ${hero.name} succombe au souffle mortel !`);
+        log.push(isEn ? `💀 ${hero.name} succumbs to the deadly breath!` : `💀 ${hero.name} succombe au souffle mortel !`);
       }
     });
     return;
@@ -893,10 +933,14 @@ function executeMonsterTurn(
         group.instances.push(makeMonsterInstance(monster));
         group.aliveCount = group.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length;
         group.count = group.instances.length;
-        log.push(`📢 ${monsterName} pousse un cri strident d'appel à l'aide... et des renforts surgissent (+1 ${monsterName}) !`);
+        log.push(isEn 
+          ? `📢 ${monsterName} screams for help... and reinforcements arrive (+1 ${monsterName})!` 
+          : `📢 ${monsterName} pousse un cri strident d'appel à l'aide... et des renforts surgissent (+1 ${monsterName}) !`);
         return;
       } else {
-        log.push(`📢 ${monsterName} appelle désespérément à l'aide, mais aucun renfort ne répond !`);
+        log.push(isEn 
+          ? `📢 ${monsterName} cries desperately for help, but none answers!` 
+          : `📢 ${monsterName} appelle désespérément à l'aide, mais aucun renfort ne répond !`);
         return;
       }
     }
@@ -909,7 +953,9 @@ function executeMonsterTurn(
       inst.status = 'DEAD';
       inst.hpLeft = 0;
       group.aliveCount = group.instances.filter(i => i.status !== 'DEAD' && i.status !== 'ASHES' && i.hpLeft > 0).length;
-      log.push(`💨 Pris de panique, ${monsterName} prend ses jambes à son cou et s'enfuit du donjon !`);
+      log.push(isEn 
+        ? `💨 Panicked, ${monsterName} flees from the dungeon!` 
+        : `💨 Pris de panique, ${monsterName} prend ses jambes à son cou et s'enfuit du donjon !`);
       return;
     }
   }
@@ -918,7 +964,9 @@ function executeMonsterTurn(
   // If monster has 0 attacks (e.g. FUZZBALL), it cannot execute melee attacks
   const attackCount = monster.attackCount ?? 0;
   if (attackCount === 0 || !monster.attacks || monster.attacks.length === 0) {
-    log.push(`${monsterName} frétille sur place mais ne dispose d'aucune attaque physique.`);
+    log.push(isEn 
+      ? `${monsterName} wriggles in place but has no physical attacks.` 
+      : `${monsterName} frétille sur place mais ne dispose d'aucune attaque physique.`);
     return;
   }
 
@@ -945,22 +993,26 @@ function executeMonsterTurn(
   }
 
   if (hits === 0) {
-    log.push(`${monsterName} tente d'attaquer ${chosenTarget.name} mais manque.`);
+    log.push(isEn ? `${monsterName} attempts to attack ${chosenTarget.name} but misses.` : `${monsterName} tente d'attaquer ${chosenTarget.name} mais manque.`);
   } else {
     chosenTarget.hpLeft -= totalDmg;
-    log.push(`${monsterName} frappe ${chosenTarget.name} ${hits > 1 ? `(${hits} coups)` : ''} pour ${totalDmg} dégâts (${chosenTarget.hpLeft}/${chosenTarget.hpMax} PV) !`);
+    log.push(isEn 
+      ? `${monsterName} hits ${chosenTarget.name} ${hits > 1 ? `(${hits} times)` : ''} for ${totalDmg} damage (${chosenTarget.hpLeft}/${chosenTarget.hpMax} HP)!` 
+      : `${monsterName} frappe ${chosenTarget.name} ${hits > 1 ? `(${hits} coups)` : ''} pour ${totalDmg} dégâts (${chosenTarget.hpLeft}/${chosenTarget.hpMax} PV) !`);
 
     // Waking up if sleeping and took damage
     if (chosenTarget.status === 'ASLEEP' && chosenTarget.hpLeft > 0) {
       chosenTarget.status = 'OK';
-      log.push(`⚡ La douleur du coup réveille brutalement ${chosenTarget.name} !`);
+      log.push(isEn ? `⚡ The pain of the blow brutally awakens ${chosenTarget.name}!` : `⚡ La douleur du coup réveille brutalement ${chosenTarget.name} !`);
     }
 
     // Authentic Pascal Special Attack Status Effects (CASEDAMG, Pascal COMBAT5.TEXT l. 220-235)
     // A. Drain Energy Levels
     if (monster.drainAmount > 0) {
       chosenTarget.charLevel = Math.max(1, chosenTarget.charLevel - monster.drainAmount);
-      log.push(`⚠️ ATTENTION ! ${chosenTarget.name} se fait aspirer son énergie vitale (-${monster.drainAmount} NIVEAU) !`);
+      log.push(isEn 
+        ? `⚠️ WARNING! ${chosenTarget.name} has life energy drained (-${monster.drainAmount} LEVEL)!` 
+        : `⚠️ ATTENTION ! ${chosenTarget.name} se fait aspirer son énergie vitale (-${monster.drainAmount} NIVEAU) !`);
     }
 
     // B. Critical Hit (Decapitation)
@@ -969,7 +1021,9 @@ function executeMonsterTurn(
       if (Math.random() * 100 < critChance) {
         chosenTarget.status = 'DEAD';
         chosenTarget.hpLeft = 0;
-        log.push(`⚡ COUP CRITIQUE MORTEL ! ${monsterName} décapite ${chosenTarget.name} d'un coup impitoyable !`);
+        log.push(isEn 
+          ? `⚡ FATAL CRITICAL HIT! ${monsterName} decapitates ${chosenTarget.name} with a ruthless blow!` 
+          : `⚡ COUP CRITIQUE MORTEL ! ${monsterName} décapite ${chosenTarget.name} d'un coup impitoyable !`);
         return;
       }
     }
@@ -979,7 +1033,9 @@ function executeMonsterTurn(
       const luckSave = Math.random() * 20 < (chosenTarget.luckSkill?.[2] ?? 10);
       if (!luckSave) {
         chosenTarget.status = 'STONED';
-        log.push(`🗿 PÉTRIFICATION ! Le contact de ${monsterName} pétrifie ${chosenTarget.name} en pierre froide !`);
+        log.push(isEn 
+          ? `🗿 PETRIFICATION! The touch of ${monsterName} petrifies ${chosenTarget.name} into cold stone!` 
+          : `🗿 PÉTRIFICATION ! Le contact de ${monsterName} pétrifie ${chosenTarget.name} en pierre froide !`);
       }
     }
 
@@ -988,7 +1044,9 @@ function executeMonsterTurn(
       const luckSave = Math.random() * 20 < (chosenTarget.luckSkill?.[1] ?? 10);
       if (!luckSave) {
         chosenTarget.status = 'PLYZE';
-        log.push(`⚡ ${chosenTarget.name} est frappé de paralysie par ${monsterName} !`);
+        log.push(isEn 
+          ? `⚡ ${chosenTarget.name} is paralyzed by ${monsterName}!` 
+          : `⚡ ${chosenTarget.name} est frappé de paralysie par ${monsterName} !`);
       }
     }
 
@@ -997,20 +1055,26 @@ function executeMonsterTurn(
       const luckSave = Math.random() * 20 < (chosenTarget.luckSkill?.[0] ?? 10);
       if (!luckSave) {
         chosenTarget.poisonAmount = (chosenTarget.poisonAmount || 0) + 1;
-        log.push(`☣️ ${chosenTarget.name} a été empoisonné (Toxine Niv. ${chosenTarget.poisonAmount}) !`);
+        log.push(isEn 
+          ? `☣️ ${chosenTarget.name} was poisoned (Toxin Lvl ${chosenTarget.poisonAmount})!` 
+          : `☣️ ${chosenTarget.name} a été empoisonné (Toxine Niv. ${chosenTarget.poisonAmount}) !`);
       }
     }
 
     // F. Sleep attack
     if (monster.specialPower?.sleep && chosenTarget.status === 'OK') {
       chosenTarget.status = 'ASLEEP';
-      log.push(`💤 Le coup de ${monsterName} plonge ${chosenTarget.name} dans un sommeil catatonique !`);
+      log.push(isEn 
+        ? `💤 The strike of ${monsterName} puts ${chosenTarget.name} into a catatonic sleep!` 
+        : `💤 Le coup de ${monsterName} plonge ${chosenTarget.name} dans un sommeil catatonique !`);
     }
 
     if (chosenTarget.hpLeft <= 0) {
       chosenTarget.status = 'DEAD';
       chosenTarget.hpLeft = 0;
-      log.push(`💀 ${chosenTarget.name} succombe aux blessures et s'effondre sans vie !`);
+      log.push(isEn 
+        ? `💀 ${chosenTarget.name} succumbs to wounds and collapses lifeless!` 
+        : `💀 ${chosenTarget.name} succombe aux blessures et s'effondre sans vie !`);
     }
   }
 }

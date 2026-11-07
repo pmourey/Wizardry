@@ -13,6 +13,7 @@ import {
 } from '../engine/combatEngine';
 import { SPELLS, ITEMS_DATABASE, isItemUsable, canClassUseItem } from '../data/provingGroundsData';
 import { CombatEffects, isFriendlySingleSpell } from '../engine/spellEngine';
+import { useI18n } from '../i18n';
 
 const FRIENDLY_HEALING_SPELLS = new Set([
   'DIOS', 'DIAL', 'DIALMA', 'MADI', 'DIALKO', 'LATUMOFI', 'LATUMOFIS', 'DI', 'KADORTO'
@@ -74,6 +75,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
   onCombatEnd,
   onFriendlyLeave
 }) => {
+  const { t, lang } = useI18n();
   const [pendingSpell, setPendingSpell] = useState<TSpell | null>(null);
   const [victoryPending, setVictoryPending] = useState<{ alarmTriggered: boolean } | null>(null);
   const [isFriendlyEncounter, setIsFriendlyEncounter] = useState<boolean>(() => Boolean(friendly));
@@ -96,7 +98,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
     if (identified.length > 0) {
       identified.forEach(g => {
         const name = g.count > 1 ? (g.monster.namePlural || g.monster.name) : g.monster.name;
-        initialMsgs.push(`🔍 L'escouade a immédiatement identifié : ${name} !`);
+        initialMsgs.push(t.combat.identifiedLog(name));
       });
     }
     return initialMsgs;
@@ -192,18 +194,18 @@ export const CombatView: React.FC<CombatViewProps> = ({
     setPendingSpell(null);
 
     if (attemptPartyRun(party, groups, mazeLevel)) {
-      setRoundLog([`🏃 Fuite collective réussie ! Votre escouade décroche et échappe aux monstres !`]);
+      setRoundLog([t.combat.fleeSuccessLog]);
       setTimeout(() => onCombatEnd(false, true, false), 1400);
       return;
     }
 
     // RUNFAILD: entire party forfeits its turn (AGILITY := -1) and monsters attack
-    const result = executeCombatRound(party, groups, [], 'NONE', { mazeLevel, acModifier: acModifierRef.current });
+    const result = executeCombatRound(party, groups, [], 'NONE', { mazeLevel, acModifier: acModifierRef.current, lang });
     const fx = result.effects;
     if (fx.lightAdd || fx.lightMax || fx.acModifier) onSpellEffects?.(fx);
     setParty([...party]);
     setRoundLog([
-      `⚠️ Échec de la fuite collective (RUNFAILD) ! Toute l'escouade perd son tour pendant que les monstres attaquent !`,
+      t.combat.fleeFailedLog,
       ...result.combatLog
     ]);
 
@@ -236,7 +238,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
     sounds.playHit();
 
     // Execute combat round with current surprise state
-    const result = executeCombatRound(party, groups, finalActions, currentSurprise, { mazeLevel, acModifier: acModifierRef.current });
+    const result = executeCombatRound(party, groups, finalActions, currentSurprise, { mazeLevel, acModifier: acModifierRef.current, lang });
     const fx = result.effects;
     if (fx.lightAdd || fx.lightMax || fx.acModifier) onSpellEffects?.(fx);
     setParty([...party]);
@@ -324,7 +326,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
     });
     if (corrupted.length > 0) {
       setParty(updatedParty);
-      setFriendlyAlert(`⚠️ Trahison impardonnable ! Attaquer des créatures pacifiques a corrompu l'âme de : ${corrupted.join(', ')} (Alignement devenu MAUVAIS !)`);
+      setFriendlyAlert(t.combat.friendlyCorruptedAlert(corrupted.join(', ')));
     }
     setIsFriendlyEncounter(false);
   };
@@ -348,14 +350,14 @@ export const CombatView: React.FC<CombatViewProps> = ({
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">
-              Engagement en Combat !
+              {t.combat.combatTitle}
             </h2>
             <p className="text-[11px] sm:text-xs text-slate-400">
               {currentSurprise === 'PARTY' 
-                ? '⚡ Vous surprenez les monstres (Tour gratuit pour vos aventuriers) !' 
+                ? t.combat.surprisePartySubtitle 
                 : currentSurprise === 'MONSTERS' 
-                ? '⚠️ Les monstres vous ont pris par surprise (Embuscade au Round 1) !' 
-                : 'Combat au corps-à-corps dans les ténèbres'}
+                ? t.combat.surpriseMonstersSubtitle 
+                : t.combat.surpriseNoneSubtitle}
             </p>
           </div>
         </div>
@@ -367,7 +369,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
               ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-400'
               : 'bg-red-950/80 border-red-500/60 text-red-400 animate-pulse'
           }`}>
-            {currentSurprise === 'PARTY' ? 'Surprise : Escouade' : 'Surprise : Monstres (Round 1)'}
+            {currentSurprise === 'PARTY' ? t.combat.surprisePartyBadge : t.combat.surpriseMonstersBadge}
           </span>
         )}
       </div>
@@ -398,7 +400,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
               <div>
                 <div className="flex items-center justify-between pb-1.5 sm:pb-2 border-b border-slate-800">
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px] sm:text-xs font-bold text-amber-400">GRP #{gIdx + 1}</span>
+                    <span className="text-[10px] sm:text-xs font-bold text-amber-400">{t.combat.groupHeader(gIdx + 1)}</span>
                     {isTargeted && (
                       <span className="inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] text-amber-300 font-bold bg-amber-950/80 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded border border-amber-600/50">
                         <Target className="w-2.5 h-2.5" />
@@ -431,9 +433,9 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   </div>
                   <div className="text-[10px] sm:text-xs">
                     {grp.identified ? (
-                      <span className="text-emerald-400 font-semibold">Niv.{grp.monster.level} · CA {grp.monster.ac}</span>
+                      <span className="text-emerald-400 font-semibold">{lang === 'fr' ? `Niv.${grp.monster.level} · CA ${grp.monster.ac}` : `Lvl.${grp.monster.level} · AC ${grp.monster.ac}`}</span>
                     ) : (
-                      <span className="text-amber-500/80 font-mono">Niv.?? · CA ??</span>
+                      <span className="text-amber-500/80 font-mono">{lang === 'fr' ? 'Niv.?? · CA ??' : 'Lvl.?? · AC ??'}</span>
                     )}
                   </div>
                 </div>
@@ -458,7 +460,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                           ? 'bg-yellow-900 text-yellow-200 border border-yellow-500'
                           : 'bg-emerald-600 text-white'
                       }`}
-                      title={`PV: ${inst.hpLeft}/${inst.maxHp} [${inst.status}]`}
+                      title={`${t.character.hpShort}: ${inst.hpLeft}/${inst.maxHp} [${inst.status}]`}
                     >
                       {isInstAlive ? `${iIdx + 1}${isAsleep ? ' 💤' : isPlyze ? ' ⚡' : ''}` : '†'}
                     </div>
@@ -473,8 +475,8 @@ export const CombatView: React.FC<CombatViewProps> = ({
       {/* Party Status Overview Strip in Combat: 3 Frontline / 3 Backline */}
       <div className="bg-slate-900/60 border border-slate-800 p-2 sm:p-3 rounded-xl max-w-4xl mx-auto w-full mb-3 sm:mb-4">
         <div className="text-[10px] sm:text-[11px] font-bold text-slate-400 mb-1.5 sm:mb-2 flex items-center justify-between">
-          <span>Escouade ({party.filter(p => p.status !== 'DEAD' && p.status !== 'ASHES').length}/{party.length} debout)</span>
-          <span className="text-[9px] sm:text-[10px] text-slate-500 hidden sm:inline">Statuts & Afflictions en temps réel</span>
+          <span>{t.combat.partyOverviewTitle(party.filter(p => p.status !== 'DEAD' && p.status !== 'ASHES').length, party.length)}</span>
+          <span className="text-[9px] sm:text-[10px] text-slate-500 hidden sm:inline">{t.combat.partyOverviewSubtitle}</span>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2">
           {party.map((hero, hIdx) => {
@@ -496,7 +498,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   <div className="flex items-center justify-between font-bold text-white text-[11px] sm:text-xs">
                     <span className="truncate">{hero.name}</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[8px] sm:text-[9px] text-amber-400 font-mono">N{hero.charLevel}</span>
+                      <span className="text-[8px] sm:text-[9px] text-amber-400 font-mono">{lang === 'fr' ? 'N' : 'L'}{hero.charLevel}</span>
                       <button
                         type="button"
                         onClick={(e) => {
@@ -504,7 +506,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                           setInspectedHeroIndex(hIdx);
                         }}
                         className="p-0.5 hover:bg-slate-800 text-slate-400 hover:text-amber-300 rounded transition"
-                        title="Consulter la fiche complète du personnage"
+                        title={lang === 'fr' ? "Consulter la fiche complète du personnage" : "View full character sheet"}
                       >
                         <FileText className="w-3 h-3" />
                       </button>
@@ -515,11 +517,11 @@ export const CombatView: React.FC<CombatViewProps> = ({
                     {(() => {
                       const { base, spellBonus, eff } = getDisplayAc(hero);
                       return spellBonus > 0 ? (
-                        <span className="text-emerald-400 font-bold" title={`CA de base : ${base} · Protection magique : -${spellBonus} CA`}>
-                          CA {eff} <span className="text-[9px] text-emerald-300">(-{spellBonus})</span>
+                        <span className="text-emerald-400 font-bold" title={lang === 'fr' ? `CA de base : ${base} · Protection magique : -${spellBonus} CA` : `Base AC: ${base} · Magic protection: -${spellBonus} AC`}>
+                          AC {eff} <span className="text-[9px] text-emerald-300">(-{spellBonus})</span>
                         </span>
                       ) : (
-                        <span>CA {base}</span>
+                        <span>AC {base}</span>
                       );
                     })()}
                   </div>
@@ -527,7 +529,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
 
                 <div className="pt-1">
                   <div className="flex justify-between text-[9px] sm:text-[10px] font-semibold">
-                    <span className="text-slate-400">PV:</span>
+                    <span className="text-slate-400">{t.character.hpShort}:</span>
                     <span className={hero.hpLeft < hero.hpMax / 3 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
                       {hero.hpLeft}/{hero.hpMax}
                     </span>
@@ -548,9 +550,9 @@ export const CombatView: React.FC<CombatViewProps> = ({
                       return spellBonus > 0 ? (
                         <span 
                           className="text-[8px] sm:text-[9px] font-bold px-1 py-0.2 rounded border bg-emerald-950/80 border-emerald-500/60 text-emerald-300"
-                          title={`Sorts de protection actifs : -${spellBonus} CA`}
+                          title={lang === 'fr' ? `Sorts de protection actifs : -${spellBonus} CA` : `Active defensive spells: -${spellBonus} AC`}
                         >
-                          🛡️ -{spellBonus} CA
+                          🛡️ -{spellBonus} AC
                         </span>
                       ) : null;
                     })()}
@@ -570,17 +572,17 @@ export const CombatView: React.FC<CombatViewProps> = ({
         <div className="bg-red-950/60 border border-red-600/60 p-4 rounded-xl max-w-3xl mx-auto w-full text-center space-y-3 shadow-lg">
           <div className="text-sm font-bold text-red-200 flex items-center justify-center gap-2">
             <Zap className="w-4 h-4 text-red-400 animate-bounce" />
-            <span>Embuscade ennemie ! Les monstres attaquent par surprise lors de ce 1er round.</span>
+            <span>{t.combat.ambushTitle}</span>
           </div>
           <p className="text-xs text-red-300/90 max-w-lg mx-auto">
-            Vos héros sont pris au dépourvu et ne peuvent pas riposter ce tour-ci. Le combat reprendra normalement dès le round suivant.
+            {t.combat.ambushDesc}
           </p>
           <button
             onClick={() => resolveRound([])}
             className="px-6 py-2.5 bg-red-700 hover:bg-red-600 text-white font-bold text-xs rounded-xl transition shadow-lg inline-flex items-center gap-2"
           >
             <Swords className="w-4 h-4" />
-            <span>Subir l'assaut de surprise des monstres</span>
+            <span>{t.combat.ambushBtn}</span>
           </button>
         </div>
       )}
@@ -590,12 +592,10 @@ export const CombatView: React.FC<CombatViewProps> = ({
         <div className="bg-purple-950/60 border border-purple-600/60 p-4 rounded-xl max-w-3xl mx-auto w-full text-center space-y-3 shadow-lg">
           <div className="text-sm font-bold text-purple-200 flex items-center justify-center gap-2">
             <Moon className="w-4 h-4 text-purple-400" />
-            <span>Tous vos aventuriers sont endormis ou paralysés !</span>
+            <span>{t.combat.allHelplessTitle}</span>
           </div>
           <p className="text-xs text-purple-300/90 max-w-lg mx-auto">
-            {anyHeroAsleep 
-              ? "Aucun héros conscient n'est en état de donner d'ordre ce tour-ci. Les monstres mènent leur assaut. Les héros endormis ont une chance de se réveiller à chaque tour ou à chaque coup reçu."
-              : "Tous vos survivants sont paralysés et incapables d'agir ! Les monstres mènent leur assaut sans pitié."}
+            {anyHeroAsleep ? t.combat.allHelplessDescAsleep : t.combat.allHelplessDescParalyzed}
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <button
@@ -603,7 +603,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
               className="px-6 py-2.5 bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs rounded-xl transition shadow-lg inline-flex items-center gap-2 active:scale-95"
             >
               <Moon className="w-4 h-4" />
-              <span>Résoudre le tour des monstres</span>
+              <span>{t.combat.resolveMonstersTurnBtn}</span>
             </button>
             {allLivingParalyzed && (
               <button
@@ -614,7 +614,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                 className="px-5 py-2.5 bg-red-950/80 hover:bg-red-900 border border-red-700/60 text-red-200 font-bold text-xs rounded-xl transition shadow-lg inline-flex items-center gap-2 active:scale-95"
               >
                 <Skull className="w-4 h-4 text-red-400" />
-                <span>Capituler (Décimation de l'escouade)</span>
+                <span>{t.combat.surrenderBtn}</span>
               </button>
             )}
           </div>
@@ -626,15 +626,13 @@ export const CombatView: React.FC<CombatViewProps> = ({
         <div className="bg-emerald-950/70 border border-emerald-500/70 p-4 sm:p-5 rounded-xl max-w-3xl mx-auto w-full text-center space-y-3 shadow-2xl">
           <div className="text-sm sm:text-base font-bold text-emerald-300 flex items-center justify-center gap-2">
             <Handshake className="w-5 h-5 text-emerald-400" />
-            <span>Rencontre Pacifique !</span>
+            <span>{t.combat.friendlyTitle}</span>
           </div>
           <div className="text-xs sm:text-sm text-slate-200">
-            Un groupe amical de <strong className="text-amber-300">
-              {groups[0]?.monster.namePlural || groups[0]?.monster.name || 'créatures'}
-            </strong> s'approche pacifiquement.
+            {t.combat.friendlySubtitle(groups[0]?.monster.namePlural || groups[0]?.monster.name || (lang === 'fr' ? 'créatures' : 'creatures'))}
           </div>
           <p className="text-xs text-emerald-200/90 italic max-w-lg mx-auto">
-            « Ils vous saluent cordialement et ne manifestent aucune hostilité. Vous pouvez les laisser en paix ou les attaquer ! »
+            {t.combat.friendlyDesc}
           </p>
           <div className="flex items-center justify-center gap-3 pt-2 flex-wrap">
             <button
@@ -642,15 +640,15 @@ export const CombatView: React.FC<CombatViewProps> = ({
               className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer"
             >
               <Check className="w-4 h-4" />
-              <span>(L) Les laisser en paix</span>
+              <span>{t.combat.friendlyLeaveBtn}</span>
             </button>
             <button
               onClick={handleFriendlyFight}
               className="px-5 py-2.5 bg-red-800 hover:bg-red-700 text-white font-bold text-xs sm:text-sm rounded-xl transition shadow-lg active:scale-95 flex items-center gap-2 cursor-pointer"
-              title="Attaquer un groupe amical risque de corrompre l'alignement des héros Bons vers Mauvais !"
+              title={t.combat.friendlyFightTooltip}
             >
               <Swords className="w-4 h-4" />
-              <span>(F) Attaquer sans pitié</span>
+              <span>{t.combat.friendlyFightBtn}</span>
             </button>
           </div>
         </div>
@@ -668,18 +666,18 @@ export const CombatView: React.FC<CombatViewProps> = ({
         <div className="bg-emerald-950/80 border border-emerald-500/80 p-4 sm:p-5 rounded-xl max-w-3xl mx-auto w-full text-center space-y-3 shadow-2xl animate-fade-in">
           <div className="text-sm sm:text-base font-bold text-emerald-300 flex items-center justify-center gap-2">
             <Trophy className="w-5 h-5 text-amber-400 animate-bounce" />
-            <span>Tous les monstres ont été vaincus !</span>
+            <span>{t.combat.monstersDefeatedTitle}</span>
           </div>
           <p className="text-xs sm:text-sm text-emerald-200/90 max-w-lg mx-auto">
-            Votre escouade triomphe de l'affrontement ! Prenez le temps de consulter le journal de combat ci-dessus avant de continuer.
+            {t.combat.monstersDefeatedDesc}
           </p>
           <div className="pt-2">
             <button
               onClick={() => onCombatEnd(true, false, victoryPending.alarmTriggered)}
               className="px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs sm:text-sm rounded-xl shadow-lg transition transform active:scale-95 inline-flex items-center gap-2 cursor-pointer"
             >
-              <span>Continuer vers les récompenses</span>
-              <kbd className="px-1.5 py-0.5 bg-black/30 border border-amber-300/40 rounded text-[10px] font-mono">Entrée ↵</kbd>
+              <span>{t.combat.continueRewardsBtn}</span>
+              <kbd className="px-1.5 py-0.5 bg-black/30 border border-amber-300/40 rounded text-[10px] font-mono">{lang === 'fr' ? 'Entrée ↵' : 'Enter ↵'}</kbd>
             </button>
           </div>
         </div>
@@ -697,28 +695,28 @@ export const CombatView: React.FC<CombatViewProps> = ({
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-400">
-                      Ordre #{currentHeroIdx + 1}/{livingHeroes.length} :
+                      {t.combat.heroOrderHeader(currentHeroIdx + 1, livingHeroes.length)}
                     </span>
                     <span className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 flex-wrap">
                       <span>{activeHero.name} ({activeHero.class} ·</span>
                       {(() => {
                         const { base, spellBonus, eff } = getDisplayAc(activeHero);
                         return spellBonus > 0 ? (
-                          <span className="text-emerald-400 font-bold" title={`CA de base : ${base} · Protection magique : -${spellBonus} CA`}>
-                            CA {eff} <span className="text-[10px] text-emerald-300">(-{spellBonus})</span>
+                          <span className="text-emerald-400 font-bold" title={lang === 'fr' ? `CA de base : ${base} · Protection magique : -${spellBonus} CA` : `Base AC: ${base} · Magic protection: -${spellBonus} AC`}>
+                            AC {eff} <span className="text-[10px] text-emerald-300">(-{spellBonus})</span>
                           </span>
                         ) : (
-                          <span>CA {base}</span>
+                          <span>AC {base}</span>
                         );
                       })()}
-                      <span>· {activeHero.hpLeft}/{activeHero.hpMax} PV)</span>
+                      <span>· {activeHero.hpLeft}/{activeHero.hpMax} {t.character.hpShort})</span>
                     </span>
                     <span className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded border ${
                       isFrontRank 
                         ? 'bg-amber-950/80 border-amber-500/60 text-amber-300' 
                         : 'bg-blue-950/80 border-blue-500/60 text-blue-300'
                     }`}>
-                      {isFrontRank ? `Avant-garde · #${heroPartyIdx + 1}` : `Arrière-garde · #${heroPartyIdx + 1}`}
+                      {isFrontRank ? t.combat.vanguardRankBadge(heroPartyIdx + 1) : t.combat.rearguardRankBadge(heroPartyIdx + 1)}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -726,10 +724,10 @@ export const CombatView: React.FC<CombatViewProps> = ({
                       type="button"
                       onClick={() => setInspectedHeroIndex(party.findIndex(p => p.id === activeHero.id))}
                       className="text-xs text-amber-300 hover:text-white flex items-center gap-1 px-2 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-md font-semibold transition"
-                      title="Consulter la fiche complète du personnage"
+                      title={lang === 'fr' ? "Consulter la fiche complète du personnage" : "View full character sheet"}
                     >
                       <FileText className="w-3.5 h-3.5" />
-                      <span>Fiche</span>
+                      <span>{t.castle.sheetBtn}</span>
                     </button>
                     {currentHeroIdx > 0 && (
                       <button
@@ -739,7 +737,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                         }}
                         className="text-xs text-slate-400 hover:text-white flex items-center gap-1 p-1"
                       >
-                        <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Revenir</span>
+                        <RotateCcw className="w-3.5 h-3.5" /> <span className="hidden sm:inline">{t.combat.undoBtn}</span>
                       </button>
                     )}
                   </div>
@@ -750,7 +748,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                   <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs pt-1 border-t border-slate-800/80">
                     <span className="font-bold text-slate-400 flex items-center gap-1 shrink-0 text-[11px] sm:text-xs">
                       <Target className="w-3.5 h-3.5 text-amber-400" />
-                      Cible :
+                      {t.combat.targetGroupLabel}
                     </span>
                     <div className="flex gap-1.5 flex-wrap">
                       {groups.map((grp, gIdx) => {
@@ -787,7 +785,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                 {activeHero.silencedRounds && activeHero.silencedRounds > 0 && (
                   <div className="px-3 py-1.5 bg-cyan-950/50 border border-cyan-500/40 rounded-lg text-xs text-cyan-300 flex items-center gap-2">
                     <MicOff className="w-4 h-4 text-cyan-400 shrink-0 animate-pulse" />
-                    <span>{activeHero.name} est sous l'effet du silence magique MONTINO (sorts bloqués pour encore {activeHero.silencedRounds} tour(s)).</span>
+                    <span>{t.combat.silenceAlert(activeHero.name, activeHero.silencedRounds)}</span>
                   </div>
                 )}
 
@@ -800,17 +798,17 @@ export const CombatView: React.FC<CombatViewProps> = ({
                     return (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-purple-300">Sélectionnez un sort magique :</span>
+                          <span className="text-xs font-bold text-purple-300">{t.combat.selectSpellPrompt}</span>
                           <button
                             onClick={() => setSelectingSpell(false)}
                             className="text-xs text-slate-400 hover:text-white p-1"
                           >
-                            Annuler
+                            {t.common.cancel}
                           </button>
                         </div>
                         {pendingSpell && (
                           <div className="p-2.5 bg-slate-900 border border-purple-700 rounded-lg space-y-2">
-                            <div className="text-xs font-bold text-purple-300">{pendingSpell.name} : choisissez le personnage ciblé</div>
+                            <div className="text-xs font-bold text-purple-300">{t.combat.selectSpellTargetPrompt(pendingSpell.name)}</div>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                               {party.map((p, idx) => (
                                 <button
@@ -819,7 +817,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                                   className="p-2 min-h-[44px] bg-slate-800 hover:bg-purple-950/50 border border-slate-700 hover:border-purple-500 rounded-lg text-left text-xs transition active:scale-95"
                                 >
                                   <div className="font-bold text-white">{idx + 1}. {p.name}</div>
-                                  <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} PV{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
+                                  <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} {t.character.hpShort}{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
                                 </button>
                               ))}
                             </div>
@@ -851,12 +849,12 @@ export const CombatView: React.FC<CombatViewProps> = ({
                     return (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-emerald-300">Sélectionnez un objet à utiliser :</span>
+                          <span className="text-xs font-bold text-emerald-300">{t.combat.selectItemPrompt}</span>
                           <button
                             onClick={() => { setSelectingItem(false); setPendingItemAction(null); }}
                             className="text-xs text-slate-400 hover:text-white p-1"
                           >
-                            Annuler
+                            {t.common.cancel}
                           </button>
                         </div>
                         {pendingItemAction && (() => {
@@ -870,14 +868,14 @@ export const CombatView: React.FC<CombatViewProps> = ({
                               }`}>
                                 <span>
                                   {pendingItemAction.targetType === 'ALLY'
-                                    ? `✨ ${pendingItemAction.itm.name}${itemSp ? ` (${itemSp.name})` : ''} : choisissez la cible alliée`
-                                    : `⚡ ${pendingItemAction.itm.name}${itemSp ? ` (${itemSp.name})` : ''} : choisissez le groupe de monstres à cibler`}
+                                    ? t.combat.selectItemAllyPrompt(pendingItemAction.itm.name, itemSp?.name)
+                                    : t.combat.selectItemEnemyPrompt(pendingItemAction.itm.name, itemSp?.name)}
                                 </span>
                                 <button
                                   onClick={() => setPendingItemAction(null)}
                                   className="text-[10px] text-slate-400 hover:text-white"
                                 >
-                                  Annuler
+                                  {t.common.cancel}
                                 </button>
                               </div>
 
@@ -894,7 +892,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                                       className="p-2 min-h-[44px] bg-slate-800 hover:bg-emerald-950/50 border border-slate-700 hover:border-emerald-500 rounded-lg text-left text-xs transition active:scale-95"
                                     >
                                       <div className="font-bold text-white">{idx + 1}. {p.name}</div>
-                                      <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} PV{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
+                                      <div className="text-[11px] text-slate-400">{p.hpLeft}/{p.hpMax} {t.character.hpShort}{p.status !== 'OK' ? ` [${p.status}]` : ''}{p.poisonAmount > 0 ? ' [POISON]' : ''}</div>
                                     </button>
                                   ))}
                                 </div>
@@ -919,11 +917,11 @@ export const CombatView: React.FC<CombatViewProps> = ({
                                         className="p-2 min-h-[44px] bg-slate-800 hover:bg-amber-950/50 border border-slate-700 hover:border-amber-500 rounded-lg text-left text-xs transition active:scale-95"
                                       >
                                         <div className="font-bold text-white flex items-center justify-between">
-                                          <span>Groupe #{gIdx + 1} : {mName}</span>
+                                          <span>{t.combat.groupHeader(gIdx + 1)} : {mName}</span>
                                           <span className="text-[11px] text-amber-400 font-mono">({aliveCount})</span>
                                         </div>
                                         <div className="text-[11px] text-slate-400">
-                                          {grp.identified ? `Niveau ${grp.monster.level} · CA ${grp.monster.ac}` : 'Statistiques inconnues'}
+                                          {grp.identified ? (lang === 'fr' ? `Niveau ${grp.monster.level} · CA ${grp.monster.ac}` : `Level ${grp.monster.level} · AC ${grp.monster.ac}`) : (lang === 'fr' ? 'Statistiques inconnues' : 'Unknown stats')}
                                         </div>
                                       </button>
                                     );
@@ -936,7 +934,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                         {!pendingItemAction && (
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                             {usableItems.map(({ slot, sIdx, itm }) => {
-                              const sp = itm.spellPower > 0 ? SPELLS.find(s => s.id === itm.spellPower) : null;
+                              const sp = itm.spellPower > 0 ? SPELLS.find(s => s.id === item.spellPower) : null;
                               const isTargetAlly = Boolean(
                                 (sp && FRIENDLY_HEALING_SPELLS.has(sp.name)) ||
                                 (!sp && (
@@ -980,7 +978,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                                     {sp && <span className="text-[10px] text-purple-400 font-mono">{sp.name}</span>}
                                   </div>
                                   <div className="text-[11px] text-slate-400 line-clamp-1">
-                                    {sp ? sp.description : itm.healPts > 0 ? `Régénération passive (+${itm.healPts} PV/tour)` : 'Objet magique'}
+                                    {sp ? sp.description : itm.healPts > 0 ? (lang === 'fr' ? `Régénération passive (+${itm.healPts} PV/tour)` : `Passive regeneration (+${itm.healPts} HP/round)`) : (lang === 'fr' ? 'Objet magique' : 'Magic item')}
                                   </div>
                                 </button>
                               );
@@ -1002,24 +1000,24 @@ export const CombatView: React.FC<CombatViewProps> = ({
                             ? 'bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/60 text-amber-300' 
                             : 'bg-slate-900 border border-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                         }`}
-                        title={isFrontRank ? `Attaquer le Groupe #${selectedTargetGroupIdx + 1}` : "Arrière-garde : Seuls les 3 premiers héros peuvent attaquer au corps-à-corps selon le code Pascal"}
+                        title={isFrontRank ? t.combat.fightTooltipFront(selectedTargetGroupIdx + 1) : t.combat.fightTooltipBack}
                       >
                         <Swords className="w-4 h-4 text-amber-400" />
-                        <span>Attaquer</span>
-                        {!isFrontRank && <span className="text-[9px] text-slate-400 font-normal">Arrière-garde</span>}
+                        <span>{t.combat.fightBtn}</span>
+                        {!isFrontRank && <span className="text-[9px] text-slate-400 font-normal">{t.combat.backRankLabel}</span>}
                       </button>
 
                       <button
                         onClick={() => { setSelectingSpell(true); setSelectingItem(false); setPendingSpell(null); }}
                         disabled={availableSpells.length === 0 || (activeHero.silencedRounds !== undefined && activeHero.silencedRounds > 0)}
                         className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
-                        title={activeHero.silencedRounds && activeHero.silencedRounds > 0 ? "Sous l'effet du silence magique MONTINO !" : undefined}
+                        title={activeHero.silencedRounds && activeHero.silencedRounds > 0 ? (lang === 'fr' ? "Sous l'effet du silence magique MONTINO !" : "Silenced by MONTINO!") : undefined}
                       >
                         <Sparkles className="w-4 h-4 text-purple-400" />
                         <span>
                           {activeHero.silencedRounds && activeHero.silencedRounds > 0 
                             ? `Silence (${activeHero.silencedRounds}T)` 
-                            : `Sorts (${availableSpells.length})`}
+                            : t.combat.spellsBtn(availableSpells.length)}
                         </span>
                       </button>
 
@@ -1027,10 +1025,10 @@ export const CombatView: React.FC<CombatViewProps> = ({
                         onClick={() => { setSelectingItem(true); setSelectingSpell(false); setPendingSpell(null); }}
                         disabled={usableItems.length === 0}
                         className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
-                        title={usableItems.length === 0 ? "Aucun consommable ou objet magique utilisable" : "Utiliser un objet magique ou consommable du sac"}
+                        title={usableItems.length === 0 ? (lang === 'fr' ? "Aucun consommable ou objet magique utilisable" : "No usable consumables or magic items") : (lang === 'fr' ? "Utiliser un objet magique ou consommable du sac" : "Use a magic item or consumable")}
                       >
                         <FlaskConical className="w-4 h-4 text-emerald-400" />
-                        <span>Objet ({usableItems.length})</span>
+                        <span>{t.combat.itemsBtn(usableItems.length)}</span>
                       </button>
 
                       <button
@@ -1038,7 +1036,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                         className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
                       >
                         <ShieldAlert className="w-4 h-4 text-blue-400" />
-                        <span>Parade (-2 CA)</span>
+                        <span>{t.combat.parryBtn}</span>
                       </button>
 
                       {(activeHero.class === 'PRIEST' || activeHero.class === 'BISHOP' || activeHero.class === 'LORD') && (
@@ -1047,17 +1045,17 @@ export const CombatView: React.FC<CombatViewProps> = ({
                           className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
                         >
                           <Zap className="w-4 h-4 text-yellow-400" />
-                          <span>Exorcisme</span>
+                          <span>{t.combat.dispellBtn}</span>
                         </button>
                       )}
 
                       <button
                         onClick={handlePartyRun}
                         className="p-2.5 sm:p-3 min-h-[52px] bg-slate-800 hover:bg-slate-700 border border-slate-700/80 rounded-lg flex flex-col items-center justify-center gap-1 text-xs font-bold transition active:scale-95"
-                        title="Fuite collective du groupe (PROCEDURE RUNAWAY)"
+                        title={t.combat.runTooltip}
                       >
                         <Footprints className="w-4 h-4 text-emerald-400" />
-                        <span>Fuir (Groupe)</span>
+                        <span>{t.combat.runBtn}</span>
                       </button>
                     </div>
                   );
@@ -1072,7 +1070,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
       {roundLog.length > 0 && (
         <div className="mt-4 bg-black/60 border border-slate-800 p-4 rounded-xl max-w-3xl mx-auto w-full space-y-1.5 font-mono text-xs text-slate-300">
           <div className="text-amber-400 font-bold border-b border-slate-800 pb-1 mb-2">
-            Journal de Combat :
+            {t.combat.combatLogTitle}
           </div>
           {roundLog.map((line, lIdx) => (
             <div key={lIdx} className="leading-relaxed">

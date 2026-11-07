@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TCharacter } from '../types/wizardry';
 import { ITEMS_DATABASE, getExpForNextLevel } from '../data/provingGroundsData';
 import { sounds } from '../utils/soundEffects';
+import { useI18n } from '../i18n';
 import {
   Zap,
   Coins,
@@ -40,6 +41,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
   onRestoreAllHeroes,
   onRespawnWerdna
 }) => {
+  const { t, lang } = useI18n();
   const [activeTab, setActiveTab] = useState<'GOLD' | 'EXP' | 'KEYS' | 'RESTORE'>('EXP');
   const [selectedHeroId, setSelectedHeroId] = useState<string>('ALL');
   const [targetLevel, setTargetLevel] = useState<number>(10);
@@ -86,8 +88,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
     updateHeroes(h => {
       h.gold = Math.max(0, (h.gold || 0) + amount);
     });
-    const targetLabel = selectedHeroId === 'ALL' ? 'tout le groupe' : party.find(p => p.id === selectedHeroId)?.name || 'le héros';
-    showNotification(`💰 +${amount.toLocaleString()} Pièces d'Or accordées à ${targetLabel} !`);
+    showNotification(t.cheat.goldGivenSuccess(amount));
   };
 
   // 2. EXP Cheat Handlers (for leveling up at the Inn)
@@ -95,8 +96,8 @@ export const CheatModal: React.FC<CheatModalProps> = ({
     updateHeroes(h => {
       h.exp = Math.max(0, (h.exp || 0) + amount);
     });
-    const targetLabel = selectedHeroId === 'ALL' ? 'tout le groupe' : party.find(p => p.id === selectedHeroId)?.name || 'le héros';
-    showNotification(`🌟 +${amount.toLocaleString()} XP accordés à ${targetLabel} ! Rendez-vous à l'Auberge pour monter de niveau.`);
+    const targetLabel = selectedHeroId === 'ALL' ? (lang === 'fr' ? 'tout le groupe' : 'the entire party') : party.find(p => p.id === selectedHeroId)?.name || 'hero';
+    showNotification(`🌟 +${amount.toLocaleString()} XP -> ${targetLabel}`);
   };
 
   const handleSetTargetLevelExp = (desiredLvl: number) => {
@@ -115,29 +116,31 @@ export const CheatModal: React.FC<CheatModalProps> = ({
       }
     });
 
-    const targetLabel = selectedHeroId === 'ALL' ? 'les membres du groupe' : party.find(p => p.id === selectedHeroId)?.name || 'le héros';
-    showNotification(`✨ XP ajustée pour ${targetLabel} afin d'atteindre le Niveau ${desiredLvl} à l'Auberge de l'Aventurier !`);
+    showNotification(t.cheat.levelSetSuccess(desiredLvl));
   };
 
   // 3. Wizardry 1 Elevator Keys & Blue Ribbon Injector
   const handleGiveItem = (itemId: number, itemName: string) => {
     const item = ITEMS_DATABASE.find(i => i.id === itemId);
     if (!item) {
-      alert(`Objet #${itemId} introuvable dans la base de données.`);
+      alert(`Item #${itemId} not found in database.`);
       return;
     }
 
     // Find first hero in party with free slot
     const targetHero = party.find(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.possessions.length < 8);
     if (!targetHero) {
-      alert("Inventaires pleins ! Libérez de la place dans l'escouade (max 8 objets par héros).");
+      alert(t.dungeon.backpackFullNotice);
       return;
     }
 
     // Check if already in party
     const alreadyHas = party.some(h => h.possessions.some(p => p.itemIndex === itemId));
     if (alreadyHas) {
-      if (!window.confirm(`Le groupe possède déjà l'objet "${itemName}". Voulez-vous en ajouter un exemplaire supplémentaire ?`)) {
+      const confirmMsg = lang === 'fr' 
+        ? `Le groupe possède déjà l'objet "${itemName}". Voulez-vous en ajouter un exemplaire supplémentaire ?`
+        : `Party already has "${itemName}". Add another copy?`;
+      if (!window.confirm(confirmMsg)) {
         return;
       }
     }
@@ -151,15 +154,15 @@ export const CheatModal: React.FC<CheatModalProps> = ({
 
     setParty([...party]);
     setAllCharacters(allCharacters.map(c => c.id === targetHero.id ? targetHero : c));
-    showNotification(`🔑 "${item.name}" ajouté à l'inventaire de ${targetHero.name} !`);
+    showNotification(`🔑 "${item.name}" -> ${targetHero.name}`);
   };
 
   // One-click Elevator Bundle (Bronze Key, Silver Key, Blue Ribbon)
   const handleGiveElevatorKeyBundle = () => {
     const bundleItems = [
-      { id: 97, name: 'BRONZE KEY (Clé de Bronze - Niveaux 1 à 4)' },
-      { id: 98, name: 'SILVER KEY (Clé d’Argent - Niveaux 1 à 4)' },
-      { id: 100, name: 'BLUE RIBBON (Ruban Bleu d’Accréditation - Niveaux 4 à 10)' }
+      { id: 97, name: 'BRONZE KEY' },
+      { id: 98, name: 'SILVER KEY' },
+      { id: 100, name: 'BLUE RIBBON' }
     ];
 
     let givenCount = 0;
@@ -188,9 +191,9 @@ export const CheatModal: React.FC<CheatModalProps> = ({
     }));
 
     if (givenCount > 0) {
-      showNotification(`🔑 Pack Ascenseurs injecté : Bronze Key, Silver Key & Blue Ribbon reçus !`);
+      showNotification(t.cheat.keysGivenSuccess);
     } else {
-      showNotification(`ℹ️ Le groupe possède déjà l'ensemble des clés et le Blue Ribbon.`);
+      showNotification(lang === 'fr' ? `ℹ️ Le groupe possède déjà l'ensemble des clés et le Blue Ribbon.` : 'ℹ️ Party already possesses all elevator keys and Blue Ribbon.');
     }
   };
 
@@ -230,7 +233,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
       return inParty || c;
     }));
 
-    showNotification(`🎁 ${given} objet(s) de quête Wizardry 1 injecté(s) dans l'escouade !`);
+    showNotification(t.cheat.keysGivenSuccess);
   };
 
   return (
@@ -248,17 +251,19 @@ export const CheatModal: React.FC<CheatModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-950/80 text-rose-300 border border-rose-600/40">
-                  DEVELOPER / GITHUB PAGES CHEAT ENGINE
+                  DEVELOPER / CHEAT ENGINE
                 </span>
                 <span className="text-[10px] font-mono text-slate-400">
-                  Scénario actif : {activeScenarioId}
+                  Scenario: {activeScenarioId}
                 </span>
               </div>
               <h2 className="text-xl md:text-2xl font-serif font-black text-rose-200 mt-1">
-                Console de Triche & Outils de Test
+                {t.cheat.modalTitle}
               </h2>
               <p className="text-xs text-slate-300 mt-0.5">
-                Modifiez l'or, les points d'XP pour le passage à l'Auberge, et injectez les clés d'ascenseurs et ruban bleu.
+                {lang === 'fr' 
+                  ? "Modifiez l'or, les points d'XP pour le passage à l'Auberge, et injectez les clés d'ascenseurs et ruban bleu."
+                  : 'Adjust gold, EXP points for the Adventurer Inn, and inject elevator keys and blue ribbon.'}
               </p>
             </div>
           </div>
@@ -266,7 +271,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
           <button
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition border border-transparent hover:border-slate-700"
-            title="Fermer"
+            title={t.common.closeBtn}
           >
             <X className="w-5 h-5" />
           </button>
@@ -284,7 +289,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
         <div className="p-3.5 px-5 bg-slate-950/60 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs">
           <span className="text-slate-400 font-semibold flex items-center gap-1.5">
             <Crown className="w-4 h-4 text-amber-400" />
-            <span>Cible de l'action de triche :</span>
+            <span>{t.cheat.targetHeroLabel}</span>
           </span>
           <div className="flex items-center gap-1 flex-wrap">
             <button
@@ -295,7 +300,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                   : 'bg-slate-900 text-slate-300 border-slate-700 hover:text-white'
               }`}
             >
-              ⭐ Tout le groupe ({party.length} héros)
+              ⭐ {t.cheat.allPartyOption} ({party.length})
             </button>
             {party.map(h => (
               <button
@@ -307,7 +312,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                     : 'bg-slate-900 text-slate-300 border-slate-700 hover:text-white'
                 }`}
               >
-                {h.name} (N.{h.charLevel})
+                {h.name} ({lang === 'fr' ? 'N.' : 'L.'}{h.charLevel})
               </button>
             ))}
           </div>
@@ -316,10 +321,10 @@ export const CheatModal: React.FC<CheatModalProps> = ({
         {/* Tabs Bar */}
         <div className="p-3.5 px-5 border-b border-slate-800 bg-slate-950/40 flex items-center gap-2 overflow-x-auto">
           {[
-            { id: 'EXP', label: 'Points d’Expérience & Niveaux', icon: Sparkles },
-            { id: 'GOLD', label: 'Pièces d’Or (Gold)', icon: Coins },
-            { id: 'KEYS', label: 'Clés & Ruban Bleu (Wiz 1)', icon: Key },
-            { id: 'RESTORE', label: 'Soin & Résurrection', icon: HeartPulse },
+            { id: 'EXP', label: t.cheat.tabExp, icon: Sparkles },
+            { id: 'GOLD', label: t.cheat.tabGold, icon: Coins },
+            { id: 'KEYS', label: t.cheat.tabKeys, icon: Key },
+            { id: 'RESTORE', label: t.cheat.tabRestore, icon: HeartPulse },
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -348,15 +353,16 @@ export const CheatModal: React.FC<CheatModalProps> = ({
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
                   <Award className="w-4 h-4 text-amber-400" />
-                  <span>Calculateur de Niveau Cible pour l'Auberge (Inn)</span>
+                  <span>{lang === 'fr' ? "Calculateur de Niveau Cible pour l'Auberge (Inn)" : "Target Level Calculator for the Inn"}</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Conformément aux règles authentiques de Wizardry, les héros ne montent pas de niveau automatiquement en combat mais en se reposant à l'<strong>Auberge de l'Aventurier</strong>.
-                  Cette triche calcule et attribue la quantité exacte d'XP requise pour atteindre le niveau cible souhaité lors du repos aux Écuries (gratuit) ou dans une chambre.
+                  {lang === 'fr'
+                    ? "Conformément aux règles authentiques de Wizardry, les héros ne montent pas de niveau automatiquement en combat mais en se reposant à l'Auberge de l'Aventurier. Cette triche calcule et attribue la quantité exacte d'XP requise pour atteindre le niveau cible souhaité lors du repos aux Écuries (gratuit) ou dans une chambre."
+                    : "In authentic Wizardry, adventurers do not level up in combat, but by resting at the Adventurer's Inn. This cheat calculates and grants the exact EXP required to achieve the desired level upon resting."}
                 </p>
 
                 <div className="flex items-center gap-3 pt-2">
-                  <span className="text-xs font-semibold text-slate-300">Niveau souhaité :</span>
+                  <span className="text-xs font-semibold text-slate-300">{t.cheat.targetLevelLabel}</span>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {[3, 5, 8, 10, 13, 15, 20, 25].map(lvl => (
                       <button
@@ -368,7 +374,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                             : 'bg-slate-900 text-slate-300 border-slate-700 hover:bg-slate-800'
                         }`}
                       >
-                        Niv. {lvl}
+                        {lang === 'fr' ? `Niv. ${lvl}` : `Lvl. ${lvl}`}
                       </button>
                     ))}
                   </div>
@@ -380,7 +386,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                     className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-black text-xs tracking-wide shadow flex items-center justify-center gap-2 transition"
                   >
                     <Sparkles className="w-4 h-4 fill-current" />
-                    <span>Attribuer l'XP requise pour atteindre le Niveau {targetLevel} à l'Auberge</span>
+                    <span>{t.cheat.setLevelBtn(targetLevel)}</span>
                   </button>
                 </div>
               </div>
@@ -388,7 +394,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
               {/* Raw EXP Injection */}
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                  Ajout Rapide de Points d'Expérience (XP Brute)
+                  {lang === 'fr' ? "Ajout Rapide de Points d'Expérience (XP Brute)" : "Quick Grant Experience Points (Raw EXP)"}
                 </span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[10000, 50000, 250000, 1000000].map(amt => (
@@ -414,7 +420,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                     onClick={() => handleAddExp(customExp)}
                     className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-600 text-xs font-bold transition"
                   >
-                    Ajouter ce montant personnalisé
+                    {lang === 'fr' ? "Ajouter ce montant personnalisé" : "Add custom amount"}
                   </button>
                 </div>
               </div>
@@ -427,10 +433,12 @@ export const CheatModal: React.FC<CheatModalProps> = ({
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
                   <Coins className="w-4 h-4" />
-                  <span>Trésor de Pièces d'Or (Gold)</span>
+                  <span>{t.cheat.tabGold}</span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  Ajoutez de l'or à vos aventuriers pour acquérir les armes et armures mythiques au comptoir commercial de Boltac, ou pour financer les nuits en suite royale à l'Auberge.
+                  {lang === 'fr' 
+                    ? "Ajoutez de l'or à vos aventuriers pour acquérir les armes et armures mythiques au comptoir commercial de Boltac, ou pour financer les nuits en suite royale à l'Auberge."
+                    : "Grant gold to your adventurers to purchase mythical equipment at Boltac's Trading Post or royal suite lodgings at the Inn."}
                 </p>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
@@ -440,7 +448,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                       onClick={() => handleAddGold(amt)}
                       className="py-2.5 px-3 rounded-lg bg-amber-950/40 hover:bg-amber-950/70 border border-amber-600/50 text-xs font-bold text-amber-300 transition shadow-sm"
                     >
-                      +{amt >= 1000000 ? `${amt / 1000000}M` : `${amt / 1000}k`} PO
+                      +{amt >= 1000000 ? `${amt / 1000000}M` : `${amt / 1000}k`} GP
                     </button>
                   ))}
                 </div>
@@ -457,19 +465,21 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                     onClick={() => handleAddGold(customGold)}
                     className="px-4 py-1.5 rounded-lg bg-amber-700 hover:bg-amber-600 text-white font-bold text-xs transition"
                   >
-                    Ajouter ce montant en PO
+                    {lang === 'fr' ? "Ajouter ce montant en PO" : "Add custom gold"}
                   </button>
                 </div>
               </div>
 
               {/* Party gold summary */}
               <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs space-y-2">
-                <span className="font-bold text-slate-400 uppercase tracking-wider block">Solde actuel de l'escouade :</span>
+                <span className="font-bold text-slate-400 uppercase tracking-wider block">
+                  {lang === 'fr' ? "Solde actuel de l'escouade :" : "Current Party Gold Balances:"}
+                </span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono">
                   {party.map(h => (
                     <div key={h.id} className="p-2 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
                       <span className="text-slate-300 truncate">{h.name}:</span>
-                      <span className="text-amber-400 font-bold">{(h.gold || 0).toLocaleString()} PO</span>
+                      <span className="text-amber-400 font-bold">{(h.gold || 0).toLocaleString()} GP</span>
                     </div>
                   ))}
                 </div>
@@ -483,15 +493,17 @@ export const CheatModal: React.FC<CheatModalProps> = ({
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <div className="flex items-center gap-2 text-sky-300 font-bold text-sm">
                   <Key className="w-4 h-4 text-sky-400" />
-                  <span>Clés d'Ascenseurs & Pass d'Accréditation (Wizardry 1)</span>
+                  <span>{t.cheat.tabKeys}</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Dans <em>Wizardry I : Proving Grounds of the Mad Overlord</em>, les ascenseurs du donjon de Trebor nécessitent des objets spéciaux dans l'inventaire :
+                  {lang === 'fr'
+                    ? "Dans Wizardry I : Proving Grounds of the Mad Overlord, les ascenseurs du donjon de Trebor nécessitent des objets spéciaux dans l'inventaire :"
+                    : "In Wizardry I: Proving Grounds of the Mad Overlord, Trebor's dungeon elevators require specific items:"}
                 </p>
                 <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                  <li><strong>BRONZE KEY (#97) & SILVER KEY (#98)</strong> : Permettent de déverrouiller les portes de l'ascenseur reliant les <strong>Niveaux 1 à 4</strong>.</li>
-                  <li><strong>BLUE RIBBON (#100)</strong> : Le ruban bleu remis par Trebor, indispensable au 4e sous-sol en case (10, 1) pour franchir la barrière magique de l'ascenseur express menant aux <strong>Niveaux 4 à 9/10</strong> !</li>
-                  <li><strong>STATUETTES OURS & GRENOUILLE (#95 & #96)</strong> : Portes blindées du 4e sous-sol.</li>
+                  <li><strong>BRONZE KEY (#97) & SILVER KEY (#98)</strong> : {lang === 'fr' ? "Permettent de déverrouiller l'ascenseur des Niveaux 1 à 4." : "Unlocks the elevator connecting Floors 1 to 4."}</li>
+                  <li><strong>BLUE RIBBON (#100)</strong> : {lang === 'fr' ? "Le ruban bleu de Trebor, indispensable au 4e sous-sol (10, 1) pour l'ascenseur express (Niveaux 4 à 9/10) !" : "Trebor's officer badge, required on Floor 4 (10, 1) for the express elevator (Floors 4 to 9/10)!"}</li>
+                  <li><strong>STATUETTES (#95 & #96)</strong> : {lang === 'fr' ? "Portes blindées du 4e sous-sol." : "Fortified doors on Floor 4."}</li>
                 </ul>
 
                 {/* 1-Click Bundle */}
@@ -501,7 +513,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                     className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white font-black text-xs tracking-wide shadow flex items-center justify-center gap-2 transition"
                   >
                     <Key className="w-4 h-4" />
-                    <span>🔑 Injecter le Pack Ascenseurs : Bronze Key + Silver Key + Blue Ribbon</span>
+                    <span>🔑 {lang === 'fr' ? "Injecter le Pack Ascenseurs : Bronze Key + Silver Key + Blue Ribbon" : "Inject Elevator Bundle: Bronze Key + Silver Key + Blue Ribbon"}</span>
                   </button>
                 </div>
               </div>
@@ -509,17 +521,17 @@ export const CheatModal: React.FC<CheatModalProps> = ({
               {/* Individual Item Injections */}
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                  Ajout d'objets de quête individuels :
+                  {lang === 'fr' ? "Ajout d'objets de quête individuels :" : "Grant Individual Quest Items:"}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {[
-                    { id: 94, name: "WERDNA'S AMULET", desc: "Amulette de Werdna (#94) - Quête Finale" },
-                    { id: 97, name: 'BRONZE KEY', desc: 'Clé de Bronze (#97)' },
-                    { id: 98, name: 'SILVER KEY', desc: 'Clé d’Argent (#98)' },
-                    { id: 100, name: 'BLUE RIBBON', desc: 'Ruban Bleu d’Accréditation (#100)' },
-                    { id: 99, name: 'GOLD KEY', desc: 'Clé d’Or (#99)' },
-                    { id: 95, name: 'STATUETTE/BEAR', desc: 'Statuette d’Ours (#95)' },
-                    { id: 96, name: 'STATUETTE/FROG', desc: 'Statuette de Grenouille (#96)' },
+                    { id: 94, name: "WERDNA'S AMULET", desc: "Amulette de Werdna (#94) - Final Relic" },
+                    { id: 97, name: 'BRONZE KEY', desc: 'Bronze Key (#97)' },
+                    { id: 98, name: 'SILVER KEY', desc: 'Silver Key (#98)' },
+                    { id: 100, name: 'BLUE RIBBON', desc: 'Blue Ribbon (#100)' },
+                    { id: 99, name: 'GOLD KEY', desc: 'Gold Key (#99)' },
+                    { id: 95, name: 'STATUETTE/BEAR', desc: 'Bear Statuette (#95)' },
+                    { id: 96, name: 'STATUETTE/FROG', desc: 'Frog Statuette (#96)' },
                   ].map(itm => (
                     <button
                       key={itm.id}
@@ -527,7 +539,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                       className="p-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-left flex items-center justify-between transition group"
                     >
                       <span className="font-semibold text-slate-200 group-hover:text-amber-300">{itm.desc}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-300 font-mono">+ Ajouter</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-300 font-mono">+ {lang === 'fr' ? 'Ajouter' : 'Add'}</span>
                     </button>
                   ))}
                 </div>
@@ -537,7 +549,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                     onClick={handleGiveAllW1QuestItems}
                     className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/40 text-xs font-bold transition"
                   >
-                    🎁 Donner tous les artefacts de quête W1
+                    🎁 {t.cheat.giveAllKeysBtn}
                   </button>
                 </div>
               </div>
@@ -549,36 +561,40 @@ export const CheatModal: React.FC<CheatModalProps> = ({
             <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
               <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
                 <HeartPulse className="w-4 h-4" />
-                <span>Restauration & Résurrection Intégrale</span>
+                <span>{t.cheat.tabRestore}</span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Restaure immédiatement l'intégralité des points de vie (PV Max), réinitialise tous les statuts (mort, cendres, paralysie, pétrification, sommeil) à l'état normal (OK), dissipe le poison et recharge les points de sorts de l'ensemble de la guilde.
+                {lang === 'fr'
+                  ? "Restaure immédiatement l'intégralité des points de vie (PV Max), réinitialise tous les statuts (mort, cendres, paralysie, pétrification, sommeil) à l'état normal (OK), dissipe le poison et recharge les points de sorts de l'ensemble de la guilde."
+                  : "Fully restores Hit Points (Max HP), resets all afflictions (dead, ashes, paralysis, petrified, asleep) to OK status, cleanses poison, and recharges spell points for all guild members."}
               </p>
 
               <button
                 onClick={() => {
                   onRestoreAllHeroes();
-                  showNotification("💖 Tous les héros ont été soignés, ressuscités et leurs sorts restaurés !");
+                  showNotification(t.cheat.restoreSuccess);
                 }}
                 className="w-full py-3 px-4 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs tracking-wide shadow flex items-center justify-center gap-2 transition"
               >
                 <HeartPulse className="w-4 h-4 fill-current" />
-                <span>Ressusciter et soigner 100% de la Guilde</span>
+                <span>{t.cheat.restoreAllHpBtn}</span>
               </button>
 
               <div className="pt-3 border-t border-slate-800 space-y-1.5">
                 <button
                   onClick={() => {
                     onRespawnWerdna?.();
-                    showNotification("💀 L'Archi-Mage Werdna a été ressuscité dans son antre au Niveau 10 ! Le combat est de nouveau prêt.");
+                    showNotification(t.cheat.werdnaRespawnedSuccess);
                   }}
                   className="w-full py-3 px-4 rounded-xl bg-purple-900/80 hover:bg-purple-800 border border-purple-500/50 text-purple-200 font-bold text-xs tracking-wide shadow flex items-center justify-center gap-2 transition"
                 >
                   <Skull className="w-4 h-4 text-purple-400" />
-                  <span>Réanimer l'Archi-Mage Werdna (Niveau 10)</span>
+                  <span>{t.cheat.respawnWerdnaBtn}</span>
                 </button>
                 <p className="text-[11px] text-slate-400 text-center">
-                  Permet d'affronter Werdna et sa garde à nouveau en case (17, 3) du Niveau 10 sans recommencer une partie.
+                  {lang === 'fr' 
+                    ? "Permet d'affronter Werdna et sa garde à nouveau en case (17, 3) du Niveau 10 sans recommencer une partie."
+                    : "Allows confronting Werdna and his guard again at Floor 10 (17, 3) without restarting a new game."}
                 </p>
               </div>
             </div>
@@ -589,13 +605,13 @@ export const CheatModal: React.FC<CheatModalProps> = ({
         <div className="p-3.5 px-6 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-400">
           <span className="flex items-center gap-1.5">
             <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
-            <span>Disponible sur GitHub Pages & Développement (inactif sur les builds de distribution itch.io).</span>
+            <span>{lang === 'fr' ? "Disponible sur GitHub Pages & Développement." : "Available on GitHub Pages & Development."}</span>
           </span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition"
           >
-            Fermer
+            {t.common.closeBtn}
           </button>
         </div>
       </div>

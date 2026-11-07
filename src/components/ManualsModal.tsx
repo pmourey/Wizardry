@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { MANUALS_CATALOG, ManualItem } from '../data/manualsCatalog';
-import { useLanguage } from '../utils/language';
+import { useI18n } from '../i18n';
 import {
   BookOpen,
   Download,
@@ -28,7 +28,7 @@ export const ManualsModal: React.FC<ManualsModalProps> = ({
   onClose,
   initialScenarioId
 }) => {
-  const [lang] = useLanguage();
+  const { t, lang } = useI18n();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'ALL' | 'OFFICIAL' | 'FAN_SCENARIO' | 'SPELLS_GRIMOIRE' | 'TOOLS_MODDING'>('ALL');
   const [languageFilter, setLanguageFilter] = useState<'ALL' | 'FR' | 'EN'>('ALL');

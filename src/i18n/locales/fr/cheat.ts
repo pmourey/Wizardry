@@ -1,0 +1,31 @@
+import { CheatTranslations } from '../../types';
+
+export const cheatFr: CheatTranslations = {
+  modalTitle: 'Menu de Triche & Outils Arcaniques',
+  tabExp: 'Expérience & Niveau',
+  tabGold: 'Trésorerie & Or',
+  tabKeys: 'Objets de Quête & Clés',
+  tabRestore: 'Soin & Résurrection',
+  targetHeroLabel: 'Aventurier ciblé :',
+  allPartyOption: 'Tous les membres de l\'escouade',
+  targetLevelLabel: 'Niveau cible :',
+  setLevelBtn: (lvl: number) => `Fixer au Niveau ${lvl}`,
+  maxStatsBtn: 'Maximiser les Caractéristiques (18)',
+  giveGoldBtn: (amount: number) => `Octroyer +${amount.toLocaleString()} Pièces d'Or`,
+  giveSilverKeyBtn: 'Clé d\'Argent',
+  giveBronzeKeyBtn: 'Clé de Bronze',
+  giveGoldKeyBtn: 'Clé d\'Or',
+  giveBlueRibbonBtn: 'Ruban Bleu (Badge d\'officier)',
+  giveAmuletBtn: 'Amulette de Werdna (Relique)',
+  giveAllKeysBtn: 'Donner Tous les Objets de Quête',
+  restoreAllHpBtn: 'Restaurer Intégralement les PV (Max HP)',
+  restoreAllSpellSlotsBtn: 'Restaurer Tous les Emplacements de Sorts (9/9/9...)',
+  resurrectAllDeadBtn: 'Ressusciter Morts, Cendres & Perdus (Statut OK)',
+  cureAllPoisonBtn: 'Guérir Tout Poison & Paralysie',
+  respawnWerdnaBtn: 'Faire réapparaître Werdna au Niveau 10',
+  werdnaRespawnedSuccess: '🧙‍♂️ L\'archimage Werdna est réapparu au Niveau 10 (0, 0) ! L\'affrontement final vous attend.',
+  restoreSuccess: '✨ Escouade entièrement soignée et restaurée au maximum de sa forme !',
+  keysGivenSuccess: '🔑 Objets de quête et clés ajoutés dans l\'inventaire !',
+  goldGivenSuccess: (amount: number) => `💰 +${amount.toLocaleString()} PO octroyés !`,
+  levelSetSuccess: (lvl: number) => `⚡ Niveau ajusté au Niveau ${lvl} !`
+};

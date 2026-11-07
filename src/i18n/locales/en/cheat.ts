@@ -1,0 +1,31 @@
+import { CheatTranslations } from '../../types';
+
+export const cheatEn: CheatTranslations = {
+  modalTitle: 'Arcane Developer & Cheat Menu',
+  tabExp: 'Experience & Level',
+  tabGold: 'Gold Treasury',
+  tabKeys: 'Quest Items & Keys',
+  tabRestore: 'Restore & Heal',
+  targetHeroLabel: 'Target adventurer:',
+  allPartyOption: 'All Active Party Members',
+  targetLevelLabel: 'Target Level:',
+  setLevelBtn: (lvl: number) => `Set Level to ${lvl}`,
+  maxStatsBtn: 'Max Out Attributes (18)',
+  giveGoldBtn: (amount: number) => `Grant +${amount.toLocaleString()} Gold`,
+  giveSilverKeyBtn: 'Silver Key',
+  giveBronzeKeyBtn: 'Bronze Key',
+  giveGoldKeyBtn: 'Gold Key',
+  giveBlueRibbonBtn: 'Blue Ribbon (Officer Badge)',
+  giveAmuletBtn: 'Amulet of Werdna (Relic)',
+  giveAllKeysBtn: 'Grant All Scenario Quest Items',
+  restoreAllHpBtn: 'Fully Restore Hit Points (Max HP)',
+  restoreAllSpellSlotsBtn: 'Restore All Spell Slots (9/9/9...)',
+  resurrectAllDeadBtn: 'Resurrect Dead, Ashes & Lost (Status OK)',
+  cureAllPoisonBtn: 'Cure All Poison & Paralysis',
+  respawnWerdnaBtn: 'Respawn Werdna on Floor 10',
+  werdnaRespawnedSuccess: '🧙‍♂️ The evil archmage Werdna has returned to Floor 10 (0, 0)! The confrontation awaits.',
+  restoreSuccess: '✨ Adventurers fully healed and restored to perfect health!',
+  keysGivenSuccess: '🔑 Quest items and keys added to inventory!',
+  goldGivenSuccess: (amount: number) => `💰 +${amount.toLocaleString()} GP granted!`,
+  levelSetSuccess: (lvl: number) => `⚡ Level adjusted to Level ${lvl}!`
+};

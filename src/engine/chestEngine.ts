@@ -18,7 +18,7 @@ export type TTrapType =
   | 'ANTI_PRIEST'
   | 'ALARM';
 
-export const TRAP_NAMES: Record<TTrapType, string> = {
+export const TRAP_NAMES_FR: Record<TTrapType, string> = {
   TRAPLESS: 'COFFRE SANS PIÈGE',
   POISON_NEEDLE: 'AIGUILLE EMPOISONNÉE',
   GAS_BOMB: 'BOMBE À GAZ',
@@ -32,6 +32,27 @@ export const TRAP_NAMES: Record<TTrapType, string> = {
   ANTI_PRIEST: 'DÉCHARGE ANTI-PRÊTRE',
   ALARM: 'ALARME D’ALERTE'
 };
+
+export const TRAP_NAMES_EN: Record<TTrapType, string> = {
+  TRAPLESS: 'OPEN / NO TRAP',
+  POISON_NEEDLE: 'POISON NEEDLE',
+  GAS_BOMB: 'GAS BOMB',
+  CROSSBOW_BOLT: 'CROSSBOW BOLT',
+  EXPLODING_BOX: 'EXPLODING BOX',
+  SPLINTERS: 'SPLINTERS',
+  BLADES: 'BLADES',
+  STUNNER: 'STUNNER',
+  TELEPORTER: 'TELEPORTER',
+  ANTI_MAGE: 'MAGE BLASTER',
+  ANTI_PRIEST: 'PRIEST BLASTER',
+  ALARM: 'ALARM'
+};
+
+export const TRAP_NAMES: Record<TTrapType, string> = TRAP_NAMES_FR;
+
+export function getTrapName(trap: TTrapType, lang: 'en' | 'fr' = 'fr'): string {
+  return lang === 'en' ? TRAP_NAMES_EN[trap] : TRAP_NAMES_FR[trap];
+}
 
 export interface ChestReward {
   trapType: TTrapType;
@@ -226,21 +247,27 @@ export function applyTrapEffects(
   trap: TTrapType,
   party: TCharacter[],
   openerIndex: number,
-  level: number
+  level: number,
+  lang: 'en' | 'fr' = 'fr'
 ): string[] {
   const log: string[] = [];
   const opener = party[openerIndex] || party[0];
+  const isEn = lang === 'en';
 
   switch (trap) {
     case 'POISON_NEEDLE':
       opener.poisonAmount = (opener.poisonAmount || 0) + 1;
-      log.push(`Une aiguille empoisonnée surgit de la serrure et pique ${opener.name} !`);
+      log.push(isEn 
+        ? `A poison needle shoots out from the lock and pricks ${opener.name}!` 
+        : `Une aiguille empoisonnée surgit de la serrure et pique ${opener.name} !`);
       break;
     case 'GAS_BOMB':
       party.forEach(h => {
         if (h.status === 'OK' && Math.random() * 100 < 50) {
           h.poisonAmount = (h.poisonAmount || 0) + 1;
-          log.push(`${h.name} inhale le gaz délétère et est empoisonné !`);
+          log.push(isEn 
+            ? `${h.name} inhales noxious gas and is poisoned!` 
+            : `${h.name} inhale le gaz délétère et est empoisonné !`);
         }
       });
       break;
@@ -250,22 +277,26 @@ export function applyTrapEffects(
       const dmg = Math.floor(Math.random() * (level * 8 + 6)) + 4;
       if (trap === 'CROSSBOW_BOLT') {
         opener.hpLeft -= dmg;
-        log.push(`Un carreau d’arbalète transperce ${opener.name} pour ${dmg} dégâts !`);
+        log.push(isEn 
+          ? `A crossbow bolt strikes ${opener.name} for ${dmg} damage!` 
+          : `Un carreau d’arbalète transperce ${opener.name} pour ${dmg} dégâts !`);
         if (opener.hpLeft <= 0) {
           opener.hpLeft = 0;
           opener.status = 'DEAD';
-          log.push(`💀 ${opener.name} succombe sur le coup !`);
+          log.push(isEn ? `💀 ${opener.name} was killed instantly!` : `💀 ${opener.name} succombe sur le coup !`);
         }
       } else {
         party.forEach(h => {
           if (h.status === 'OK') {
             const hDmg = Math.floor(dmg / 2) + Math.floor(Math.random() * 4);
             h.hpLeft -= hDmg;
-            log.push(`${h.name} est touché par l’explosion pour ${hDmg} dégâts.`);
+            log.push(isEn 
+              ? `${h.name} is hit by the explosion for ${hDmg} damage.` 
+              : `${h.name} est touché par l’explosion pour ${hDmg} dégâts.`);
             if (h.hpLeft <= 0) {
               h.hpLeft = 0;
               h.status = 'DEAD';
-              log.push(`💀 ${h.name} meurt dans l’explosion !`);
+              log.push(isEn ? `💀 ${h.name} perished in the explosion!` : `💀 ${h.name} meurt dans l’explosion !`);
             }
           }
         });
@@ -275,7 +306,9 @@ export function applyTrapEffects(
     case 'STUNNER':
       if (opener.status === 'OK') {
         opener.status = 'PLYZE';
-        log.push(`Une décharge étourdissante paralyse complètement ${opener.name} !`);
+        log.push(isEn 
+          ? `A stunning flash completely paralyzes ${opener.name}!` 
+          : `Une décharge étourdissante paralyse complètement ${opener.name} !`);
       }
       break;
     case 'ANTI_MAGE':
@@ -283,7 +316,9 @@ export function applyTrapEffects(
         if (h.class === 'MAGE' || h.class === 'SAMURAI' || h.class === 'BISHOP') {
           if (h.status === 'OK') {
             h.status = 'PLYZE';
-            log.push(`Une onde anti-magique frappe ${h.name} de paralysie !`);
+            log.push(isEn 
+              ? `An anti-mage wave strikes ${h.name} with paralysis!` 
+              : `Une onde anti-magique frappe ${h.name} de paralysie !`);
           }
         }
       });
@@ -293,16 +328,20 @@ export function applyTrapEffects(
         if (h.class === 'PRIEST' || h.class === 'LORD' || h.class === 'BISHOP') {
           if (h.status === 'OK') {
             h.status = 'STONED';
-            log.push(`Le fluide impie pétrifie ${h.name} en statue de pierre !`);
+            log.push(isEn 
+              ? `Unholy fluid petrifies ${h.name} into stone!` 
+              : `Le fluide impie pétrifie ${h.name} en statue de pierre !`);
           }
         }
       });
       break;
     case 'ALARM':
-      log.push(`🚨 UNE ALARME STRIDENTE RÉSONNE DANS TOUT LE DONJON !`);
+      log.push(isEn 
+        ? `🚨 A SHRILL ALARM RINGS OUT ECHOING THROUGH THE ENTIRE DUNGEON!` 
+        : `🚨 UNE ALARME STRIDENTE RÉSONNE DANS TOUT LE DONJON !`);
       break;
     default:
-      log.push(`Rien de fâcheux ne se produit.`);
+      log.push(isEn ? `Nothing untoward happens.` : `Rien de fâcheux ne se produit.`);
       break;
   }
 

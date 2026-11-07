@@ -7,6 +7,10 @@ import { castleEn } from './castle';
 import { characterEn } from './character';
 import { dungeonEn } from './dungeon';
 import { miniMapEn } from './miniMap';
+import { combatEn } from './combat';
+import { chestEn } from './chest';
+import { cheatEn } from './cheat';
+import { manualsEn } from './manuals';
 
 export const enLocale: LocaleSchema = {
   common: commonEn,
@@ -17,4 +21,8 @@ export const enLocale: LocaleSchema = {
   character: characterEn,
   dungeon: dungeonEn,
   miniMap: miniMapEn,
+  combat: combatEn,
+  chest: chestEn,
+  cheat: cheatEn,
+  manuals: manualsEn,
 };

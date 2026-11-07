@@ -5,11 +5,14 @@ import {
   inspectChest, 
   disarmChest, 
   applyTrapEffects, 
-  TRAP_NAMES, 
+  TRAP_NAMES_EN,
+  TRAP_NAMES_FR,
+  getTrapName,
   TTrapType 
 } from '../engine/chestEngine';
 import { shiftDeadHeroesToEnd } from '../engine/combatEngine';
 import { sounds } from '../utils/soundEffects';
+import { useI18n } from '../i18n';
 import { Package, Search, KeyRound, Unlock, ArrowRight, ShieldCheck, AlertTriangle, CheckCircle2, ShieldAlert, Footprints } from 'lucide-react';
 
 interface ChestViewProps {
@@ -29,14 +32,15 @@ export const ChestView: React.FC<ChestViewProps> = ({
   onFinishChest,
   onPartyWipedOut
 }) => {
+  const { t, lang } = useI18n();
   const [log, setLog] = useState<string[]>(() => {
     const initial: string[] = [];
     if (chest.expGainedPerSurvivor && chest.expGainedPerSurvivor > 0) {
       initial.push(
-        `🏆 POUR AVOIR VAINCU LES MONSTRES, CHAQUE SURVIVANT (STATUT OK) REÇOIT +${chest.expGainedPerSurvivor.toLocaleString()} POINTS D'EXPÉRIENCE (${(chest.totalExpGained || chest.expGainedPerSurvivor).toLocaleString()} XP au total) !`
+        t.chest.expAwardMsg(chest.expGainedPerSurvivor, chest.totalExpGained || chest.expGainedPerSurvivor)
       );
     }
-    initial.push('Les monstres ont laissé un coffre au trésor bardé de ferrements !');
+    initial.push(t.chest.chestFoundMsg);
     return initial;
   });
   const [selectedHeroIdx, setSelectedHeroIdx] = useState<number>(0);
@@ -55,7 +59,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
       sounds.playBell();
       setLog(prev => [
         ...prev,
-        `💀 L'escouade entière a été décimée par les ravages du coffre !`
+        t.chest.partyWipeoutChest
       ]);
       if (onPartyWipedOut) {
         setTimeout(() => onPartyWipedOut(), 1800);
@@ -70,8 +74,8 @@ export const ChestView: React.FC<ChestViewProps> = ({
       setLog(prev => [
         ...prev,
         chest.exploded 
-          ? `Le mécanisme du piège a déjà explosé et gît en miettes. Le coffre est inoffensif.`
-          : `Le piège a déjà été désamorcé avec succès.`
+          ? (lang === 'fr' ? `Le mécanisme du piège a déjà explosé et gît en miettes. Le coffre est inoffensif.` : 'The trap mechanism already exploded and lies in pieces. The chest is harmless.')
+          : (lang === 'fr' ? `Le piège a déjà été désamorcé avec succès.` : 'The trap has already been disarmed.')
       ]);
       return;
     }
@@ -80,19 +84,21 @@ export const ChestView: React.FC<ChestViewProps> = ({
     const result = inspectChest(chest, hero);
     if (result.sprung) {
       sounds.playBump();
-      const trapLogs = applyTrapEffects(chest.trapType, party, selectedHeroIdx, dungeonLevel);
+      const trapLogs = applyTrapEffects(chest.trapType, party, selectedHeroIdx, dungeonLevel, lang);
       setLog(prev => [
         ...prev,
-        `💥 Catastrophe ! ${hero.name} a déclenché le piège (${TRAP_NAMES[chest.trapType]}) en inspectant la serrure !`,
+        t.chest.inspectSprungLog(hero.name, getTrapName(chest.trapType, lang)),
         ...trapLogs,
-        `⚠️ Le piège s'est déchargé et est désormais inactif. Vous pouvez ouvrir le coffre sans risque supplémentaire.`
+        lang === 'fr'
+          ? `⚠️ Le piège s'est déchargé et est désormais inactif. Vous pouvez ouvrir le coffre sans risque supplémentaire.`
+          : '⚠️ The trap has discharged and is now inactive. You can open the chest without further risk.'
       ]);
       setParty([...party]);
       checkPartyWipeout();
     } else {
       setLog(prev => [
         ...prev,
-        `${hero.name} examine minutieusement la serrure et soupçonne : ${TRAP_NAMES[result.guess]}`
+        t.chest.inspectSuccessLog(hero.name, getTrapName(result.guess, lang))
       ]);
     }
   };
@@ -102,8 +108,8 @@ export const ChestView: React.FC<ChestViewProps> = ({
       setLog(prev => [
         ...prev,
         chest.exploded
-          ? `Inutile d'incanter CALFO : le piège a déjà sauté et le coffre est neutralisé.`
-          : `Inutile d'incanter CALFO : le coffre a déjà été désamorcé.`
+          ? (lang === 'fr' ? `Inutile d'incanter CALFO : le piège a déjà sauté et le coffre est neutralisé.` : 'No need to cast CALFO: the trap already triggered and the chest is neutralized.')
+          : (lang === 'fr' ? `Inutile d'incanter CALFO : le coffre a déjà été désamorcé.` : 'No need to cast CALFO: the chest has already been disarmed.')
       ]);
       return;
     }
@@ -111,7 +117,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
     // Find priest who knows Calfo (spell 28)
     const priest = party.find(p => p.status === 'OK' && p.spellsKnown[28] && p.priestSpells[2] > 0);
     if (!priest) {
-      setLog(prev => [...prev, 'Aucun prêtre en état ne dispose du sort CALFO (Tier 2).']);
+      setLog(prev => [...prev, t.chest.noPriestCalfo]);
       return;
     }
     sounds.playSpellCast();
@@ -119,7 +125,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
     chest.calfoRevealed = true;
     setLog(prev => [
       ...prev,
-      `✨ ${priest.name} incante CALFO. La vérité mystique se révèle : ce coffre est piégé par "${TRAP_NAMES[chest.trapType]}" !`
+      t.chest.calfoRevealLog(priest.name, getTrapName(chest.trapType, lang))
     ]);
     setSelectedDisarmTrap(chest.trapType);
     setParty([...party]);
@@ -130,8 +136,8 @@ export const ChestView: React.FC<ChestViewProps> = ({
       setLog(prev => [
         ...prev,
         chest.exploded 
-          ? `Le mécanisme s'est déjà déclenché et déchargé. Il ne présente plus aucun danger !`
-          : `Le coffre a déjà été désamorcé.`
+          ? (lang === 'fr' ? `Le mécanisme s'est déjà déclenché et déchargé. Il ne présente plus aucun danger !` : 'The mechanism has already triggered and discharged. It presents no danger!')
+          : (lang === 'fr' ? `Le coffre a déjà été désamorcé.` : 'The chest has already been disarmed.')
       ]);
       return;
     }
@@ -142,24 +148,26 @@ export const ChestView: React.FC<ChestViewProps> = ({
       sounds.playGold();
       setLog(prev => [
         ...prev,
-        `🛠️ ${hero.name} désamorce adroitement le mécanisme de piège (${TRAP_NAMES[selectedDisarmTrap]}) ! Le coffre est sécurisé.`
+        t.chest.disarmSuccessLog(hero.name, getTrapName(selectedDisarmTrap, lang))
       ]);
     } else if (result.exploded) {
       sounds.playBump();
-      const trapLogs = applyTrapEffects(chest.trapType, party, selectedHeroIdx, dungeonLevel);
+      const trapLogs = applyTrapEffects(chest.trapType, party, selectedHeroIdx, dungeonLevel, lang);
       shiftDeadHeroesToEnd(party);
       setLog(prev => [
         ...prev,
-        `💥 ÉCHEC CRITIQUE ! Le mécanisme de désamorçage se coince et le piège (${TRAP_NAMES[chest.trapType]}) se déclenche !`,
+        t.chest.disarmSprungLog(hero.name, getTrapName(chest.trapType, lang)),
         ...trapLogs,
-        `⚠️ Le piège a explosé et s'est totalement déchargé. Le coffre est désormais inoffensif et NE SE DÉCLENCHERA PLUS à l'ouverture.`
+        lang === 'fr'
+          ? `⚠️ Le piège a explosé et s'est totalement déchargé. Le coffre est désormais inoffensif et NE SE DÉCLENCHERA PLUS à l'ouverture.`
+          : '⚠️ The trap exploded and fully discharged. The chest is now harmless and will NOT trigger again when opened.'
       ]);
       setParty([...party]);
       checkPartyWipeout();
     } else {
       setLog(prev => [
         ...prev,
-        `${hero.name} n'arrive pas à crocheter le verrou, mais ne déclenche pas le piège.`
+        t.chest.disarmFailLog(hero.name)
       ]);
     }
   };
@@ -169,11 +177,11 @@ export const ChestView: React.FC<ChestViewProps> = ({
     if (!chest.disarmed && !chest.exploded && chest.trapType !== 'TRAPLESS') {
       chest.exploded = true;
       sounds.playBump();
-      const trapLogs = applyTrapEffects(chest.trapType, party, selectedHeroIdx, dungeonLevel);
+      const trapLogs = applyTrapEffects(chest.trapType, party, selectedHeroIdx, dungeonLevel, lang);
       shiftDeadHeroesToEnd(party);
       setLog(prev => [
         ...prev,
-        `💥 Vous forcez le couvercle sans désarmer... Le piège (${TRAP_NAMES[chest.trapType]}) explose !`,
+        t.chest.openPriedSprungLog(getTrapName(chest.trapType, lang)),
         ...trapLogs
       ]);
       setParty([...party]);
@@ -181,17 +189,19 @@ export const ChestView: React.FC<ChestViewProps> = ({
     } else if (chest.exploded) {
       setLog(prev => [
         ...prev,
-        `🔓 Le piège ayant déjà sauté lors de la tentative précédente, vous ouvrez les ferrures du coffre neutralisé en toute sécurité.`
+        lang === 'fr'
+          ? `🔓 Le piège ayant déjà sauté lors de la tentative précédente, vous ouvrez les ferrures du coffre neutralisé en toute sécurité.`
+          : '🔓 The trap having already triggered previously, you open the fittings of the neutralized chest safely.'
       ]);
     } else if (chest.disarmed) {
       setLog(prev => [
         ...prev,
-        `🔓 Le piège ayant été désamorcé, le coffre s'ouvre sans encombre.`
+        t.chest.openSafeLog
       ]);
     } else {
       setLog(prev => [
         ...prev,
-        `🔓 Le coffre ne comportait aucun piège et s'ouvre facilement.`
+        t.chest.openNoTrapLog
       ]);
     }
 
@@ -203,7 +213,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
       survivors.forEach(h => { h.gold += share; });
       setLog(prev => [
         ...prev,
-        `💰 Butin : ${chest.goldFound} Pièces d'Or partagées (${share} PO par survivant).`
+        t.chest.goldFoundLog(chest.goldFound, share)
       ]);
     }
 
@@ -219,10 +229,10 @@ export const ChestView: React.FC<ChestViewProps> = ({
         });
         setLog(prev => [
           ...prev,
-          `🎁 Objet trouvé : ${chest.itemFound?.nameUnknown || chest.itemFound?.name} placé dans le sac de ${recipient.name} !`
+          t.chest.itemFoundLog(chest.itemFound?.nameUnknown || chest.itemFound?.name || '', recipient.name)
         ]);
       } else {
-        setLog(prev => [...prev, `Les sacs des survivants sont pleins, l'objet trouvé est abandonné.`]);
+        setLog(prev => [...prev, t.chest.backpacksFullLog]);
       }
     }
 
@@ -234,7 +244,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
     sounds.playFootstep();
     setLog(prev => [
       ...prev,
-      `🚪 Vous choisissez de laisser le coffre sur place sans l'ouvrir (Option Pascal L)EAVE). L'escouade s'éloigne prudemment.`
+      t.chest.leaveChestLog
     ]);
     setTimeout(() => {
       onFinishChest(false, false);
@@ -294,8 +304,8 @@ export const ChestView: React.FC<ChestViewProps> = ({
             <Package className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-white font-serif">Coffre aux Trésors Découvert</h2>
-            <p className="text-[11px] sm:text-xs text-slate-400">Inspectez, désamorcez ou forcez le coffre avec précaution.</p>
+            <h2 className="text-base sm:text-lg font-bold text-white font-serif">{t.chest.chestTitle}</h2>
+            <p className="text-[11px] sm:text-xs text-slate-400">{t.chest.chestSubtitle}</p>
           </div>
         </div>
 
@@ -304,22 +314,22 @@ export const ChestView: React.FC<ChestViewProps> = ({
           {chest.disarmed ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-950/80 border border-emerald-600/50 rounded-full text-emerald-400 text-[11px] sm:text-xs font-bold">
               <ShieldCheck className="w-3.5 h-3.5" />
-              Désamorcé (Inoffensif)
+              {t.chest.disarmedSafeBadge}
             </span>
           ) : chest.exploded ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-950/80 border border-amber-600/50 rounded-full text-amber-400 text-[11px] sm:text-xs font-bold">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Piège Déclenché (Neutralisé)
+              {t.chest.explodedSafeBadge}
             </span>
           ) : chest.calfoRevealed ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-950/80 border border-purple-600/50 rounded-full text-purple-300 text-[11px] sm:text-xs font-bold">
               <KeyRound className="w-3.5 h-3.5" />
-              Calfo : {TRAP_NAMES[chest.trapType]}
+              {t.chest.calfoBadge(getTrapName(chest.trapType, lang))}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 border border-slate-700 rounded-full text-slate-400 text-[11px] sm:text-xs font-medium">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-              Piège Armé (Non désamorcé)
+              {t.chest.armedBadge}
             </span>
           )}
         </div>
@@ -330,7 +340,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
         {!opened && (
           <div className="bg-slate-900/80 border border-slate-800 p-2.5 sm:p-4 rounded-xl space-y-2 sm:space-y-3">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-300 text-[11px] sm:text-xs">Aventurier à l'action :</span>
+              <span className="font-bold text-slate-300 text-[11px] sm:text-xs">{t.chest.operatorLabel}</span>
               <span className="text-amber-400 font-bold text-[11px] sm:text-xs">{hero.name} ({hero.class} · AGI {hero.attrib.AGILITY})</span>
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2">
@@ -349,7 +359,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
                   >
                     <div className="truncate text-[11px] sm:text-xs">{h.name}</div>
                     <div className="text-[9px] sm:text-[10px] text-slate-400 font-normal">
-                      {isAlive ? `${h.hpLeft} PV` : h.status}
+                      {isAlive ? `${h.hpLeft} ${t.character.hpShort}` : h.status}
                     </div>
                   </button>
                 );
@@ -366,53 +376,53 @@ export const ChestView: React.FC<ChestViewProps> = ({
                 onClick={handleInspect}
                 disabled={chest.exploded || chest.disarmed}
                 className="p-3 min-h-[44px] bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition active:scale-95 disabled:opacity-40 disabled:hover:bg-slate-800"
-                title={chest.exploded ? "Le piège a déjà explosé" : "Examiner la serrure pour identifier le piège (Touche I)"}
+                title={chest.exploded ? (lang === 'fr' ? "Le piège a déjà explosé" : "The trap already triggered") : (lang === 'fr' ? "Examiner la serrure pour identifier le piège (Touche I)" : "Inspect lock to identify trap (Key I)")}
               >
                 <Search className="w-4 h-4 text-amber-400" />
-                <span>(I) Inspecter</span>
+                <span>{t.chest.inspectBtn}</span>
               </button>
 
               <button
                 onClick={handleCalfo}
                 disabled={chest.exploded || chest.disarmed}
                 className="p-3 min-h-[44px] bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition active:scale-95 disabled:opacity-40 disabled:hover:bg-slate-800"
-                title={chest.exploded ? "Le piège a déjà explosé" : "Incanter CALFO pour révéler le piège à 100% (Touche C)"}
+                title={chest.exploded ? (lang === 'fr' ? "Le piège a déjà explosé" : "The trap already triggered") : (lang === 'fr' ? "Incanter CALFO pour révéler le piège à 100% (Touche C)" : "Cast CALFO to reveal trap (Key C)")}
               >
                 <KeyRound className="w-4 h-4 text-purple-400" />
-                <span>(C) Sort CALFO</span>
+                <span>{t.chest.calfoBtn}</span>
               </button>
 
               {/* Pascal L)EAVE Option: Leave chest undisturbed */}
               <button
                 onClick={handleLeave}
                 className="p-3 min-h-[44px] bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-white rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition active:scale-95 shadow-sm"
-                title="Ne pas ouvrir le coffre et reprendre la route sans déclencher de piège (Option L originelle de Wizardry)"
+                title={lang === 'fr' ? "Ne pas ouvrir le coffre et reprendre la route sans déclencher de piège (Option L originelle de Wizardry)" : "Leave the chest undisturbed without triggering traps (Authentic Pascal Wizardry L option)"}
               >
                 <Footprints className="w-4 h-4 text-slate-400" />
-                <span>(L) Laisser le coffre</span>
+                <span>{t.chest.leaveBtn}</span>
               </button>
             </div>
 
             {/* D)isarm: the player names the suspected trap */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-800/80 border border-slate-700 rounded-xl p-2.5">
-              <span className="text-xs text-slate-300 font-bold shrink-0">Piège supposé :</span>
+              <span className="text-xs text-slate-300 font-bold shrink-0">{t.chest.suspectedTrapLabel}</span>
               <select
                 value={selectedDisarmTrap}
                 onChange={e => setSelectedDisarmTrap(e.target.value as TTrapType)}
                 disabled={chest.exploded || chest.disarmed}
                 className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-2 min-h-[40px] text-xs text-white flex-1 min-w-0 focus:outline-none disabled:opacity-40"
               >
-                {Object.entries(TRAP_NAMES).map(([key, name]) => (
-                  <option key={key} value={key}>{name}</option>
+                {Object.keys(TRAP_NAMES_FR).map(key => (
+                  <option key={key} value={key}>{getTrapName(key as TTrapType, lang)}</option>
                 ))}
               </select>
               <button
                 onClick={handleDisarm}
                 disabled={chest.exploded || chest.disarmed}
                 className="px-4 py-2 min-h-[40px] bg-amber-600 hover:bg-amber-500 disabled:bg-slate-700 text-white rounded-lg text-xs font-bold transition active:scale-95 shrink-0 disabled:opacity-40"
-                title="Tenter de désamorcer le piège (Touche D)"
+                title={lang === 'fr' ? "Tenter de désamorcer le piège (Touche D)" : "Attempt to disarm the trap (Key D)"}
               >
-                (D) Désarmer
+                {t.chest.disarmBtn}
               </button>
             </div>
 
@@ -426,15 +436,15 @@ export const ChestView: React.FC<ChestViewProps> = ({
                   ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-950/40 ring-1 ring-amber-400/50 animate-pulse'
                   : 'bg-amber-700 hover:bg-amber-600 text-amber-100 shadow-amber-950/30'
               }`}
-              title="Ouvrir le coffre et piller le trésor (Touche O)"
+              title={lang === 'fr' ? "Ouvrir le coffre et piller le trésor (Touche O)" : "Open chest and take the treasure (Key O)"}
             >
               <Unlock className="w-4 h-4 shrink-0" />
               <span className="text-center">
                 {chest.disarmed
-                  ? '(O) Ouvrir le coffre sécurisé et collecter le butin'
+                  ? t.chest.openSafeBtn
                   : chest.exploded
-                  ? '(O) Ouvrir le coffre neutralisé (aucun danger restant)'
-                  : '(O) Ouvrir le coffre et piller le trésor'}
+                  ? t.chest.openNeutralizedBtn
+                  : t.chest.openLootBtn}
               </span>
             </button>
           </div>
@@ -443,7 +453,7 @@ export const ChestView: React.FC<ChestViewProps> = ({
             onClick={() => onFinishChest(chest.trapType === 'ALARM', true)}
             className="w-full min-h-[48px] p-3.5 sm:p-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition active:scale-95 flex items-center justify-center gap-2 shadow-lg text-xs sm:text-sm"
           >
-            <span>Reprendre l'exploration du Labyrinthe</span>
+            <span>{t.chest.resumeExplorationBtn}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         )}
@@ -458,4 +468,5 @@ export const ChestView: React.FC<ChestViewProps> = ({
     </div>
   );
 };
+
 

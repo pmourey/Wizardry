@@ -624,6 +624,145 @@ export interface MiniMapTranslations {
   cardinalWest: string;
 }
 
+export interface CombatTranslations {
+  combatTitle: string;
+  surprisePartySubtitle: string;
+  surpriseMonstersSubtitle: string;
+  surpriseNoneSubtitle: string;
+  surprisePartyBadge: string;
+  surpriseMonstersBadge: string;
+  groupHeader: (idx: number) => string;
+  partyOverviewTitle: (standing: number, total: number) => string;
+  partyOverviewSubtitle: string;
+  ambushTitle: string;
+  ambushDesc: string;
+  ambushBtn: string;
+  allHelplessTitle: string;
+  allHelplessDescAsleep: string;
+  allHelplessDescParalyzed: string;
+  resolveMonstersTurnBtn: string;
+  surrenderBtn: string;
+  friendlyTitle: string;
+  friendlySubtitle: (monster: string) => string;
+  friendlyDesc: string;
+  friendlyLeaveBtn: string;
+  friendlyFightBtn: string;
+  friendlyFightTooltip: string;
+  friendlyCorruptedAlert: (names: string) => string;
+  monstersDefeatedTitle: string;
+  monstersDefeatedDesc: string;
+  continueRewardsBtn: string;
+  heroOrderHeader: (current: number, total: number) => string;
+  vanguardRankBadge: (rank: number) => string;
+  rearguardRankBadge: (rank: number) => string;
+  undoBtn: string;
+  targetGroupLabel: string;
+  silenceAlert: (hero: string, rounds: number) => string;
+  selectSpellPrompt: string;
+  selectItemPrompt: string;
+  selectSpellTargetPrompt: (spell: string) => string;
+  selectItemAllyPrompt: (item: string, spell?: string) => string;
+  selectItemEnemyPrompt: (item: string, spell?: string) => string;
+  fightBtn: string;
+  fightTooltipFront: (grp: number) => string;
+  fightTooltipBack: string;
+  backRankLabel: string;
+  spellsBtn: (count: number) => string;
+  itemsBtn: (count: number) => string;
+  parryBtn: string;
+  dispellBtn: string;
+  runBtn: string;
+  runTooltip: string;
+  combatLogTitle: string;
+  fleeSuccessLog: string;
+  fleeFailedLog: string;
+  identifiedLog: (name: string) => string;
+}
+
+export interface ChestTranslations {
+  chestTitle: string;
+  chestSubtitle: string;
+  disarmedSafeBadge: string;
+  explodedSafeBadge: string;
+  calfoBadge: (trap: string) => string;
+  armedBadge: string;
+  operatorLabel: string;
+  inspectBtn: string;
+  calfoBtn: string;
+  leaveBtn: string;
+  disarmBtn: string;
+  suspectedTrapLabel: string;
+  openSafeBtn: string;
+  openNeutralizedBtn: string;
+  openLootBtn: string;
+  resumeExplorationBtn: string;
+  expAwardMsg: (perSurvivor: number, total: number) => string;
+  chestFoundMsg: string;
+  inspectSuccessLog: (hero: string, trap: string) => string;
+  inspectSprungLog: (hero: string, trap: string) => string;
+  calfoRevealLog: (priest: string, trap: string) => string;
+  noPriestCalfo: string;
+  disarmSuccessLog: (hero: string, trap: string) => string;
+  disarmSprungLog: (hero: string, trap: string) => string;
+  disarmFailLog: (hero: string) => string;
+  openPriedSprungLog: (trap: string) => string;
+  openSafeLog: string;
+  openNoTrapLog: string;
+  goldFoundLog: (total: number, share: number) => string;
+  itemFoundLog: (item: string, hero: string) => string;
+  backpacksFullLog: string;
+  leaveChestLog: string;
+  partyWipeoutChest: string;
+  traps: Record<string, string>;
+}
+
+export interface CheatTranslations {
+  modalTitle: string;
+  tabExp: string;
+  tabGold: string;
+  tabKeys: string;
+  tabRestore: string;
+  targetHeroLabel: string;
+  allPartyOption: string;
+  targetLevelLabel: string;
+  setLevelBtn: (lvl: number) => string;
+  maxStatsBtn: string;
+  giveGoldBtn: (amount: number) => string;
+  giveSilverKeyBtn: string;
+  giveBronzeKeyBtn: string;
+  giveGoldKeyBtn: string;
+  giveBlueRibbonBtn: string;
+  giveAmuletBtn: string;
+  giveAllKeysBtn: string;
+  restoreAllHpBtn: string;
+  restoreAllSpellSlotsBtn: string;
+  resurrectAllDeadBtn: string;
+  cureAllPoisonBtn: string;
+  respawnWerdnaBtn: string;
+  werdnaRespawnedSuccess: string;
+  restoreSuccess: string;
+  keysGivenSuccess: string;
+  goldGivenSuccess: (amount: number) => string;
+  levelSetSuccess: (lvl: number) => string;
+}
+
+export interface ManualsTranslations {
+  modalTitle: string;
+  searchPlaceholder: string;
+  categoryAll: string;
+  categoryOfficial: string;
+  categoryFanScenario: string;
+  categoryGrimoire: string;
+  categoryModding: string;
+  filterLangAll: string;
+  filterLangFr: string;
+  filterLangEn: string;
+  pagesCount: (pages: number) => string;
+  openPdfBtn: string;
+  externalArchiveBtn: string;
+  noResults: string;
+}
+
 export interface LocaleSchema {
   common: CommonTranslations;
   journal: JournalTranslations;
@@ -633,4 +772,8 @@ export interface LocaleSchema {
   character: CharacterTranslations;
   dungeon: DungeonTranslations;
   miniMap: MiniMapTranslations;
+  combat: CombatTranslations;
+  chest: ChestTranslations;
+  cheat: CheatTranslations;
+  manuals: ManualsTranslations;
 }
