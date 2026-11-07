@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { AdventureLogEvent, AdventureLogCategory } from '../types/wizardry';
+import { useI18n } from '../i18n';
 import { 
   ScrollText, 
   Swords, 
@@ -28,6 +29,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
   onClearEvents,
   onEnterMaze
 }) => {
+  const { t } = useI18n();
   const [selectedCategory, setSelectedCategory] = useState<AdventureLogCategory | 'ALL'>('ALL');
 
   // Display only the last 10 events as requested
@@ -56,7 +58,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
     switch (category) {
       case 'COMBAT':
         return {
-          label: 'Combat',
+          label: t.journal.categories.combat,
           icon: Swords,
           badgeBg: 'bg-rose-950/80',
           badgeBorder: 'border-rose-600/60',
@@ -65,7 +67,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
         };
       case 'DISCOVERY':
         return {
-          label: 'Découverte',
+          label: t.journal.categories.discovery,
           icon: Sparkles,
           badgeBg: 'bg-amber-950/80',
           badgeBorder: 'border-amber-500/60',
@@ -74,7 +76,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
         };
       case 'LOSS':
         return {
-          label: 'Perte',
+          label: t.journal.categories.loss,
           icon: Skull,
           badgeBg: 'bg-red-950/90',
           badgeBorder: 'border-red-600/80',
@@ -83,7 +85,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
         };
       case 'RESCUE':
         return {
-          label: 'Secours',
+          label: t.journal.categories.rescue,
           icon: ShieldCheck,
           badgeBg: 'bg-emerald-950/80',
           badgeBorder: 'border-emerald-600/60',
@@ -93,7 +95,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
       case 'CASTLE':
       default:
         return {
-          label: 'Château',
+          label: t.journal.categories.castle,
           icon: Castle,
           badgeBg: 'bg-sky-950/80',
           badgeBorder: 'border-sky-600/60',
@@ -117,14 +119,14 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-serif font-black text-white tracking-wide">
-                  Journal d'Aventures
+                  {t.journal.title}
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                  10 Derniers Récits
+                  {t.journal.recentCountBadge}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
-                Chroniques officielles des hauts faits, victoires au combat, butins déterrés et drames essuyés par votre guilde dans les profondeurs de Trebor.
+                {t.journal.subtitle}
               </p>
             </div>
           </div>
@@ -132,16 +134,16 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
           {onClearEvents && events.length > 0 && (
             <button
               onClick={() => {
-                if (confirm("Réinitialiser le journal d'aventures ?")) {
+                if (confirm(t.journal.clearConfirm)) {
                   sounds.playTurn();
                   onClearEvents();
                 }
               }}
               className="self-start sm:self-center px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-400 hover:text-red-300 border border-slate-700 hover:border-red-500/40 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0"
-              title="Effacer l'historique du journal"
+              title={t.journal.clearBtn}
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Effacer</span>
+              <span>{t.journal.clearBtn}</span>
             </button>
           )}
         </div>
@@ -149,7 +151,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
         {/* Category Filter Chips */}
         <div className="flex flex-wrap items-center gap-2 pt-5 border-t border-slate-800/80 mt-5">
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
-            <Filter className="w-3 h-3" /> Filtres :
+            <Filter className="w-3 h-3" /> {t.journal.filterLabel}
           </span>
 
           <button
@@ -160,7 +162,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
                 : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 border-slate-700/60'
             }`}
           >
-            <span>Tous</span>
+            <span>{t.journal.categories.all}</span>
             <span className="text-[10px] opacity-75 font-mono">({categoryStats.ALL})</span>
           </button>
 
@@ -173,7 +175,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
             }`}
           >
             <Swords className="w-3 h-3 text-rose-400" />
-            <span>Combats</span>
+            <span>{t.journal.categories.combat}</span>
             <span className="text-[10px] opacity-75 font-mono">({categoryStats.COMBAT})</span>
           </button>
 
@@ -186,7 +188,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
             }`}
           >
             <Sparkles className="w-3 h-3 text-amber-400" />
-            <span>Découvertes</span>
+            <span>{t.journal.categories.discovery}</span>
             <span className="text-[10px] opacity-75 font-mono">({categoryStats.DISCOVERY})</span>
           </button>
 
@@ -199,7 +201,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
             }`}
           >
             <Skull className="w-3 h-3 text-red-400" />
-            <span>Pertes</span>
+            <span>{t.journal.categories.loss}</span>
             <span className="text-[10px] opacity-75 font-mono">({categoryStats.LOSS})</span>
           </button>
 
@@ -212,7 +214,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
             }`}
           >
             <ShieldCheck className="w-3 h-3 text-emerald-400" />
-            <span>Secours</span>
+            <span>{t.journal.categories.rescue}</span>
             <span className="text-[10px] opacity-75 font-mono">({categoryStats.RESCUE})</span>
           </button>
 
@@ -225,7 +227,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
             }`}
           >
             <Castle className="w-3 h-3 text-sky-400" />
-            <span>Château</span>
+            <span>{t.journal.categories.castle}</span>
             <span className="text-[10px] opacity-75 font-mono">({categoryStats.CASTLE})</span>
           </button>
         </div>
@@ -240,10 +242,10 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
             </div>
             <div className="space-y-1">
               <h3 className="text-base font-serif font-bold text-slate-200">
-                Aucun récit dans cette catégorie
+                {t.journal.emptyTitle}
               </h3>
               <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Vos aventuriers n'ont pas encore consigné d'événement correspondant. Aventurez-vous dans le labyrinthe !
+                {t.journal.emptyDesc}
               </p>
             </div>
             {onEnterMaze && (
@@ -251,7 +253,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
                 onClick={onEnterMaze}
                 className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs transition shadow-md"
               >
-                Entrer dans le Donjon
+                {t.journal.enterMazeBtn}
               </button>
             )}
           </div>
@@ -285,7 +287,7 @@ export const AdventureJournal: React.FC<AdventureJournalProps> = ({
                   {event.level !== undefined && (
                     <div className="flex items-center gap-1.5 text-[11px] bg-slate-950/70 px-2 py-0.5 rounded border border-slate-800 text-amber-400/90 font-mono">
                       <MapPin className="w-3 h-3 text-amber-500" />
-                      <span>Niv. {event.level}</span>
+                      <span>{t.journal.levelBadge(event.level)}</span>
                       {event.coordinates && (
                         <span className="text-slate-400">({event.coordinates.x}, {event.coordinates.y})</span>
                       )}

@@ -1,0 +1,120 @@
+import { CommonTranslations } from '../../types';
+
+export const commonFr: CommonTranslations = {
+  scenarios: 'Scénarios',
+  backToGame: 'Retour au Jeu',
+  gameShort: 'Jeu',
+  locationLabel: 'Lieu :',
+  adventurersLabel: 'Aventuriers :',
+  mainMenu: 'Menu Principal',
+  dungeonFloorPrefix: 'Donjon N.',
+  keyboardLayoutTitle: (layout: string) =>
+    `Disposition clavier actuelle : ${layout} (${layout === 'AZERTY' ? 'Z=Avancer, Q=Gauche, D=Droite' : 'W=Avancer, A=Gauche, D=Droite'}). Cliquer pour basculer AZERTY / QWERTY.`,
+  musicActive: (title: string) => `Musique d'ambiance active (${title}) — Cliquer pour couper`,
+  musicInactive: "Activer la musique d'ambiance (We Love Wizardry)",
+  music: 'Musique',
+  mute: 'Muet',
+  sfxMute: 'Couper les bruitages (SFX)',
+  sfxUnmute: 'Activer les bruitages (SFX)',
+  exportPySide6: 'Export PySide6',
+  manualsBtn: 'Manuels & Guides',
+  manualsTooltip: 'Télécharger les manuels officiels & guides Zimlab',
+  scenarioMenuTooltip: 'Ouvrir le menu principal de sélection des scénarios',
+  langSwitchFrTooltip: "Afficher l'interface et les scénarios en Français",
+  langSwitchEnTooltip: 'Display interface and scenarios in English',
+  continueBtn: 'Continuer',
+  cancelBtn: 'Annuler',
+  closeBtn: 'Fermer',
+  confirmBtn: 'Confirmer',
+
+  // ScenarioMenuView
+  badgeAnthology: (count: number) => `ANTHOLOGIE WIZARDRY ENGINE v3.3 — ${count} SCÉNARIOS`,
+  chooseScenario: 'CHOISISSEZ VOTRE SCÉNARIO D’AVENTURE',
+  heroDescription:
+    'Explorez la quadrilogie classique officielle (#1 Proving Grounds of the Mad Overlord, #2 Knight of Diamonds, #3 The Legacy of Llylgamyn, #4 The Return of Werdna) ou l’une des 9 campagnes alternatives de la collection Zimlab / Snafaru. Chaque scénario dispose de sa propre sauvegarde isolée dans le stockage local de votre navigateur (localStorage).',
+  storageLabel: 'Stockage : Navigateur (Local)',
+  exportSaves: 'Exporter Sauvegardes',
+  exportSavesTooltip: 'Exporter toutes vos sauvegardes locales en JSON',
+  importJson: 'Importer JSON',
+
+  // Filters
+  filterAll: (count: number) => `Tous les scénarios (${count})`,
+  filterLvl1: (count: number) => `Débutants Niv. 1+ (${count})`,
+  filterHigh: (count: number) => `Vétérans Niv. 7+ / 13+ (${count})`,
+  filterOriental: (count: number) => `Cycle Oriental (${count})`,
+  filterGothic: (count: number) => `Gothique & Cryptes (${count})`,
+  filterScifi: (count: number) => `Sci-Fi 2098 (${count})`,
+
+  // Scenario Cards
+  scenarioTag: 'SCÉNARIO #',
+  engineTag: 'MOTEUR',
+  noLocalSave: 'Aucune sauvegarde locale',
+  heroSaveSummary: (heroes: number, maxLvl: number) => `${heroes} héros (Max N.${maxLvl})`,
+  floorsCount: (floors: number) => `${floors} niv.`,
+
+  // Inspector
+  byAuthorYear: (author: string, year: string) => `Par ${author} (${year})`,
+  recommendedLevel: 'NIVEAU RECOMMANDÉ',
+  depth: 'PROFONDEUR',
+  floorsLabel: (floors: number) => `${floors} Étages`,
+  sourceDisk: 'DISQUETTE SOURCE',
+  zimlabNotes: 'Notes du Guide du Joueur (Zimlab)',
+  localSessionStatus: (id: string) => `État de la session locale (${id})`,
+  activeParty: 'Escouade active :',
+  rosterGuild: 'Guilde (Roster) :',
+  heroes: 'héros',
+  registered: 'inscrits',
+  newGame: 'Nouvelle Partie',
+  exploringMaze: (lvl: number, x: number, y: number) => `En expédition (Niv. ${lvl}, [${x},${y}])`,
+  graveyard: (lvl: number) => `Cimetière (Niv. ${lvl})`,
+  atCastle: (name: string) => `Au ${name}`,
+
+  // Transfer
+  transferHeader: 'Transférer des personnages depuis un autre scénario (sans équipement)',
+  transferSelectOption: (num: number, title: string, count: number) => `#${num} - ${title} (${count} héros)`,
+  transferBtn: 'Importer',
+  transferDiffPrompt: 'Veuillez choisir un scénario source différent du scénario cible.',
+  transferNoHeroes: 'Aucun personnage trouvé dans la sauvegarde locale du scénario source.',
+  transferAllPresent: 'Tous les héros du scénario source sont déjà présents dans ce scénario.',
+  transferSuccess: (count: number, title: string) =>
+    `${count} personnage(s) transféré(s) vers "${title}" (sans équipement, conformément aux règles inter-scénarios Wizardry).`,
+  transferError: 'Erreur lors de la lecture des personnages à transférer.',
+  importSuccess: 'Sauvegardes locales importées avec succès dans le navigateur.',
+  importInvalid: 'Fichier JSON de sauvegarde invalide.',
+
+  // Launch
+  resumeBtn: (title: string) => `REPRENDRE "${title.toUpperCase()}"`,
+  launchBtn: (title: string) => `LANCER "${title.toUpperCase()}"`,
+
+  // Castle
+  welcomeToCastle: (name: string) => `Bienvenue à : ${name}. Choisissez votre destination.`,
+  welcomeFallback: (title: string) => `Bienvenue dans les Terres de ${title}`,
+
+  // Dungeon 3D / WebGL View & HUD
+  dungeonRenderModeLabel: 'Rendu :',
+  dungeonRenderWireframe: 'Rétro Vectoriel (1981)',
+  dungeonRenderStone: '3D Donjon Pierre',
+  dungeonRenderShortWireframe: 'Fil de Fer',
+  dungeonRenderShortStone: 'Pierre 3D',
+  dungeonRenderTooltip: 'Basculer entre le rendu 3D Donjon Pierre et le Rétro Vectoriel Apple II',
+  dungeonShieldMaporfic: 'Bouclier',
+  dungeonShieldTooltip: 'Protection Maporfic Active',
+  dungeonMapBtn: 'Carte',
+  dungeonMapActive: 'Active',
+  dungeonMapTooltip: 'Afficher/masquer la minicarte HUD (M)',
+  dungeonFallenFoundTitle: "Corps d'aventuriers découverts !",
+  dungeonFallenFoundDesc: "Les dépouilles de vos anciens compagnons gisent ici dans la poussière du donjon :",
+  dungeonRecoverBodyBtn: 'Hisser le corps',
+  dungeonPartyFullBtn: 'Groupe 6/6',
+  dungeonPartyFullWarning: '⚠️ Votre escouade est au complet (6/6). Vous devez avoir au moins 1 emplacement libre pour transporter une dépouille.',
+  dungeonRecoverSuccess: '✓ Hisser le corps occupe 1 emplacement dans votre escouade. Ramenez-le au Temple de Cant !',
+  dungeonCampBtn: 'Campement',
+  dungeonSearchBtn: 'Fouiller',
+  dungeonStairsTag: 'Escalier',
+  dungeonLightTag: 'Lumière',
+  dungeonForward: 'Avancer',
+  dungeonBackward: 'Reculer',
+  dungeonTurnLeft: 'Pivoter Gauche',
+  dungeonTurnRight: 'Pivoter Droite',
+  dungeonKickDoor: 'Porte',
+};

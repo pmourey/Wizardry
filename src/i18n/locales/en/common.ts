@@ -1,0 +1,120 @@
+import { CommonTranslations } from '../../types';
+
+export const commonEn: CommonTranslations = {
+  scenarios: 'Scenarios',
+  backToGame: 'Return to Game',
+  gameShort: 'Game',
+  locationLabel: 'Location:',
+  adventurersLabel: 'Adventurers:',
+  mainMenu: 'Main Menu',
+  dungeonFloorPrefix: 'Dungeon Fl.',
+  keyboardLayoutTitle: (layout: string) =>
+    `Current keyboard layout: ${layout} (${layout === 'AZERTY' ? 'Z=Forward, Q=Left, D=Right' : 'W=Forward, A=Left, D=Right'}). Click to toggle.`,
+  musicActive: (title: string) => `Ambient music active (${title}) — Click to mute`,
+  musicInactive: 'Enable ambient music (We Love Wizardry)',
+  music: 'Music',
+  mute: 'Mute',
+  sfxMute: 'Mute sound effects (SFX)',
+  sfxUnmute: 'Enable sound effects (SFX)',
+  exportPySide6: 'Export PySide6',
+  manualsBtn: 'Manuals & Guides',
+  manualsTooltip: 'Download official manuals & Zimlab clue books',
+  scenarioMenuTooltip: 'Open scenario selection menu',
+  langSwitchFrTooltip: "Afficher l'interface et les scénarios en Français",
+  langSwitchEnTooltip: 'Display interface and scenarios in English',
+  continueBtn: 'Continue',
+  cancelBtn: 'Cancel',
+  closeBtn: 'Close',
+  confirmBtn: 'Confirm',
+
+  // ScenarioMenuView
+  badgeAnthology: (count: number) => `WIZARDRY ENGINE ANTHOLOGY v3.3 — ${count} SCENARIOS`,
+  chooseScenario: 'CHOOSE YOUR ADVENTURE SCENARIO',
+  heroDescription:
+    'Explore the official classic quadrilogy (#1 Proving Grounds of the Mad Overlord, #2 Knight of Diamonds, #3 The Legacy of Llylgamyn, #4 The Return of Werdna) or one of the 9 alternative campaigns from the Zimlab / Snafaru collection. Each scenario features its own isolated save in your browser local storage (localStorage).',
+  storageLabel: 'Storage: Browser (Local)',
+  exportSaves: 'Export Saves',
+  exportSavesTooltip: 'Export all your local saves to JSON',
+  importJson: 'Import JSON',
+
+  // Filters
+  filterAll: (count: number) => `All Scenarios (${count})`,
+  filterLvl1: (count: number) => `Beginners Lvl 1+ (${count})`,
+  filterHigh: (count: number) => `Veterans Lvl 7+ / 13+ (${count})`,
+  filterOriental: (count: number) => `Oriental Cycle (${count})`,
+  filterGothic: (count: number) => `Gothic & Crypts (${count})`,
+  filterScifi: (count: number) => `Sci-Fi 2098 (${count})`,
+
+  // Scenario Cards
+  scenarioTag: 'SCENARIO #',
+  engineTag: 'ENGINE',
+  noLocalSave: 'No local save',
+  heroSaveSummary: (heroes: number, maxLvl: number) => `${heroes} heroes (Max Lvl ${maxLvl})`,
+  floorsCount: (floors: number) => `${floors} fl.`,
+
+  // Inspector
+  byAuthorYear: (author: string, year: string) => `By ${author} (${year})`,
+  recommendedLevel: 'RECOMMENDED LEVEL',
+  depth: 'DEPTH',
+  floorsLabel: (floors: number) => `${floors} Floors`,
+  sourceDisk: 'SOURCE DISK',
+  zimlabNotes: "Player's Guide Notes (Zimlab)",
+  localSessionStatus: (id: string) => `Local session status (${id})`,
+  activeParty: 'Active party:',
+  rosterGuild: 'Guild (Roster):',
+  heroes: 'heroes',
+  registered: 'registered',
+  newGame: 'New Game',
+  exploringMaze: (lvl: number, x: number, y: number) => `Exploring Maze (Floor ${lvl}, [${x},${y}])`,
+  graveyard: (lvl: number) => `Graveyard (Floor ${lvl})`,
+  atCastle: (name: string) => `At ${name}`,
+
+  // Transfer
+  transferHeader: 'Transfer characters from another scenario (without equipment)',
+  transferSelectOption: (num: number, title: string, count: number) => `#${num} - ${title} (${count} heroes)`,
+  transferBtn: 'Import',
+  transferDiffPrompt: 'Please choose a source scenario different from the destination scenario.',
+  transferNoHeroes: 'No characters found in the source scenario local save.',
+  transferAllPresent: 'All characters from the source scenario are already present in this scenario.',
+  transferSuccess: (count: number, title: string) =>
+    `${count} character(s) transferred to "${title}" (without equipment, per authentic Wizardry inter-scenario rules).`,
+  transferError: 'Error reading characters to transfer.',
+  importSuccess: 'Local saves successfully imported into browser.',
+  importInvalid: 'Invalid save JSON file.',
+
+  // Launch
+  resumeBtn: (title: string) => `RESUME "${title.toUpperCase()}"`,
+  launchBtn: (title: string) => `LAUNCH "${title.toUpperCase()}"`,
+
+  // Castle
+  welcomeToCastle: (name: string) => `Welcome to: ${name}. Choose your destination.`,
+  welcomeFallback: (title: string) => `Welcome to the Lands of ${title}`,
+
+  // Dungeon 3D / WebGL View & HUD
+  dungeonRenderModeLabel: 'Renderer:',
+  dungeonRenderWireframe: 'Retro Wireframe (1981)',
+  dungeonRenderStone: '3D Stone Dungeon',
+  dungeonRenderShortWireframe: 'Wireframe',
+  dungeonRenderShortStone: '3D Stone',
+  dungeonRenderTooltip: 'Toggle between 3D Stone Dungeon and Retro Apple II Wireframe',
+  dungeonShieldMaporfic: 'Shield',
+  dungeonShieldTooltip: 'Maporfic Shield Active',
+  dungeonMapBtn: 'Map',
+  dungeonMapActive: 'Active',
+  dungeonMapTooltip: 'Show/hide HUD minimap (M)',
+  dungeonFallenFoundTitle: 'Fallen Adventurers Discovered!',
+  dungeonFallenFoundDesc: 'The remains of your fallen companions lie here in the dungeon dust:',
+  dungeonRecoverBodyBtn: 'Recover Body',
+  dungeonPartyFullBtn: 'Party Full (6/6)',
+  dungeonPartyFullWarning: '⚠️ Your party is full (6/6). You must have at least 1 free slot to carry a body.',
+  dungeonRecoverSuccess: '✓ Recovering a body occupies 1 party slot. Bring them to the Temple of Cant!',
+  dungeonCampBtn: 'Camp',
+  dungeonSearchBtn: 'Search',
+  dungeonStairsTag: 'Stairs',
+  dungeonLightTag: 'Light',
+  dungeonForward: 'Forward',
+  dungeonBackward: 'Backward',
+  dungeonTurnLeft: 'Turn Left',
+  dungeonTurnRight: 'Turn Right',
+  dungeonKickDoor: 'Door',
+};

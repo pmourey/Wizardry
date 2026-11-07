@@ -35,7 +35,7 @@ import { CheatModal } from './components/CheatModal';
 import { VictoryModal } from './components/VictoryModal';
 import { getCharacterChevrons } from './utils/awards';
 import { WIZARDRY_SCENARIOS, getLocalizedScenario } from './data/scenariosCatalog';
-import { useLanguage, UI_TEXT } from './utils/language';
+import { useI18n, getTranslation } from './i18n';
 import { 
   initCombatEncounter, 
   CombatGroup,
@@ -96,6 +96,7 @@ export function getDefaultJournalForScenario(scenarioId: string, lang: 'fr' | 'e
   const rawScen = WIZARDRY_SCENARIOS.find(s => s.id === scenarioId) || WIZARDRY_SCENARIOS[0];
   const scen = getLocalizedScenario(rawScen, lang);
   const castle = scen.castleName || (lang === 'fr' ? 'Château de Trebor' : 'Castle of Trebor');
+  const tJournal = getTranslation(lang).journal;
 
   if (scenarioId === 'proving-grounds') {
     return [
@@ -103,25 +104,21 @@ export function getDefaultJournalForScenario(scenarioId: string, lang: 'fr' | 'e
         id: 'init-pg-1',
         scenarioId: 'proving-grounds',
         timestamp: '08:00',
-        dateStr: lang === 'fr' ? 'Décret Royal' : 'Royal Decree',
+        dateStr: tJournal.royalDecreeDate,
         category: 'CASTLE',
-        title: lang === 'fr' ? "Proclamation de l'Overlord Trebor" : "Overlord Trebor's Proclamation",
-        description: lang === 'fr'
-          ? "Par décret souverain, la création de votre guilde d'aventuriers a été ratifiée. L'accès aux Proving Grounds vous est accordé pour terrasser le sorcier Werdna."
-          : "By royal decree, the charter of your adventuring guild is ratified. You are granted access to the Proving Grounds to vanquish Werdna.",
-        details: lang === 'fr' ? "Objectif suprême : Récupérer l'Amulette au 10e sous-sol" : "Supreme objective: Retrieve the Amulet on floor 10"
+        title: tJournal.royalDecreeTitle,
+        description: tJournal.royalDecreeDesc,
+        details: tJournal.royalDecreeDetails
       },
       {
         id: 'init-pg-2',
         scenarioId: 'proving-grounds',
         timestamp: '08:15',
-        dateStr: lang === 'fr' ? 'Préparatifs' : 'Preparations',
+        dateStr: tJournal.preparationsDate,
         category: 'DISCOVERY',
-        title: lang === 'fr' ? "Constitution de l'Escouade & Fourbissage" : "Party Assembly & Arming",
-        description: lang === 'fr'
-          ? "Vos héros se sont rassemblés à la Taverne de Gilgamesh et ont acquis leurs premières armes chez Boltac avant de franchir la grille de fer."
-          : "Your adventurers gathered at Gilgamesh's Tavern and equipped their weapons at Boltac's before entering the iron gate.",
-        details: lang === 'fr' ? "6 aventuriers prêts à braver les pièges et les bêtes du dédale" : "6 adventurers ready to face the maze"
+        title: tJournal.preparationsTitle,
+        description: tJournal.preparationsDesc,
+        details: tJournal.preparationsDetails
       }
     ];
   }
@@ -131,12 +128,10 @@ export function getDefaultJournalForScenario(scenarioId: string, lang: 'fr' | 'e
       id: `init-${scenarioId}-1`,
       scenarioId,
       timestamp: '08:00',
-      dateStr: lang === 'fr' ? 'Chronique' : 'Chronicle',
+      dateStr: tJournal.chronicleDate,
       category: 'CASTLE',
-      title: lang === 'fr' ? `Départ de la Quête : ${scen.title}` : `Quest Begins: ${scen.title}`,
-      description: lang === 'fr'
-        ? `L'enregistrement de votre escouade a été consigné au ${castle}. Votre mission débute au cœur de ce scénario.`
-        : `Your party's arrival has been recorded at ${castle}. Your mission begins in this scenario.`,
+      title: tJournal.questBeginsTitle(scen.title),
+      description: tJournal.questBeginsDesc(castle),
       details: scen.subtitle || scen.description
     }
   ];
@@ -242,8 +237,7 @@ export default function App() {
     return 'proving-grounds';
   });
 
-  const [lang, setLang] = useLanguage();
-  const t = UI_TEXT[lang];
+  const { lang, setLang, t } = useI18n();
 
   const rawScenario = WIZARDRY_SCENARIOS.find(s => s.id === activeScenarioId) || WIZARDRY_SCENARIOS[0];
   const activeScenario = getLocalizedScenario(rawScenario, lang);
@@ -680,9 +674,9 @@ export default function App() {
         music.playTrack('13-complete');
         addAdventureEvent(
           'DISCOVERY',
-          "Victoire Suprême : L'Amulette de Werdna est nôtre !",
-          "Le sorcier maléfique Werdna a été vaincu ! Votre escouade triomphante rapporte l'Amulette sacrée à l'Overlord Trebor. Le royaume est sauvé !",
-          "Récompense royale : 250 000 XP et insigne suprême de la couronne"
+          t.journal.victorySupremeTitle,
+          t.journal.victorySupremeDesc,
+          t.journal.victorySupremeDetails(party.map(h => h.name))
         );
       }
     }
@@ -1278,14 +1272,14 @@ export default function App() {
     addAdventureEvent(
       'LOSS',
       reason === 'ROCK'
-        ? "VOUS VOUS ÊTES TÉLÉPORTÉ DANS LA ROCHE SOLIDE !"
-        : (reason === 'POISON' ? "Hécatombe causée par le poison" : "Décimation complète de l'escouade au combat"),
+        ? t.journal.wipeoutRockTitle
+        : (reason === 'POISON' ? t.journal.wipeoutPoisonTitle : t.journal.wipeoutCombatTitle),
       reason === 'ROCK'
-        ? "YOU HAVE TELEPORTED INTO SOLID ROCK! L'escouade entière a été instantanément broyée et anéantie dans la pierre compacte. Il n'y a aucun survivant ! (OOPS!)"
+        ? t.journal.wipeoutRockDesc
         : (reason === 'POISON'
-            ? "Le venin a insidieusement drainé les dernières forces de l'escouade. Tous vos héros se sont effondrés."
-            : "Tous vos aventuriers ont succombé. Leurs corps sans vie gisent dans les ténèbres du donjon."),
-      `Victimes : ${deadHeroes.map(h => h.name).join(', ')} · Lieu : Niveau ${wipeLevel}, position (${wipeX}, ${wipeY})`,
+            ? t.journal.wipeoutPoisonDesc
+            : t.journal.wipeoutCombatDesc),
+      t.journal.wipeoutVictimsDetails(deadHeroes.map(h => h.name), wipeLevel, wipeX, wipeY),
       wipeLevel,
       { x: wipeX, y: wipeY }
     );
@@ -1316,8 +1310,8 @@ export default function App() {
       if (pendingCombatEventKey) setPendingCombatEventKey(null);
       addAdventureEvent(
         'COMBAT',
-        'Repli stratégique devant les monstres',
-        `Face aux périls du donjon, votre escouade a prudemment fui l'affrontement pour préserver sa survie.`,
+        t.journal.fleeCombatTitle,
+        t.journal.fleeCombatDesc,
         undefined,
         dungeonLevel,
         { x: posX, y: posY }
@@ -1360,9 +1354,9 @@ export default function App() {
     const monstersDesc = combatGroups.map(g => `${g.count}x ${g.monster.name}`).join(', ');
     addAdventureEvent(
       'COMBAT',
-      `Victoire contre ${monstersDesc || 'des monstres'} (+${expPerSurvivor.toLocaleString()} XP)`,
-      `Vos braves ont terrassé l'ennemi au terme d'un rude corps-à-corps dans les couloirs de pierre. Chacun des ${survivorCount} survivant(s) (statut OK) reçoit +${expPerSurvivor.toLocaleString()} XP.`,
-      `Monstres éliminés : ${monstersDesc || 'Créatures du donjon'} · Total XP : ${totalExp.toLocaleString()} (+${expPerSurvivor.toLocaleString()} XP / survivant)`,
+      t.journal.combatVictoryTitle(monstersDesc, expPerSurvivor),
+      t.journal.combatVictoryDesc(survivorCount, expPerSurvivor),
+      t.journal.combatVictoryDetails(monstersDesc, totalExp, expPerSurvivor),
       dungeonLevel,
       { x: posX, y: posY }
     );
@@ -1382,8 +1376,8 @@ export default function App() {
       // Alarm calls another fight immediately!
       addAdventureEvent(
         'COMBAT',
-        "Alarme du donjon déclenchée !",
-        "Un cri strident a alerté une nouvelle meute de créatures prêtes à bondir !",
+        t.journal.alarmTriggeredTitle,
+        t.journal.alarmTriggeredDesc,
         undefined,
         dungeonLevel,
         { x: posX, y: posY }
@@ -1425,9 +1419,9 @@ export default function App() {
         setParty([...party]);
         addAdventureEvent(
           'DISCOVERY',
-          "Victoire Suprême sur Werdna ! L'Amulette récupérée !",
-          `L'archimage Werdna est vaincu ! ${recipient.name} ramasse la légendaire Amulette de Werdna (${amuletItem.name}) ! Rapportez-la au Château de Trebor pour achever votre quête !`,
-          `Objet légendaire obtenu : ${amuletItem.name} (sac de ${recipient.name})`,
+          t.journal.werdnaDefeatedTitle,
+          t.journal.werdnaDefeatedDesc(recipient.name, amuletItem.name),
+          t.journal.werdnaDefeatedDetails(amuletItem.name, recipient.name),
           dungeonLevel,
           { x: posX, y: posY }
         );
@@ -1461,22 +1455,22 @@ export default function App() {
   const handleFinishChest = (alarmTriggered: boolean, wasOpened: boolean = true) => {
     if (wasOpened && chestReward) {
       const itemDesc = chestReward.itemFound 
-        ? `Objet : ${chestReward.itemFound.name}` 
-        : 'Aucun équipement';
+        ? `${lang === 'fr' ? 'Objet' : 'Item'}: ${chestReward.itemFound.name}` 
+        : t.journal.noEquipment;
       addAdventureEvent(
         'DISCOVERY',
-        `Coffre de monstre ouvert (+${chestReward.goldFound} PO)`,
-        `Votre escouade a inspecté et fouillé le coffre abandonné par les monstres.`,
-        `Trésor : +${chestReward.goldFound} PO · ${itemDesc}`,
+        t.journal.chestOpenedTitle(chestReward.goldFound),
+        t.journal.chestOpenedDesc,
+        t.journal.chestOpenedDetails(chestReward.goldFound, itemDesc),
         dungeonLevel,
         { x: posX, y: posY }
       );
     } else if (!wasOpened) {
       addAdventureEvent(
         'DISCOVERY',
-        `Coffre aux trésors laissé scellé`,
-        `Faute de voleur qualifié ou de sort Calfo, votre escouade a prudemment laissé le coffre intact (Règle Pascal L)EAVE).`,
-        `Piège non déclenché · Exploration poursuivie`,
+        t.journal.chestLeftTitle,
+        t.journal.chestLeftDesc,
+        t.journal.chestLeftDetails,
         dungeonLevel,
         { x: posX, y: posY }
       );
@@ -1590,26 +1584,32 @@ export default function App() {
 
       addAdventureEvent(
         'VICTORY',
-        "👑 VICTOIRE SUPRÊME : L'Amulette de Werdna est restituée à Trebor !",
-        `Vous avez accompli votre quête ! L'Amulette est rendue à votre bienveillant suzerain, le Seigneur Trebor. En récompense, il octroie un don royal de 250 000 XP à chaque héros et les initie dans la prestigieuse Garde d'Honneur du Suzerain, avec le Chevron (>) perpétuel !`,
-        `Héros honorés : ${honoredList.map(h => h.name).join(', ')} · +250 000 XP chacun · Chevron d'honneur [ > ] décerné !`,
+        t.journal.victorySupremeTitle,
+        t.journal.victorySupremeDesc,
+        t.journal.victorySupremeDetails(honoredList.map(h => h.name)),
         0,
         { x: 0, y: 0 }
       );
     } else {
       const castleTitle = activeScenarioId === 'return-of-werdna' 
-        ? "Arrivée au Château de Trebor (Surface)" 
-        : "Retour au Château de Trebor";
+        ? t.journal.castleReturnWerdnaTitle 
+        : t.journal.castleReturnTitle;
+
+      const castleDesc = fallenHeroes.length > 0
+        ? t.journal.castleReturnWithFallenDesc(fallenHeroes.map(f => f.name))
+        : (activeScenarioId === 'return-of-werdna'
+          ? t.journal.castleReturnWerdnaDesc
+          : t.journal.castleReturnDesc);
+
+      const castleDetails = fallenHeroes.length > 0 
+        ? t.journal.castleTempleTransferredDetails(fallenHeroes.map(f => f.name)) 
+        : undefined;
 
       addAdventureEvent(
         'CASTLE',
         castleTitle,
-        fallenHeroes.length > 0
-          ? `L'escouade regagne le château. Les dépouilles de ${fallenHeroes.map(f => f.name).join(', ')} ont été retirées du groupe et confiées au Temple de Cant.`
-          : (activeScenarioId === 'return-of-werdna'
-            ? "Werdna et ses hordes ont percé le donjon et foulent la surface du Château de Trebor !"
-            : "L'escouade a gravi les marches pour regagner la sécurité du château."),
-        fallenHeroes.length > 0 ? `Transférés au Temple de Cant : ${fallenHeroes.map(f => f.name).join(', ')}` : undefined,
+        castleDesc,
+        castleDetails,
         dungeonLevel,
         { x: posX, y: posY }
       );
@@ -1977,8 +1977,8 @@ export default function App() {
 
         {/* Center Zone: Status tags */}
         <div className="hidden lg:flex items-center gap-6 text-xs text-slate-400">
-          <span>Lieu : <strong className="text-white">{showScenarioMenu ? 'Menu Principal' : location === 'MAZE' ? `Donjon N.${dungeonLevel}` : location}</strong></span>
-          <span>Aventuriers : <strong className="text-emerald-400">{party.filter(p => p.status === 'OK').length}/{party.length}</strong></span>
+          <span>{t.common.locationLabel} <strong className="text-white">{showScenarioMenu ? t.common.mainMenu : location === 'MAZE' ? `${t.common.dungeonFloorPrefix}${dungeonLevel}` : location}</strong></span>
+          <span>{t.common.adventurersLabel} <strong className="text-emerald-400">{party.filter(p => p.status === 'OK').length}/{party.length}</strong></span>
         </div>
 
         {/* Right Zone: Controls */}
@@ -1992,7 +1992,7 @@ export default function App() {
                   ? 'bg-amber-600 text-white shadow'
                   : 'text-slate-400 hover:text-white'
               }`}
-              title="Afficher l'interface et les scénarios en Français"
+              title={t.common.langSwitchFrTooltip}
             >
               FR
             </button>
@@ -2004,7 +2004,7 @@ export default function App() {
                   ? 'bg-amber-600 text-white shadow'
                   : 'text-slate-400 hover:text-white'
               }`}
-              title="Display interface and scenarios in English"
+              title={t.common.langSwitchEnTooltip}
             >
               EN
             </button>
@@ -2017,11 +2017,11 @@ export default function App() {
                 ? 'bg-amber-600 text-white border-amber-400'
                 : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-600/30'
             }`}
-            title="Ouvrir le menu principal de sélection des scénarios"
+            title={t.common.scenarioMenuTooltip}
           >
             <Library className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{showScenarioMenu ? t.backToGame : `${t.scenarios} (${WIZARDRY_SCENARIOS.length})`}</span>
-            <span className="sm:hidden">{showScenarioMenu ? 'Jeu' : t.scenarios}</span>
+            <span className="hidden sm:inline">{showScenarioMenu ? t.common.backToGame : `${t.common.scenarios} (${WIZARDRY_SCENARIOS.length})`}</span>
+            <span className="sm:hidden">{showScenarioMenu ? t.common.gameShort : t.common.scenarios}</span>
           </button>
 
           <button
@@ -2236,20 +2236,19 @@ export default function App() {
             <div className="space-y-2 max-w-xl">
               <h2 className="text-2xl font-serif font-black text-white tracking-widest uppercase">
                 {activeScenarioId === 'return-of-werdna'
-                  ? "L'Archi-Mage Werdna a été Terrassé !"
+                  ? t.gameOver.skullWerdnaTitle
                   : (lastWipeoutInfo?.reason === 'ROCK'
-                      ? "YOU HAVE TELEPORTED INTO SOLID ROCK !"
-                      : "Escouade Décimée dans le Dédale")}
+                      ? t.gameOver.skullRockTitle
+                      : t.gameOver.skullCombatTitle)}
               </h2>
 
               {activeScenarioId === 'return-of-werdna' ? (
                 <div className="p-4 bg-rose-950/40 border border-rose-900/60 rounded-xl text-xs text-rose-200 space-y-2">
                   <div className="font-bold text-rose-100 text-sm">
-                    Fin de la Quête de Vengeance
+                    {t.gameOver.werdnaGameOverTitle}
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Les groupes d'aventuriers envoyés par l'Overlord Trebor ont percé vos défenses et détruit votre enveloppe charnelle.
-                    Dans <em>Wizardry IV</em>, vous êtes le maître du donjon : aucune garnison royale de Trebor ne viendra vous secourir !
+                    {t.gameOver.werdnaGameOverDesc}
                   </p>
                 </div>
               ) : (
@@ -2257,31 +2256,30 @@ export default function App() {
                   {lastWipeoutInfo?.reason === 'ROCK' ? (
                     <div className="p-4 bg-stone-950/90 border-2 border-amber-600/80 rounded-xl text-xs space-y-2 shadow-2xl">
                       <div className="text-amber-400 font-black text-sm uppercase tracking-wider">
-                        *** VOUS VOUS ÊTES TÉLÉPORTÉ DANS LA ROCHE SOLIDE ! (OOPS!) ***
+                        {t.gameOver.rockWarningBanner}
                       </div>
                       <p className="text-slate-200 leading-relaxed font-sans">
-                        L'escouade s'est matérialisée dans la masse minérale compacte. Tous vos aventuriers ont été instantanément broyés et réduits en cendres dans la roche.
+                        {t.gameOver.rockDescription}
                       </p>
                       <div className="font-mono text-xs text-amber-300">
-                        Tombeau de pierre : Niveau {lastWipeoutInfo.level}, position ({lastWipeoutInfo.x}, {lastWipeoutInfo.y})
+                        {t.gameOver.rockTombLocation(lastWipeoutInfo.level, lastWipeoutInfo.x, lastWipeoutInfo.y)}
                       </div>
                       <div className="text-[11px] text-slate-400">
-                        Héros anéantis : {lastWipeoutInfo.heroes.join(', ')}
+                        {t.gameOver.rockHeroesCrushed(lastWipeoutInfo.heroes)}
                       </div>
                     </div>
                   ) : lastWipeoutInfo ? (
                     <div className="p-3 bg-red-950/40 border border-red-900/60 rounded-xl text-xs text-red-300 space-y-1">
                       <div className="font-bold text-red-200">
-                        Dernières coordonnées connues : Niveau {lastWipeoutInfo.level}, position ({lastWipeoutInfo.x}, {lastWipeoutInfo.y})
+                        {t.gameOver.lastCoordinatesTitle(lastWipeoutInfo.level, lastWipeoutInfo.x, lastWipeoutInfo.y)}
                       </div>
                       <div className="text-[11px] text-slate-400">
-                        Héros tombés : {lastWipeoutInfo.heroes.join(', ')}
+                        {t.gameOver.fallenHeroesList(lastWipeoutInfo.heroes)}
                       </div>
                     </div>
                   ) : null}
                   <p className="text-xs text-slate-300 leading-relaxed">
-                    Selon le code originel de Wizardry, un groupe d'aventuriers anéanti ne peut plus se déplacer, combattre ni regagner le château.
-                    Leurs corps restent étendus dans le donjon à moins qu'une <strong>escouade de secours</strong> ne vienne les récupérer (chaque dépouille occupe un emplacement du groupe).
+                    {t.gameOver.partyDecimatedNotice}
                   </p>
                 </>
               )}
@@ -2318,7 +2316,7 @@ export default function App() {
                   className="flex-1 py-3 px-4 bg-rose-700 hover:bg-rose-600 text-white font-bold rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
-                  <span>Ressusciter au Tombeau de Werdna (Niv. 10)</span>
+                  <span>{t.gameOver.reviveWerdnaTombBtn}</span>
                 </button>
 
                 <button
@@ -2351,7 +2349,7 @@ export default function App() {
                   className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-rose-300 hover:text-white border border-rose-600/40 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Ressusciter au début du Niveau {dungeonLevel}</span>
+                  <span>{t.gameOver.reviveWerdnaFloorBtn(dungeonLevel)}</span>
                 </button>
               </div>
             ) : (
@@ -2364,19 +2362,19 @@ export default function App() {
                     setDirection(0);
                   }}
                   className="flex-1 py-3 px-4 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-2"
-                  title="Former une escouade de secours à la taverne et s'aventurer dans le donjon"
+                  title={t.gameOver.formRescuePartyTooltip}
                 >
                   <Users className="w-4 h-4" />
-                  <span>Former une escouade de secours</span>
+                  <span>{t.gameOver.formRescuePartyBtn}</span>
                 </button>
 
                 <button
                   onClick={handleEmergencyGuardRetrieval}
                   className="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-amber-600/40 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
-                  title="Rapatrier les corps au château pour les ressusciter au Temple de Cant"
+                  title={t.gameOver.emergencyRetrievalTooltip}
                 >
                   <RotateCcw className="w-4 h-4" />
-                  <span>Rapatrier par les gardes de Trebor</span>
+                  <span>{t.gameOver.emergencyRetrievalBtn}</span>
                 </button>
               </div>
             )}
@@ -2404,7 +2402,7 @@ export default function App() {
                 onClick={() => setScenarioMessage(null)}
                 className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition"
               >
-                Continuer
+                {t.common.continueBtn}
               </button>
             </div>
           </div>
@@ -2418,11 +2416,10 @@ export default function App() {
             </div>
             <div className="space-y-3 max-w-lg">
               <h2 className="text-3xl font-serif font-black text-amber-300 tracking-wider">
-                *** FÉLICITATIONS ***
+                {t.victory.screenTitle}
               </h2>
               <p className="text-sm text-slate-300 leading-relaxed">
-                Vous avez terrassé le sorcier <strong>Werdna</strong> et rapporté l'Amulette sacrée à l'Overlord Trebor !
-                Chaque survivant reçoit <strong>250 000 Points d'Expérience</strong> et l'insigne d'honneur (&gt;) de la garde suprême.
+                {t.victory.screenBody}
               </p>
             </div>
             <button
@@ -2448,7 +2445,7 @@ export default function App() {
               }}
               className="px-6 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-sm transition"
             >
-              Retourner au Château célébrer la victoire
+              {t.victory.celebrateAtCastleBtn}
             </button>
           </div>
         )}
