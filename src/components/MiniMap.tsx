@@ -724,10 +724,19 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 )}
 
                 {specialType === 'PIT' && (
-                  <g stroke="#ffffff" strokeWidth={cellSize > 20 ? 2 : 1.2} strokeLinecap="round">
-                    <line x1={svgX + cellSize * 0.28} y1={svgY + cellSize * 0.28} x2={svgX + cellSize * 0.72} y2={svgY + cellSize * 0.72} />
-                    <line x1={svgX + cellSize * 0.72} y1={svgY + cellSize * 0.28} x2={svgX + cellSize * 0.28} y2={svgY + cellSize * 0.72} />
-                  </g>
+                  <text
+                    x={svgX + cellSize / 2}
+                    y={svgY + cellSize / 2 + (cellSize > 20 ? (variant === 'modal' ? 4.5 : 4) : 3)}
+                    textAnchor="middle"
+                    fontSize={cellSize > 20 ? (variant === 'modal' ? 14 : 12) : 9}
+                    fontWeight="bold"
+                    fill="#f43f5e"
+                    stroke="#4c0519"
+                    strokeWidth="0.3"
+                    className="select-none pointer-events-none"
+                  >
+                    ☠
+                  </text>
                 )}
 
                 {specialType === 'SPINNER' && (

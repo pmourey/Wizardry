@@ -365,7 +365,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
     hero.class === 'SAMURAI' || hero.class === 'LORD';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[65] flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div 
         className="w-full h-full sm:h-auto max-w-3xl bg-slate-900 border-0 sm:border border-amber-600/40 rounded-none sm:rounded-2xl shadow-2xl shadow-amber-950/40 overflow-hidden flex flex-col max-h-screen sm:max-h-[92vh] safe-top safe-bottom safe-left safe-right"
         onClick={e => e.stopPropagation()}

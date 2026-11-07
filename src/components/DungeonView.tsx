@@ -954,7 +954,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
           {/* Fallen Heroes / Lost Bodies Recovery Box */}
           {fallenHeroesHere.length > 0 && (
-            <div className="absolute top-4 left-4 z-20 max-w-sm bg-red-950/90 border-2 border-red-600/80 rounded-xl p-3.5 shadow-2xl backdrop-blur-md text-xs space-y-2.5 animate-fadeIn">
+            <div className="fixed top-4 left-4 z-[55] max-w-sm bg-red-950/90 border-2 border-red-600/80 rounded-xl p-3.5 shadow-2xl backdrop-blur-md text-xs space-y-2.5 animate-fadeIn">
               <div className="flex items-center gap-2 font-bold text-red-200">
                 <Skull className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
                 <span className="tracking-wide uppercase">{t.dungeonFallenFoundTitle}</span>
@@ -1026,7 +1026,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
           )}
           {/* Stairs Detected Floating Banner */}
           {isStairs && stairsTargetLvl !== undefined && (
-            <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 border border-amber-500/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-2xl backdrop-blur-md max-w-[calc(100vw-1rem)]">
+            <div className="fixed top-2 sm:top-4 left-1/2 -translate-x-1/2 z-[55] flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 border border-amber-500/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-2xl backdrop-blur-md max-w-[calc(100vw-1rem)]">
               <Layers className="w-4 h-4 text-amber-400 animate-bounce" />
               <span className="text-xs font-bold text-amber-300">
                 {stairsTargetLvl === 0 
@@ -1046,7 +1046,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
           {/* Elevator Detected Floating Banner */}
           {isElevator && (
-            <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 border border-sky-500/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-2xl backdrop-blur-md max-w-[calc(100vw-1rem)]">
+            <div className="fixed top-2 sm:top-4 left-1/2 -translate-x-1/2 z-[55] flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 border border-sky-500/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-2xl backdrop-blur-md max-w-[calc(100vw-1rem)]">
               <span className="text-base">🛗</span>
               <span className="text-xs font-bold text-sky-300">
                 {lang === 'en' ? `Elevator (Levels ${elevatorMinLvl} - ${elevatorMaxLvl})` : `Ascenseur (Niveaux ${elevatorMinLvl} à ${elevatorMaxLvl})`}
@@ -1057,97 +1057,6 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
               >
                 {lang === 'en' ? 'Use (E)' : 'Actionner (E)'}
               </button>
-            </div>
-          )}
-
-          {/* Elevator Selection Modal */}
-          {showElevatorModal && isElevator && (
-            <div className="absolute inset-0 z-40 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-              <div className="bg-slate-900 border-2 border-sky-500/80 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
-                <div className="w-14 h-14 mx-auto rounded-full bg-sky-950/80 border-2 border-sky-400 flex items-center justify-center text-sky-400 text-2xl shadow-lg shadow-sky-950/60">
-                  🛗
-                </div>
-                <h3 className="text-lg font-black text-sky-300 tracking-wide">
-                  {lang === 'en' ? 'Elevator Mechanism' : 'Mécanisme d\'Ascenseur'}
-                </h3>
-                <p className="text-xs text-slate-300">
-                  {lang === 'en' 
-                    ? `Select destination floor (current floor: Level ${maze.level}):` 
-                    : `Choisissez l'étage de destination (étage actuel : Niveau ${maze.level}) :`}
-                </p>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  {Array.from({ length: elevatorMaxLvl - elevatorMinLvl + 1 }, (_, i) => elevatorMinLvl + i).map(lvl => (
-                    <button
-                      key={lvl}
-                      disabled={lvl === maze.level}
-                      onClick={() => {
-                        setShowElevatorModal(false);
-                        lastPromptedPos.current = `${x},${y},${lvl}`;
-                        if (onTakeStairs) onTakeStairs(lvl, x, y);
-                      }}
-                      className={`py-2.5 px-3 rounded-xl font-bold text-xs transition cursor-pointer ${
-                        lvl === maze.level
-                          ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
-                          : 'bg-sky-600 hover:bg-sky-500 text-white border border-sky-400/50 active:scale-95 shadow-md shadow-sky-950/50'
-                      }`}
-                    >
-                      {lang === 'en' ? `Level ${lvl}` : `Niveau ${lvl}`} {lvl === maze.level ? '(ici)' : `[${lvl}]`}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setShowElevatorModal(false)}
-                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer"
-                >
-                  {lang === 'en' ? 'Stay on this floor (Esc)' : 'Rester sur ce niveau (Échap)'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Interactive Stairs Confirmation Modal */}
-          {showStairsPrompt && isStairs && stairsTargetLvl !== undefined && (
-            <div className="absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
-              <div className="bg-slate-900 border-2 border-amber-500/80 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center">
-                <div className="w-14 h-14 mx-auto rounded-full bg-amber-950/80 border-2 border-amber-400 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-950/60">
-                  <Layers className="w-7 h-7" />
-                </div>
-                <h3 className="text-lg font-black text-amber-300 tracking-wide">
-                  {stairsTargetLvl === 0 
-                    ? (lang === 'en' ? "Stairs to the Castle" : "Escalier vers le Château")
-                    : stairsTargetLvl > maze.level 
-                      ? (lang === 'en' ? `Descending Stairs (Level ${stairsTargetLvl})` : `Escalier Descendant (Niveau ${stairsTargetLvl})`) 
-                      : (lang === 'en' ? `Ascending Stairs (Level ${stairsTargetLvl})` : `Escalier Montant (Niveau ${stairsTargetLvl})`)}
-                </h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {stairsTargetLvl === 0
-                    ? (lang === 'en' ? "A broad flight of stone stairs leads up to the courtyard and safety of the Castle." : "Un large perron de pierre remonte vers la cour et la sécurité du Château.")
-                    : stairsTargetLvl > maze.level
-                      ? (lang === 'en' ? `A spiral staircase carved into raw rock descends into the depths towards Level ${stairsTargetLvl}. The air is colder, and creature roars echo closer.` : `Un escalier en colimaçon taillé dans la roche brute s'enfonce dans les profondeurs vers le Niveau ${stairsTargetLvl}. L'air y est plus froid, et les rugissements des créatures résonnent plus près.`)
-                      : (lang === 'en' ? `A carved stone staircase leads up to the corridors of Level ${stairsTargetLvl}.` : `Un escalier de pierre taillée remonte vers les couloirs du Niveau ${stairsTargetLvl}.`)}
-                </p>
-                <div className="text-amber-200/90 font-bold text-xs pt-1">
-                  {lang === 'en' ? "Do you wish to take these stairs?" : "Voulez-vous emprunter cet escalier ?"}
-                </div>
-                <div className="flex items-center justify-center gap-3 pt-2">
-                  <button
-                    onClick={handleExecuteTakeStairs}
-                    className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl text-xs font-black shadow-lg transition active:scale-95 cursor-pointer"
-                  >
-                    {stairsTargetLvl === 0 
-                      ? (lang === 'en' ? 'Return to Castle (Y)' : 'Remonter au Château (Y)')
-                      : stairsTargetLvl > maze.level 
-                        ? (lang === 'en' ? `Descend to Level ${stairsTargetLvl} (Y)` : `Descendre au Niveau ${stairsTargetLvl} (Y)`) 
-                        : (lang === 'en' ? `Ascend to Level ${stairsTargetLvl} (Y)` : `Monter au Niveau ${stairsTargetLvl} (Y)`)}
-                  </button>
-                  <button
-                    onClick={() => setShowStairsPrompt(false)}
-                    className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
-                  >
-                    {lang === 'en' ? 'Stay Here (N)' : 'Rester ici (N)'}
-                  </button>
-                </div>
-              </div>
             </div>
           )}
         </div>
@@ -2078,6 +1987,97 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             onKickDoor={onKickDoor}
             onInspectArea={onInspectArea}
           />
+        </div>
+      )}
+
+      {/* ELEVATOR SELECTION MODAL (Always in foreground z-[65], above minimap and 3D view) */}
+      {showElevatorModal && isElevator && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-sky-500/80 rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center space-y-4">
+            <div className="w-14 h-14 mx-auto rounded-full bg-sky-950/80 border-2 border-sky-400 flex items-center justify-center text-sky-400 text-2xl shadow-lg shadow-sky-950/60">
+              🛗
+            </div>
+            <h3 className="text-lg font-black text-sky-300 tracking-wide">
+              {lang === 'en' ? 'Elevator Mechanism' : 'Mécanisme d\'Ascenseur'}
+            </h3>
+            <p className="text-xs text-slate-300">
+              {lang === 'en' 
+                ? `Select destination floor (current floor: Level ${maze.level}):` 
+                : `Choisissez l'étage de destination (étage actuel : Niveau ${maze.level}) :`}
+            </p>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {Array.from({ length: elevatorMaxLvl - elevatorMinLvl + 1 }, (_, i) => elevatorMinLvl + i).map(lvl => (
+                <button
+                  key={lvl}
+                  disabled={lvl === maze.level}
+                  onClick={() => {
+                    setShowElevatorModal(false);
+                    lastPromptedPos.current = `${x},${y},${lvl}`;
+                    if (onTakeStairs) onTakeStairs(lvl, x, y);
+                  }}
+                  className={`py-2.5 px-3 rounded-xl font-bold text-xs transition cursor-pointer ${
+                    lvl === maze.level
+                      ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
+                      : 'bg-sky-600 hover:bg-sky-500 text-white border border-sky-400/50 active:scale-95 shadow-md shadow-sky-950/50'
+                  }`}
+                >
+                  {lang === 'en' ? `Level ${lvl}` : `Niveau ${lvl}`} {lvl === maze.level ? '(ici)' : `[${lvl}]`}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowElevatorModal(false)}
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition active:scale-95 cursor-pointer"
+            >
+              {lang === 'en' ? 'Stay on this floor (Esc)' : 'Rester sur ce niveau (Échap)'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* INTERACTIVE STAIRS CONFIRMATION MODAL (Always in foreground z-[65], above minimap and 3D view) */}
+      {showStairsPrompt && isStairs && stairsTargetLvl !== undefined && (
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-slate-900 border-2 border-amber-500/80 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center">
+            <div className="w-14 h-14 mx-auto rounded-full bg-amber-950/80 border-2 border-amber-400 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-950/60">
+              <Layers className="w-7 h-7" />
+            </div>
+            <h3 className="text-lg font-black text-amber-300 tracking-wide">
+              {stairsTargetLvl === 0 
+                ? (lang === 'en' ? "Stairs to the Castle" : "Escalier vers le Château")
+                : stairsTargetLvl > maze.level 
+                  ? (lang === 'en' ? `Descending Stairs (Level ${stairsTargetLvl})` : `Escalier Descendant (Niveau ${stairsTargetLvl})`) 
+                  : (lang === 'en' ? `Ascending Stairs (Level ${stairsTargetLvl})` : `Escalier Montant (Niveau ${stairsTargetLvl})`)}
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {stairsTargetLvl === 0
+                ? (lang === 'en' ? "A broad flight of stone stairs leads up to the courtyard and safety of the Castle." : "Un large perron de pierre remonte vers la cour et la sécurité du Château.")
+                : stairsTargetLvl > maze.level
+                  ? (lang === 'en' ? `A spiral staircase carved into raw rock descends into the depths towards Level ${stairsTargetLvl}. The air is colder, and creature roars echo closer.` : `Un escalier en colimaçon taillé dans la roche brute s'enfonce dans les profondeurs vers le Niveau ${stairsTargetLvl}. L'air y est plus froid, et les rugissements des créatures résonnent plus près.`)
+                  : (lang === 'en' ? `A carved stone staircase leads up to the corridors of Level ${stairsTargetLvl}.` : `Un escalier de pierre taillée remonte vers les couloirs du Niveau ${stairsTargetLvl}.`)}
+            </p>
+            <div className="text-amber-200/90 font-bold text-xs pt-1">
+              {lang === 'en' ? "Do you wish to take these stairs?" : "Voulez-vous emprunter cet escalier ?"}
+            </div>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={handleExecuteTakeStairs}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-xl text-xs font-black shadow-lg transition active:scale-95 cursor-pointer"
+              >
+                {stairsTargetLvl === 0 
+                  ? (lang === 'en' ? 'Return to Castle (Y)' : 'Remonter au Château (Y)')
+                  : stairsTargetLvl > maze.level 
+                    ? (lang === 'en' ? `Descend to Level ${stairsTargetLvl} (Y)` : `Descendre au Niveau ${stairsTargetLvl} (Y)`) 
+                    : (lang === 'en' ? `Ascend to Level ${stairsTargetLvl} (Y)` : `Monter au Niveau ${stairsTargetLvl} (Y)`)}
+              </button>
+              <button
+                onClick={() => setShowStairsPrompt(false)}
+                className="py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer"
+              >
+                {lang === 'en' ? 'Stay Here (N)' : 'Rester ici (N)'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

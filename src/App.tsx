@@ -2241,7 +2241,7 @@ export default function App() {
 
         {scenarioMessage && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn"
             onClick={() => setScenarioMessage(null)}
           >
             <div
