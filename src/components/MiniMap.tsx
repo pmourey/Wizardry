@@ -259,6 +259,11 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           <span className="text-[10px] text-amber-400 bg-amber-950/50 px-1.5 py-0.2 rounded border border-amber-600/30 font-mono font-bold shrink-0">
             Niv. {maze.level}
           </span>
+          {revealAll && (
+            <span className="text-[9px] text-purple-300 bg-purple-950/90 px-1.5 py-0.2 rounded border border-purple-500/80 font-mono font-bold shrink-0 tracking-wider">
+              RÉVÉLÉE
+            </span>
+          )}
         </div>
 
         {/* Toolbar Buttons */}
@@ -408,52 +413,59 @@ export const MiniMap: React.FC<MiniMapProps> = ({
 
             // Explored tile
             let specialFill = '#0f172a';
-            let iconText = '';
-            let iconColor = '#94a3b8';
+            let tileBorder = '#1e293b';
+            let tileBorderWidth = 0.5;
+            let tooltip = '';
 
-            if (specialType === 'STAIRS') {
-              specialFill = '#3b2506';
-              iconText = (aux0 === 0 || (cx === 0 && cy === 0)) ? '▲' : '▼';
-              iconColor = '#fbbf24';
-            } else if (specialType === 'TRANSFER') {
-              specialFill = '#2e1065';
-              iconText = '⚡';
-              iconColor = '#c084fc';
+            if (specialType === 'TRANSFER') {
+              specialFill = '#6b21a8';
+              tileBorder = '#d8b4fe';
+              tileBorderWidth = 1;
+              tooltip = `⚡ Téléporteur (${cx}, ${cy})`;
             } else if (specialType === 'BUTTONZ') {
-              specialFill = '#082f49';
-              iconText = '🛗';
-              iconColor = '#38bdf8';
+              specialFill = '#0369a1';
+              tileBorder = '#7dd3fc';
+              tileBorderWidth = 1;
+              tooltip = `🛗 Ascenseur (${cx}, ${cy})`;
             } else if (specialType === 'CHUTE') {
-              specialFill = '#3f0d12';
-              iconText = '⤓';
-              iconColor = '#f43f5e';
+              specialFill = '#b91c1c';
+              tileBorder = '#fca5a5';
+              tileBorderWidth = 1;
+              tooltip = `⤓ Chute / Trappe (${cx}, ${cy})`;
+            } else if (specialType === 'STAIRS') {
+              specialFill = '#854d0e';
+              tileBorder = '#fde047';
+              tileBorderWidth = 1;
+              tooltip = (aux0 === 0 || (cx === 0 && cy === 0)) ? `▲ Escalier vers Château (${cx}, ${cy})` : `▼ Escalier (${cx}, ${cy})`;
             } else if (specialType === 'PIT') {
-              specialFill = '#3f0d12';
-              iconText = '☠';
-              iconColor = '#ef4444';
+              specialFill = '#881337';
+              tileBorder = '#f43f5e';
+              tileBorderWidth = 1;
+              tooltip = `☠ Fossepiège (${cx}, ${cy})`;
             } else if (specialType === 'SPINNER') {
-              specialFill = '#083344';
-              iconText = '↻';
-              iconColor = '#06b6d4';
+              specialFill = '#0e7490';
+              tileBorder = '#22d3ee';
+              tooltip = `↻ Spinner (${cx}, ${cy})`;
             } else if (specialType === 'DARK') {
               specialFill = '#1e1b4b';
-              iconText = '●';
-              iconColor = '#818cf8';
+              tileBorder = '#6366f1';
+              tooltip = `● Zone de Ténèbres (${cx}, ${cy})`;
             } else if (specialType === 'SCNMSG') {
               const desc = (description || '').toLowerCase();
               if (desc.includes('castle') || desc.includes('château')) {
-                specialFill = '#14532d';
-                iconText = '🏰';
-                iconColor = '#4ade80';
+                specialFill = '#15803d';
+                tileBorder = '#86efac';
+                tileBorderWidth = 1;
+                tooltip = `🏰 Sortie Château (${cx}, ${cy})`;
               } else {
-                specialFill = '#1c1917';
-                iconText = '§';
-                iconColor = '#a8a29e';
+                specialFill = '#292524';
+                tileBorder = '#a8a29e';
+                tooltip = `§ Inscription / Panneau (${cx}, ${cy})`;
               }
             } else if (specialType === 'ENCOUNTE') {
-              specialFill = '#2d1515';
-              iconText = '⚔';
-              iconColor = '#f87171';
+              specialFill = '#7f1d1d';
+              tileBorder = '#f87171';
+              tooltip = `⚔ Gardiens fixes (${cx}, ${cy})`;
             }
 
             return (
@@ -464,21 +476,116 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                   width={cellSize}
                   height={cellSize}
                   fill={specialFill}
-                  stroke="#1e293b"
-                  strokeWidth="0.5"
+                  stroke={tileBorder}
+                  strokeWidth={tileBorderWidth}
                 />
+                {tooltip && <title>{tooltip}</title>}
 
-                {/* Special Icon */}
-                {iconText && (
+                {/* 1.1 Vector Graphics for High-Visibility Special Traps & Staircases */}
+                {specialType === 'TRANSFER' && (
+                  <polygon
+                    points={`${svgX + cellSize * 0.55},${svgY + cellSize * 0.12} ${svgX + cellSize * 0.22},${svgY + cellSize * 0.52} ${svgX + cellSize * 0.48},${svgY + cellSize * 0.52} ${svgX + cellSize * 0.42},${svgY + cellSize * 0.88} ${svgX + cellSize * 0.78},${svgY + cellSize * 0.48} ${svgX + cellSize * 0.52},${svgY + cellSize * 0.48}`}
+                    fill="#ffffff"
+                    stroke="#f0abfc"
+                    strokeWidth={cellSize > 20 ? 0.8 : 0.4}
+                  />
+                )}
+
+                {specialType === 'BUTTONZ' && (
+                  <g>
+                    <polygon
+                      points={`${svgX + cellSize * 0.5},${svgY + cellSize * 0.18} ${svgX + cellSize * 0.25},${svgY + cellSize * 0.42} ${svgX + cellSize * 0.75},${svgY + cellSize * 0.42}`}
+                      fill="#ffffff"
+                    />
+                    <polygon
+                      points={`${svgX + cellSize * 0.5},${svgY + cellSize * 0.82} ${svgX + cellSize * 0.25},${svgY + cellSize * 0.58} ${svgX + cellSize * 0.75},${svgY + cellSize * 0.58}`}
+                      fill="#ffffff"
+                    />
+                  </g>
+                )}
+
+                {specialType === 'CHUTE' && (
+                  <g>
+                    <line
+                      x1={svgX + cellSize * 0.5}
+                      y1={svgY + cellSize * 0.18}
+                      x2={svgX + cellSize * 0.5}
+                      y2={svgY + cellSize * 0.55}
+                      stroke="#ffffff"
+                      strokeWidth={cellSize > 20 ? 2 : 1.2}
+                    />
+                    <polygon
+                      points={`${svgX + cellSize * 0.5},${svgY + cellSize * 0.85} ${svgX + cellSize * 0.22},${svgY + cellSize * 0.48} ${svgX + cellSize * 0.78},${svgY + cellSize * 0.48}`}
+                      fill="#ffffff"
+                    />
+                  </g>
+                )}
+
+                {specialType === 'STAIRS' && (
+                  <polygon
+                    points={
+                      (aux0 === 0 || (cx === 0 && cy === 0))
+                        ? `${svgX + cellSize * 0.5},${svgY + cellSize * 0.18} ${svgX + cellSize * 0.2},${svgY + cellSize * 0.82} ${svgX + cellSize * 0.8},${svgY + cellSize * 0.82}`
+                        : `${svgX + cellSize * 0.5},${svgY + cellSize * 0.82} ${svgX + cellSize * 0.2},${svgY + cellSize * 0.18} ${svgX + cellSize * 0.8},${svgY + cellSize * 0.18}`
+                    }
+                    fill="#ffffff"
+                    stroke="#fde047"
+                    strokeWidth={0.5}
+                  />
+                )}
+
+                {specialType === 'PIT' && (
+                  <g stroke="#ffffff" strokeWidth={cellSize > 20 ? 2 : 1.2} strokeLinecap="round">
+                    <line x1={svgX + cellSize * 0.28} y1={svgY + cellSize * 0.28} x2={svgX + cellSize * 0.72} y2={svgY + cellSize * 0.72} />
+                    <line x1={svgX + cellSize * 0.72} y1={svgY + cellSize * 0.28} x2={svgX + cellSize * 0.28} y2={svgY + cellSize * 0.72} />
+                  </g>
+                )}
+
+                {specialType === 'SPINNER' && (
                   <text
                     x={svgX + cellSize / 2}
                     y={svgY + cellSize / 2 + (cellSize > 20 ? 4 : 3)}
                     textAnchor="middle"
                     fontSize={cellSize > 20 ? 12 : 8}
                     fontWeight="bold"
-                    fill={iconColor}
+                    fill="#22d3ee"
                   >
-                    {iconText}
+                    ↻
+                  </text>
+                )}
+
+                {specialType === 'DARK' && (
+                  <circle
+                    cx={svgX + cellSize / 2}
+                    cy={svgY + cellSize / 2}
+                    r={cellSize > 20 ? 3.5 : 2}
+                    fill="#818cf8"
+                  />
+                )}
+
+                {specialType === 'SCNMSG' && (
+                  <text
+                    x={svgX + cellSize / 2}
+                    y={svgY + cellSize / 2 + (cellSize > 20 ? 4 : 3)}
+                    textAnchor="middle"
+                    fontSize={cellSize > 20 ? 12 : 8}
+                    fontWeight="bold"
+                    fill={((description || '').toLowerCase().includes('castle') || (description || '').toLowerCase().includes('château')) ? '#86efac' : '#a8a29e'}
+                  >
+                    {((description || '').toLowerCase().includes('castle') || (description || '').toLowerCase().includes('château')) ? '🏰' : '§'}
+                  </text>
+                )}
+
+                {specialType === 'ENCOUNTE' && (
+                  <text
+                    x={svgX + cellSize / 2}
+                    y={svgY + cellSize / 2 + (cellSize > 20 ? 4 : 3)}
+                    textAnchor="middle"
+                    fontSize={cellSize > 20 ? 12 : 8}
+                    fontWeight="bold"
+                    fill="#f87171"
+                  >
+                    ⚔
                   </text>
                 )}
 

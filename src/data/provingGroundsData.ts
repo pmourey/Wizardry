@@ -1515,7 +1515,10 @@ export function getMazeForFloor(level: number, scenarioId?: string): TMazeFloor 
     sqrExtra: raw.sqrExtra.map(c => Array.from(c, ch => parseInt(ch, 16))),
     extraDefs: raw.extraDefs.map(d => ({ ...d })),
     enemyCalc: raw.enemyCalc.map(c => ({ ...c })),
-    events: raw.events.map(ev => ({ ...ev }))
+    events: raw.events.map(ev => ({
+      ...ev,
+      uses: (ev.aux0 === -1 && ev.kind === 'MESSAGE') ? 'ALWAYS' : ev.uses
+    }))
   };
 }
 

@@ -824,7 +824,10 @@ export default function App() {
       return false;
     }
 
-    const onceOnly = ev.uses === 'ONCE';
+    // In authentic UCSD Pascal: aux0 = -1 indicates permanent wall inscriptions/plaques/signs (infinite uses).
+    // Positive aux0 values count down to 0 and disappear.
+    const isPermanentSign = ev.aux0 === -1 || ev.uses === 'ALWAYS';
+    const onceOnly = !isPermanentSign && ev.uses === 'ONCE';
     if (ev.uses === 'DISABLED') return false;
 
     switch (ev.kind) {
@@ -833,7 +836,12 @@ export default function App() {
       case 'ITEM_TO_PASS':
         if (onceOnly && used > 0) return false;
         markEventUsed(key, used + 1);
-        if (ev.message?.length) announce('Inscription ou vision', ev.message, undefined, x, y);
+        if (ev.message?.length) {
+          const title = ev.description?.toLowerCase().includes('sign') || ev.description?.toLowerCase().includes('message')
+            ? 'Panneau ou inscription murale'
+            : 'Inscription ou vision';
+          announce(title, ev.message, undefined, x, y);
+        }
         return false;
       case 'ITEM_PICKUP': {
         if (used > 0) return false;
