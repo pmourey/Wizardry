@@ -1,0 +1,93 @@
+<h2>📜 Devlog itch.io — Mise à jour Tactique : Exploration sur Mini-Carte, Ergonomie des Ascenseurs &amp; Cartographie Affinée</h2>
+
+<p>
+  <strong>Date :</strong> Novembre 2026<br />
+  <strong>Version :</strong> v3.5.2<br />
+  <strong>Plateformes :</strong> Navigateur Web (HTML5/WebGL), itch.io, APK Android
+</p>
+
+<hr />
+
+<h3>🗺️ 1. Exploration Tactique en Direct sur la Mini-Carte Agrandie</h3>
+
+<p>
+  L'une des fonctionnalités les plus demandées est désormais réalité : 
+  <strong>il est désormais possible d'explorer le labyrinthe et de déplacer son groupe directement depuis la mini-carte agrandie (<code>Touche M</code>) !</strong>
+</p>
+
+<ul>
+  <li>
+    <strong>Navigation clavier complète :</strong> Déplacement avant (<code>Z</code> en AZERTY / <code>W</code> en QWERTY / <code>↑</code>), pivots à 90° (<code>Q</code> / <code>A</code> / <code>D</code> / <code>←</code> / <code>→</code>), demi-tour immédiat à 180° (<code>S</code> / <code>↓</code>), enfoncer les portes (<code>K</code> ou <code>Barre d'espace</code>) et fouille de la case (<code>I</code>).
+  </li>
+  <li>
+    <strong>Pavé tactile &amp; commandes D-Pad intégrées :</strong> Un pavé de contrôle ergonomique apparaît sous la carte avec des boutons clairs pour le jeu sur mobile ou à la souris.
+  </li>
+  <li>
+    <strong>Gestes tactiles directs (Swipes &amp; Taps) :</strong> Glissez le doigt ou cliquez directement sur le plan pour faire avancer votre escouade ou pivoter dans la direction souhaitée.
+  </li>
+  <li>
+    <strong>Persistance du mode de carte :</strong> Le dernier mode choisi (carte agrandie ou compacte HUD) est désormais automatiquement mémorisé. À la fin d'un combat ou après une halte au campement, vous revenez directement dans le mode de visualisation que vous aviez sélectionné.
+  </li>
+</ul>
+
+<hr />
+
+<h3>🔍 2. Cartographie &amp; Symboles Authentiques</h3>
+
+<p>
+  Le moteur de rendu SVG vectoriel de la mini-carte a fait l'objet d'une passe complète d'optimisation et de fidélité par rapport aux règles Sir-Tech de 1981 :
+</p>
+
+<ul>
+  <li>
+    <strong>Épaisseur des murs et portes calibrée :</strong> Réduction de l'épaisseur des parois et des portes pour une lecture nette, aérée et précise, même sur les niveaux complexes de 20×20 cases.
+  </li>
+  <li>
+    <strong>Portes à sens unique (One-Way Doors) :</strong> Affichage de fines flèches directionnelles traversant la porte avec une pointe pleine et une couche dédiée de premier plan, y compris pour les portes situées sur les bords toroïdaux du labyrinthe (ex. coordonnées <code>(19, 9)</code> et <code>(1, 19)</code>).
+  </li>
+  <li>
+    <strong>Harmonisation des fossepièges (Pits) :</strong> Remplacement de l'ancien tracé en croix par l'icône de crâne <strong>☠</strong> en rose vif sur fond pourpre d'alerte, parfaitement conforme à la légende de la carte.
+  </li>
+  <li>
+    <strong>Gestion authentique des portes secrètes :</strong> Restauration des règles originales du scénario UCSD Pascal : le test de détection de porte secrète est effectué selon les statistiques du groupe ; une fois détectée et franchie, la porte reste définitivement connue et accessible sans nécessiter de nouvelle fouille.
+  </li>
+  <li>
+    <strong>Restauration des passages ouverts :</strong> Correction des passages aux coordonnées <code>(19, 1)</code> Sud et <code>(11, 0)</code> Ouest au Niveau 3 qui pouvaient être bloqués par des parois solides.
+  </li>
+  <li>
+    <strong>Mode Révélation Test / Triche discret :</strong> La mini-carte est un outil de cartographie fidèle respectant le brouillard de guerre. Une case à cocher discrète <em>« Outil Test / Triche »</em> a été intégrée dans la légende pour permettre les tests fonctionnels de cartographie complète sans gêner l'expérience de jeu normale.
+  </li>
+</ul>
+
+<hr />
+
+<h3>🛗 3. Mécanisme d'Ascenseur &amp; Priorité d'Affichage au Premier Plan</h3>
+
+<ul>
+  <li>
+    <strong>Suppression du prompt navigateur basique :</strong> L'ancienne invite <code>window.prompt</code> a été totalement éliminée au profit de la <strong>fenêtre modale graphique enrichie</strong>.
+  </li>
+  <li>
+    <strong>Sélection rapide des étages :</strong> Boutons tactiles pour chaque étage accessible (Niveaux 1 à 4 pour le premier ascenseur, 4 à 9 pour le second), raccourcis numériques directs au clavier (<code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>) et fermeture rapide avec <code>Échap</code>.
+  </li>
+  <li>
+    <strong>Passage garanti au premier plan (<code>z-index</code>) :</strong>
+    <ul>
+      <li>La fenêtre de sélection de l'ascenseur s'affiche désormais toujours au-dessus de la mini-carte agrandie.</li>
+      <li>Les bandeaux d'action flottants (<code>🛗 Ascenseur [Actionner (E)]</code>, <code>▲ Escalier [Emprunter (Y)]</code>) restent visibles et actifs en haut de l'écran en mode carte.</li>
+      <li>Tous les messages d'exploration, inscriptions murales (<code>scenarioMessage</code>) et alertes de découverte de héros tombés au combat s'affichent prioritairement au premier plan sans être masqués par la carte.</li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h3>📦 4. Disponibilité &amp; Liens de Téléchargement</h3>
+
+<ul>
+  <li><strong>Jouable directement dans le navigateur :</strong> <a href="https://pmourey.github.io/Wizardry/" target="_blank" rel="noopener noreferrer">Sur GitHub Pages</a> et sur la page de jeu <strong>itch.io</strong>.</li>
+  <li><strong>Archive HTML5 / itch.io :</strong> <code>wizardry-itchio.zip</code> mise à jour avec les derniers assets et scripts compilés.</li>
+  <li><strong>Application native Android :</strong> <code>Remix-Wizardry-v3.5.apk</code> disponible au téléchargement direct.</li>
+</ul>
+
+<p><em>Merci pour vos retours et tests continus ! Bonne exploration dans les profondeurs de Trebor ! ⚔️</em></p>
