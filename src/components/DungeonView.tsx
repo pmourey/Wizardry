@@ -224,7 +224,14 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
   // Keyboard navigation shortcuts (adapts to AZERTY [Z/Q/D] or QWERTY [W/A/D] + Arrow keys)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (showCamp || showMinimap) return;
+    if (showCamp || showCharacterSheetModal) return;
+
+    // Close minimap modal on Escape
+    if (e.key === 'Escape' && showMinimap) {
+      e.preventDefault();
+      setShowMinimap(false);
+      return;
+    }
 
     if (showStairsPrompt && isStairs) {
       if (e.key === 'y' || e.key === 'Y' || e.key === 'o' || e.key === 'O' || e.key === 'Enter') {
@@ -266,11 +273,15 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     } else if (key === 'd' || key === 'r' || e.key === 'ArrowRight') {
       e.preventDefault();
       onRotate(1); // Turn Right
-    } else if (key === 'k') {
+    } else if (key === 's' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      onRotate(2); // Turn around 180°
+    } else if (key === 'k' || e.key === ' ') {
       e.preventDefault();
       onKickDoor();
     } else if (key === 'c') {
       e.preventDefault();
+      if (showMinimap) setShowMinimap(false);
       setShowCamp(true);
       sounds.playTurn();
     } else if (key === 'm') {
@@ -281,7 +292,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       e.preventDefault();
       onInspectArea();
     }
-  }, [showCamp, showMinimap, showStairsPrompt, isStairs, currentSqrDef, x, y, direction, maze, keyboardLayout]);
+  }, [showCamp, showCharacterSheetModal, showMinimap, showStairsPrompt, isStairs, isElevator, currentSqrDef, x, y, direction, maze, keyboardLayout]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -2042,6 +2053,12 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             fallenMarkers={fallenMarkers}
             keyboardLayout={keyboardLayout}
             onClose={() => setShowMinimap(false)}
+            onMoveForward={() => tryMoveForward(false)}
+            onTurnLeft={() => onRotate(3)}
+            onTurnRight={() => onRotate(1)}
+            onTurnAround={() => onRotate(2)}
+            onKickDoor={onKickDoor}
+            onInspectArea={onInspectArea}
           />
         </div>
       )}

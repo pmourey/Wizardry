@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { TMazeFloor, TWall } from '../types/wizardry';
 import { 
   Compass, 
@@ -66,6 +66,12 @@ export interface MiniMapProps {
   keyboardLayout?: 'AZERTY' | 'QWERTY';
   onClose?: () => void;
   onExpand?: () => void;
+  onMoveForward?: () => void;
+  onTurnLeft?: () => void;
+  onTurnRight?: () => void;
+  onTurnAround?: () => void;
+  onKickDoor?: () => void;
+  onInspectArea?: () => void;
 }
 
 export const MiniMap: React.FC<MiniMapProps> = ({
@@ -78,7 +84,13 @@ export const MiniMap: React.FC<MiniMapProps> = ({
   fallenMarkers = [],
   keyboardLayout = 'AZERTY',
   onClose,
-  onExpand
+  onExpand,
+  onMoveForward,
+  onTurnLeft,
+  onTurnRight,
+  onTurnAround,
+  onKickDoor,
+  onInspectArea
 }) => {
   // Persistent Mode: 'radar' (7x7 local area around player) or 'full' (20x20 floor grid)
   const [viewMode, setViewMode] = useState<'radar' | 'full'>(() => {
@@ -102,6 +114,59 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       saveMiniMapPrefs({ hudViewMode: viewMode, revealAll, hudShowLegend: showLegend, allowCheatMode });
     }
   }, [variant, viewMode, revealAll, showLegend, allowCheatMode]);
+
+  // Touch / swipe handling for direct exploration on mobile & touchscreens
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        time: Date.now()
+      };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+    const dt = Date.now() - touchStartRef.current.time;
+    touchStartRef.current = null;
+
+    const minSwipeDistance = 30;
+    if (Math.abs(dx) > minSwipeDistance || Math.abs(dy) > minSwipeDistance) {
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0) {
+          onTurnRight?.();
+        } else {
+          onTurnLeft?.();
+        }
+      } else {
+        if (dy < 0) {
+          onMoveForward?.();
+        } else {
+          onTurnAround?.();
+        }
+      }
+    } else if (dt < 300 && Math.abs(dx) < 15 && Math.abs(dy) < 15) {
+      // Direct tap navigation on the map viewport
+      const target = e.currentTarget.getBoundingClientRect();
+      const relX = (touch.clientX - target.left) / target.width;
+      const relY = (touch.clientY - target.top) / target.height;
+      if (relY < 0.35) {
+        onMoveForward?.();
+      } else if (relX < 0.35) {
+        onTurnLeft?.();
+      } else if (relX > 0.65) {
+        onTurnRight?.();
+      } else {
+        onTurnAround?.();
+      }
+    }
+  };
 
   const dirNames = ['NORD', 'EST', 'SUD', 'OUEST'];
   const dirAngles = [0, 90, 180, 270];
@@ -463,7 +528,12 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       </div>
 
       {/* Map Viewport Area */}
-      <div className="flex flex-col items-center justify-center overflow-hidden bg-slate-950 rounded-lg p-1.5 sm:p-2 border border-slate-800/80 relative w-full">
+      <div 
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="flex flex-col items-center justify-center overflow-hidden bg-slate-950 rounded-lg p-1.5 sm:p-2 border border-slate-800/80 relative w-full cursor-pointer select-none touch-manipulation"
+        title={variant === 'modal' ? 'Glisser ou cliquer sur la carte pour explorer' : undefined}
+      >
         <svg
           viewBox={`-${svgPad} -${svgPad} ${totalSvgWidth} ${totalSvgHeight}`}
           width={totalSvgWidth}
@@ -980,6 +1050,94 @@ export const MiniMap: React.FC<MiniMapProps> = ({
         </svg>
       </div>
 
+      {/* Tactical Exploration Controls Bar in Modal Mode */}
+      {variant === 'modal' && (onMoveForward || onTurnLeft || onTurnRight) && (
+        <div className="mt-2.5 pt-2 border-t border-slate-800/90 flex flex-col gap-2">
+          {/* Controls title & quick status */}
+          <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+            <span className="flex items-center gap-1.5 font-semibold text-amber-300">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Mode Exploration Active
+            </span>
+            <span className="text-[10px] text-slate-400 hidden sm:inline">
+              Glissez ou touchez la carte, ou utilisez les touches / commandes ci-dessous
+            </span>
+          </div>
+
+          {/* D-Pad Buttons */}
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2 max-w-sm mx-auto w-full">
+            {/* Top row: Turn Left, Forward, Turn Right */}
+            <button
+              type="button"
+              onClick={onTurnLeft}
+              className="flex items-center justify-center gap-1.5 py-2 px-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 hover:border-amber-500/60 rounded-lg text-slate-200 hover:text-white font-mono text-xs font-bold transition shadow-sm active:scale-95 touch-manipulation cursor-pointer"
+              title={`Pivoter à gauche de 90° (${keyboardLayout === 'AZERTY' ? 'Touche Q ou ←' : 'Touche A ou ←'})`}
+            >
+              <span>↺</span>
+              <span>Gauche</span>
+              <span className="text-[10px] text-slate-400 font-normal">[{keyboardLayout === 'AZERTY' ? 'Q' : 'A'}]</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onMoveForward}
+              className="flex items-center justify-center gap-1.5 py-2 px-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-black font-mono text-xs font-bold rounded-lg border border-amber-400/80 transition shadow-md shadow-amber-950/40 active:scale-95 touch-manipulation cursor-pointer"
+              title={`Avancer d'une case (${keyboardLayout === 'AZERTY' ? 'Touche Z ou ↑' : 'Touche W ou ↑'})`}
+            >
+              <span>▲</span>
+              <span>Avancer</span>
+              <span className="text-[10px] text-amber-950 font-semibold">[{keyboardLayout === 'AZERTY' ? 'Z' : 'W'}]</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onTurnRight}
+              className="flex items-center justify-center gap-1.5 py-2 px-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 hover:border-amber-500/60 rounded-lg text-slate-200 hover:text-white font-mono text-xs font-bold transition shadow-sm active:scale-95 touch-manipulation cursor-pointer"
+              title="Pivoter à droite de 90° (Touche D ou →)"
+            >
+              <span>Droite</span>
+              <span>↻</span>
+              <span className="text-[10px] text-slate-400 font-normal">[D]</span>
+            </button>
+
+            {/* Bottom row: Turn Around 180°, Kick Door, Inspect Area */}
+            <button
+              type="button"
+              onClick={onTurnAround}
+              className="flex items-center justify-center gap-1 py-1.5 px-2 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 rounded-lg text-slate-300 hover:text-white font-mono text-[11px] font-semibold transition active:scale-95 touch-manipulation cursor-pointer"
+              title="Faire demi-tour à 180° (Touche S ou ↓)"
+            >
+              <span>↷ 180°</span>
+              <span className="text-[9px] text-slate-400 font-normal">[S]</span>
+            </button>
+
+            {onKickDoor && (
+              <button
+                type="button"
+                onClick={onKickDoor}
+                className="flex items-center justify-center gap-1 py-1.5 px-2 bg-amber-950/70 hover:bg-amber-900/80 active:bg-amber-950 border border-amber-600/70 text-amber-300 hover:text-amber-200 font-mono text-[11px] font-semibold rounded-lg transition active:scale-95 touch-manipulation cursor-pointer"
+                title="Enfoncer / ouvrir la porte en face (Touche K ou Espace)"
+              >
+                <span>🚪 Porte</span>
+                <span className="text-[9px] text-amber-400/80 font-normal">[K]</span>
+              </button>
+            )}
+
+            {onInspectArea && (
+              <button
+                type="button"
+                onClick={onInspectArea}
+                className="flex items-center justify-center gap-1 py-1.5 px-2 bg-slate-800/90 hover:bg-slate-700 active:bg-slate-900 border border-slate-700 rounded-lg text-slate-300 hover:text-white font-mono text-[11px] font-semibold transition active:scale-95 touch-manipulation cursor-pointer"
+                title="Inspecter / fouiller la case courante (Touche I)"
+              >
+                <span>🔍 Fouiller</span>
+                <span className="text-[9px] text-slate-400 font-normal">[I]</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Legend Drawer / Strip */}
       {showLegend && (
         <div className="mt-2 sm:mt-3 pt-2 border-t border-slate-800 text-[10px] sm:text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-slate-300">
@@ -1066,9 +1224,11 @@ export const MiniMap: React.FC<MiniMapProps> = ({
 
       {/* Footer Details */}
       <div className="mt-2 pt-1.5 sm:pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400">
-        <span className="hidden sm:inline">Touches ({keyboardLayout}) : <strong>{keyboardLayout === 'AZERTY' ? 'Z/Q/D' : 'W/A/D'}</strong></span>
+        <span className="hidden sm:inline">
+          Touches ({keyboardLayout}) : <strong>{keyboardLayout === 'AZERTY' ? 'Z' : 'W'}</strong> Avancer • <strong>{keyboardLayout === 'AZERTY' ? 'Q/D' : 'A/D'}</strong> Pivoter • <strong>S</strong> 180° • <strong>K/Espace</strong> Porte
+        </span>
         <span className="sm:hidden text-slate-400">Niv. {maze.level}</span>
-        <span>Carte : <kbd className="px-1 py-0.2 bg-slate-800 border border-slate-700 rounded text-amber-300 font-mono text-[9px] sm:text-[10px]">M</kbd></span>
+        <span>{variant === 'modal' ? 'Fermer : ' : 'Carte : '}<kbd className="px-1 py-0.2 bg-slate-800 border border-slate-700 rounded text-amber-300 font-mono text-[9px] sm:text-[10px]">{variant === 'modal' ? 'Échap / M' : 'M'}</kbd></span>
       </div>
     </div>
   );
