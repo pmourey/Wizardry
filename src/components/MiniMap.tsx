@@ -23,6 +23,7 @@ export interface MiniMapPrefs {
   hudVisible: boolean;
   wireframeMode: boolean;
   allowCheatMode: boolean;
+  modalEnlarged: boolean;
 }
 
 const DEFAULT_MINIMAP_PREFS: MiniMapPrefs = {
@@ -33,7 +34,8 @@ const DEFAULT_MINIMAP_PREFS: MiniMapPrefs = {
   modalShowLegend: true,
   hudVisible: true,
   wireframeMode: false,
-  allowCheatMode: true
+  allowCheatMode: true,
+  modalEnlarged: false
 };
 
 export function loadMiniMapPrefs(): MiniMapPrefs {

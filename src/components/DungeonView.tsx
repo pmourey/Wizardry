@@ -126,12 +126,12 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   const [lang] = useLanguage();
   const t = UI_TEXT[lang] || UI_TEXT.fr;
   const [wireframeMode, setWireframeMode] = useState<boolean>(() => loadMiniMapPrefs().wireframeMode);
-  const [showMinimap, setShowMinimap] = useState<boolean>(false);
+  const [showMinimap, setShowMinimap] = useState<boolean>(() => loadMiniMapPrefs().modalEnlarged ?? false);
   const [hudMinimapVisible, setHudMinimapVisible] = useState<boolean>(() => loadMiniMapPrefs().hudVisible);
 
   useEffect(() => {
-    saveMiniMapPrefs({ hudVisible: hudMinimapVisible, wireframeMode });
-  }, [hudMinimapVisible, wireframeMode]);
+    saveMiniMapPrefs({ hudVisible: hudMinimapVisible, wireframeMode, modalEnlarged: showMinimap });
+  }, [hudMinimapVisible, wireframeMode, showMinimap]);
   const [showCamp, setShowCamp] = useState<boolean>(false);
   const [campCharIdx, setCampCharIdx] = useState<number>(0);
   const [campTargetIdx, setCampTargetIdx] = useState<number>(0);
@@ -299,7 +299,6 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       onKickDoor();
     } else if (key === 'c') {
       e.preventDefault();
-      if (showMinimap) setShowMinimap(false);
       setShowCamp(true);
       sounds.playTurn();
     } else if (key === 'm') {
@@ -2060,7 +2059,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
       )}
 
       {/* FULL TACTICAL CARTOGRAPHY MODAL */}
-      {showMinimap && (
+      {showMinimap && !showCamp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 overflow-y-auto safe-top safe-bottom safe-left safe-right animate-fadeIn">
           <MiniMap
             maze={maze}
