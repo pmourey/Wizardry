@@ -1525,6 +1525,14 @@ export function getMazeForFloor(level: number, scenarioId?: string): TMazeFloor 
     }
   }
 
+  // Outer perimeter boundaries are impassable solid rock walls
+  for (let i = 0; i < 20; i++) {
+    sWalls[i][0] = 'WALL';
+    nWalls[i][19] = 'WALL';
+    wWalls[0][i] = 'WALL';
+    eWalls[19][i] = 'WALL';
+  }
+
   return {
     level: raw.level,
     w: wWalls,

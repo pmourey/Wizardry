@@ -636,9 +636,9 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             if (!isValid || !isVisited) return null;
 
             const wallStroke = '#64748b';
-            const wallWidth = viewMode === 'radar' ? (variant === 'modal' ? 1.5 : 1.2) : 1.7;
-            const doorWidth = viewMode === 'radar' ? (variant === 'modal' ? 2.2 : 1.8) : 2.5;
-            const arrowLen = Math.max(3.5, cellSize * 0.35);
+            const wallWidth = viewMode === 'radar' ? (variant === 'modal' ? 1.1 : 0.9) : 1.3;
+            const doorWidth = viewMode === 'radar' ? (variant === 'modal' ? 1.2 : 1.0) : 1.3;
+            const arrowLen = Math.max(3, cellSize * 0.32);
             const xMid = svgX + cellSize / 2;
             const yMid = svgY + cellSize / 2;
 
@@ -653,28 +653,28 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 {(north === 'DOOR' || isNorthSecretDiscovered) ? (
                   <g>
                     {/* Door posts */}
-                    <line x1={svgX} y1={svgY} x2={svgX + cellSize * 0.2} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize * 0.8} y1={svgY} x2={svgX + cellSize} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
-                    {/* Door bar */}
+                    <line x1={svgX} y1={svgY} x2={svgX + cellSize * 0.3} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize * 0.7} y1={svgY} x2={svgX + cellSize} y2={svgY} stroke={wallStroke} strokeWidth={wallWidth} />
+                    {/* Fine Door bar */}
                     <line
-                      x1={svgX + cellSize * 0.2}
+                      x1={svgX + cellSize * 0.3}
                       y1={svgY}
-                      x2={svgX + cellSize * 0.8}
+                      x2={svgX + cellSize * 0.7}
                       y2={svgY}
                       stroke={isNorthSecretDiscovered ? '#c084fc' : '#f59e0b'}
                       strokeWidth={doorWidth}
-                      strokeDasharray={isNorthSecretDiscovered ? '2.5,2' : undefined}
+                      strokeDasharray={isNorthSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {/* Fine crossing directional arrow if one-way */}
-                    {oppNorth === 'WALL' && (
+                    {/* Fine crossing directional arrow if one-way (inside maze only) */}
+                    {oppNorth === 'WALL' && cell.cy < 19 && (
                       <g>
-                        <line x1={xMid} y1={svgY + arrowLen * 0.6} x2={xMid} y2={svgY - arrowLen * 0.7} stroke="#38bdf8" strokeWidth="1.1" strokeLinecap="round" />
+                        <line x1={xMid} y1={svgY + arrowLen * 0.55} x2={xMid} y2={svgY - arrowLen * 0.65} stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" />
                         <polyline
-                          points={`${xMid - 2.2},${svgY - arrowLen * 0.7 + 2.2} ${xMid},${svgY - arrowLen * 0.7} ${xMid + 2.2},${svgY - arrowLen * 0.7 + 2.2}`}
+                          points={`${xMid - 1.8},${svgY - arrowLen * 0.65 + 1.8} ${xMid},${svgY - arrowLen * 0.65} ${xMid + 1.8},${svgY - arrowLen * 0.65 + 1.8}`}
                           fill="none"
                           stroke="#38bdf8"
-                          strokeWidth="1.1"
+                          strokeWidth="0.9"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
@@ -696,26 +696,26 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 {/* South Wall / Door */}
                 {(south === 'DOOR' || isSouthSecretDiscovered) ? (
                   <g>
-                    <line x1={svgX} y1={svgY + cellSize} x2={svgX + cellSize * 0.2} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize * 0.8} y1={svgY + cellSize} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX} y1={svgY + cellSize} x2={svgX + cellSize * 0.3} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize * 0.7} y1={svgY + cellSize} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
                     <line
-                      x1={svgX + cellSize * 0.2}
+                      x1={svgX + cellSize * 0.3}
                       y1={svgY + cellSize}
-                      x2={svgX + cellSize * 0.8}
+                      x2={svgX + cellSize * 0.7}
                       y2={svgY + cellSize}
                       stroke={isSouthSecretDiscovered ? '#c084fc' : '#f59e0b'}
                       strokeWidth={doorWidth}
-                      strokeDasharray={isSouthSecretDiscovered ? '2.5,2' : undefined}
+                      strokeDasharray={isSouthSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {oppSouth === 'WALL' && (
+                    {oppSouth === 'WALL' && cell.cy > 0 && (
                       <g>
-                        <line x1={xMid} y1={svgY + cellSize - arrowLen * 0.6} x2={xMid} y2={svgY + cellSize + arrowLen * 0.7} stroke="#38bdf8" strokeWidth="1.1" strokeLinecap="round" />
+                        <line x1={xMid} y1={svgY + cellSize - arrowLen * 0.55} x2={xMid} y2={svgY + cellSize + arrowLen * 0.65} stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" />
                         <polyline
-                          points={`${xMid - 2.2},${svgY + cellSize + arrowLen * 0.7 - 2.2} ${xMid},${svgY + cellSize + arrowLen * 0.7} ${xMid + 2.2},${svgY + cellSize + arrowLen * 0.7 - 2.2}`}
+                          points={`${xMid - 1.8},${svgY + cellSize + arrowLen * 0.65 - 1.8} ${xMid},${svgY + cellSize + arrowLen * 0.65} ${xMid + 1.8},${svgY + cellSize + arrowLen * 0.65 - 1.8}`}
                           fill="none"
                           stroke="#38bdf8"
-                          strokeWidth="1.1"
+                          strokeWidth="0.9"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
@@ -737,26 +737,26 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 {/* East Wall / Door */}
                 {(east === 'DOOR' || isEastSecretDiscovered) ? (
                   <g>
-                    <line x1={svgX + cellSize} y1={svgY} x2={svgX + cellSize} y2={svgY + cellSize * 0.2} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX + cellSize} y1={svgY + cellSize * 0.8} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize} y1={svgY} x2={svgX + cellSize} y2={svgY + cellSize * 0.3} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX + cellSize} y1={svgY + cellSize * 0.7} x2={svgX + cellSize} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
                     <line
                       x1={svgX + cellSize}
-                      y1={svgY + cellSize * 0.2}
+                      y1={svgY + cellSize * 0.3}
                       x2={svgX + cellSize}
-                      y2={svgY + cellSize * 0.8}
+                      y2={svgY + cellSize * 0.7}
                       stroke={isEastSecretDiscovered ? '#c084fc' : '#f59e0b'}
                       strokeWidth={doorWidth}
-                      strokeDasharray={isEastSecretDiscovered ? '2.5,2' : undefined}
+                      strokeDasharray={isEastSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {oppEast === 'WALL' && (
+                    {oppEast === 'WALL' && cell.cx < 19 && (
                       <g>
-                        <line x1={svgX + cellSize - arrowLen * 0.6} y1={yMid} x2={svgX + cellSize + arrowLen * 0.7} stroke="#38bdf8" strokeWidth="1.1" strokeLinecap="round" />
+                        <line x1={svgX + cellSize - arrowLen * 0.55} y1={yMid} x2={svgX + cellSize + arrowLen * 0.65} stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" />
                         <polyline
-                          points={`${svgX + cellSize + arrowLen * 0.7 - 2.2},${yMid - 2.2} ${svgX + cellSize + arrowLen * 0.7},${yMid} ${svgX + cellSize + arrowLen * 0.7 - 2.2},${yMid + 2.2}`}
+                          points={`${svgX + cellSize + arrowLen * 0.65 - 1.8},${yMid - 1.8} ${svgX + cellSize + arrowLen * 0.65},${yMid} ${svgX + cellSize + arrowLen * 0.65 - 1.8},${yMid + 1.8}`}
                           fill="none"
                           stroke="#38bdf8"
-                          strokeWidth="1.1"
+                          strokeWidth="0.9"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
@@ -778,26 +778,26 @@ export const MiniMap: React.FC<MiniMapProps> = ({
                 {/* West Wall / Door */}
                 {(west === 'DOOR' || isWestSecretDiscovered) ? (
                   <g>
-                    <line x1={svgX} y1={svgY} x2={svgX} y2={svgY + cellSize * 0.2} stroke={wallStroke} strokeWidth={wallWidth} />
-                    <line x1={svgX} y1={svgY + cellSize * 0.8} x2={svgX} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX} y1={svgY} x2={svgX} y2={svgY + cellSize * 0.3} stroke={wallStroke} strokeWidth={wallWidth} />
+                    <line x1={svgX} y1={svgY + cellSize * 0.7} x2={svgX} y2={svgY + cellSize} stroke={wallStroke} strokeWidth={wallWidth} />
                     <line
                       x1={svgX}
-                      y1={svgY + cellSize * 0.2}
+                      y1={svgY + cellSize * 0.3}
                       x2={svgX}
-                      y2={svgY + cellSize * 0.8}
+                      y2={svgY + cellSize * 0.7}
                       stroke={isWestSecretDiscovered ? '#c084fc' : '#f59e0b'}
                       strokeWidth={doorWidth}
-                      strokeDasharray={isWestSecretDiscovered ? '2.5,2' : undefined}
+                      strokeDasharray={isWestSecretDiscovered ? '2,1.5' : undefined}
                       strokeLinecap="round"
                     />
-                    {oppWest === 'WALL' && (
+                    {oppWest === 'WALL' && cell.cx > 0 && (
                       <g>
-                        <line x1={svgX + arrowLen * 0.6} y1={yMid} x2={svgX - arrowLen * 0.7} y2={yMid} stroke="#38bdf8" strokeWidth="1.1" strokeLinecap="round" />
+                        <line x1={svgX + arrowLen * 0.55} y1={yMid} x2={svgX - arrowLen * 0.65} y2={yMid} stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" />
                         <polyline
-                          points={`${svgX - arrowLen * 0.7 + 2.2},${yMid - 2.2} ${svgX - arrowLen * 0.7},${yMid} ${svgX - arrowLen * 0.7 + 2.2},${yMid + 2.2}`}
+                          points={`${svgX - arrowLen * 0.65 + 1.8},${yMid - 1.8} ${svgX - arrowLen * 0.65},${yMid} ${svgX - arrowLen * 0.65 + 1.8},${yMid + 1.8}`}
                           fill="none"
                           stroke="#38bdf8"
-                          strokeWidth="1.1"
+                          strokeWidth="0.9"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         />
@@ -887,22 +887,22 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       {showLegend && (
         <div className="mt-2 sm:mt-3 pt-2 border-t border-slate-800 text-[10px] sm:text-[11px] grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-slate-300">
           <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-0.5 bg-slate-400 rounded-sm inline-block" />
+            <span className="w-3.5 h-[1.5px] bg-slate-400 rounded-sm inline-block" />
             <span>Mur</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-1 bg-amber-400 rounded-sm inline-block shadow-sm" />
+            <span className="w-3.5 h-[1.5px] bg-amber-400 rounded-sm inline-block shadow-sm" />
             <span>Porte</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3.5 h-0.5 border-t-2 border-dashed border-purple-400 inline-block" />
+            <span className="w-3.5 h-[1.5px] border-t-2 border-dashed border-purple-400 inline-block" />
             <span>Porte secrète</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <svg width="14" height="10" viewBox="0 0 14 10" className="inline-block shrink-0">
-              <line x1="7" y1="1" x2="7" y2="9" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" />
-              <line x1="2" y1="5" x2="12" y2="5" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" />
-              <polyline points="9.5,2.5 12,5 9.5,7.5" fill="none" stroke="#38bdf8" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="15" height="10" viewBox="0 0 15 10" className="inline-block shrink-0">
+              <line x1="7.5" y1="1" x2="7.5" y2="9" stroke="#f59e0b" strokeWidth="1.1" strokeLinecap="round" />
+              <line x1="2" y1="5" x2="13" y2="5" stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" />
+              <polyline points="10.5,3 13,5 10.5,7" fill="none" stroke="#38bdf8" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             <span>Porte 1-sens</span>
           </div>
