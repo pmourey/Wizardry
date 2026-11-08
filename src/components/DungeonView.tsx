@@ -24,6 +24,7 @@ import { music } from '../utils/musicManager';
 import { getCharacterChevrons } from '../utils/awards';
 import { useI18n } from '../i18n';
 import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSystem';
+import { getSpellDescription } from '../engine/spellEngine';
 import { MiniMap, loadMiniMapPrefs, saveMiniMapPrefs } from './MiniMap';
 import { CharacterSheetModal } from './CharacterSheetModal';
 import { 
@@ -692,7 +693,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   };
 
   const handleCampCastSpell = (spell: any, targetHero: TCharacter) => {
-    const castCheck = canHeroCastSpells(activeCampHero);
+    const castCheck = canHeroCastSpells(activeCampHero, lang);
     if (!castCheck.canCast) {
       setCampMessage(lang === 'fr' ? `Impossible de lancer le sort : ${castCheck.reason}` : `Cannot cast spell: ${castCheck.reason}`);
       return;
@@ -1351,7 +1352,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
                 {/* Active Status Badges */}
                 <div className="flex flex-wrap gap-0.5 md:gap-1 pt-0.5 min-h-[14px]">
-                  {getActiveStatusEffects(hero).map(eff => (
+                  {getActiveStatusEffects(hero, lang).map(eff => (
                     <span 
                       key={eff.id}
                       className={`text-[8px] md:text-[9px] font-bold px-1 py-0.2 rounded border ${eff.bgColor} ${eff.borderColor} ${eff.color}`}
@@ -1543,7 +1544,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
                   {/* Active Silenced / Afflicted check */}
                   {(() => {
-                    const castCheck = canHeroCastSpells(activeCampHero);
+                    const castCheck = canHeroCastSpells(activeCampHero, lang);
                     if (!castCheck.canCast) {
                       return (
                         <div className="p-2 bg-red-950/60 border border-red-800/60 rounded text-red-300 text-xs flex items-center gap-2">
@@ -1563,7 +1564,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                       const hasSlots = sp.spellType === 'PRIEST' 
                         ? activeCampHero.priestSpells[sp.tier] > 0 
                         : activeCampHero.mageSpells[sp.tier] > 0;
-                      const canCast = canHeroCastSpells(activeCampHero).canCast && hasSlots;
+                      const canCast = canHeroCastSpells(activeCampHero, lang).canCast && hasSlots;
                       const slotsCount = sp.spellType === 'PRIEST' 
                         ? activeCampHero.priestSpells[sp.tier] 
                         : activeCampHero.mageSpells[sp.tier];
@@ -1577,7 +1578,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                                 {t.dungeon.campSlotsRemaining(slotsCount)}
                               </span>
                             </div>
-                            <div className="text-[11px] text-slate-400">{sp.description}</div>
+                            <div className="text-[11px] text-slate-400">{getSpellDescription(sp, lang)}</div>
                           </div>
                           <button
                             onClick={() => handleCampCastSpell(sp, targetHero)}

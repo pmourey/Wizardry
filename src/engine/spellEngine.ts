@@ -337,3 +337,72 @@ export function castCombatSpell(
       log.push(isEn ? `${spell.name} has no effect in the heat of battle.` : `${spell.name} n'a aucun effet dans le feu du combat.`);
   }
 }
+
+export const SPELL_DESCRIPTIONS_EN: Record<string, string> = {
+  // Mage Spells
+  HALITO: 'Miniature fireball inflicting 1-8 fire damage on one enemy.',
+  MOGREF: 'Reduces caster’s AC by 2 for the duration of combat.',
+  KATINO: 'Puts an entire enemy group to sleep.',
+  DUMAPIC: 'Informs the party of their exact depth and coordinates in the maze.',
+  DILTO: 'Increases an enemy group’s AC by 2, making them easier to hit.',
+  SOPIC: 'Makes caster transparent, reducing AC by 4.',
+  MAHALITO: 'Fire storm inflicting 4d6 damage on an enemy group.',
+  MOLITO: 'Stone sparks inflicting 3d6 damage on an enemy group.',
+  MORLIS: 'Frightens and disorients an enemy group (+3 AC).',
+  DALTO: 'Blizzard wave inflicting 6d6 polar cold damage on an enemy group.',
+  LAHALITO: 'Intense furnace blast inflicting 6d6 fire damage on an enemy group.',
+  MAMORLIS: 'Degrades the AC of all enemy groups by 3.',
+  MAKANITO: 'Suffocates and instantly slays all enemies of level <= 7.',
+  MADALTO: 'Deadly blizzard inflicting 8d8 frost damage on an enemy group.',
+  LAKANITO: 'Vacuums air around an enemy group, causing death by suffocation.',
+  ZILWAN: 'Destroys undead monsters (10d200 holy damage).',
+  MASOPIC: 'Reduces the AC of all party members by 4.',
+  HAMAN: 'Pleas to the gods for a random miracle (costs 1 level).',
+  MALOR: 'Teleportation: precise in camp, random emergency teleport in combat.',
+  MAHAMAN: 'Supreme grand miracle with wondrous effects (costs 1 level).',
+  TILTOWAI: 'Mythical nuclear explosion inflicting 10d15 damage to all monsters.',
+
+  // Priest Spells
+  KALKI: 'Blesses the party by improving AC by 1.',
+  DIOS: 'Heals 1-8 hit points on a hero.',
+  BADIOS: 'Inflicts 1-8 spiritual damage on an enemy.',
+  MILWA: 'Illuminates dark dungeon corridors (15 to 29 steps).',
+  PORFIC: 'Creates a divine shield for the priest (-4 AC).',
+  MATU: 'Major blessing reducing party AC by 2.',
+  CALFO: 'Reveals with 100% certainty the true trap on a chest.',
+  MANIFO: 'Paralyzes and immobilizes an enemy group.',
+  MONTINO: 'Envelops an enemy group in magical silence.',
+  LATUMAPIC: 'Reveals the true identities of unknown monsters.',
+  BAMATU: 'Battle prayer reducing party AC by 4.',
+  DIALKO: 'Cures paralysis and awakens sleeping companions.',
+  LATUMOFI: 'Neutralizes poison in a hero.',
+  LATUMOFIS: 'Neutralizes poison in a hero.',
+  MAPORFIC: 'Great protective ward (-2 AC) lasting the entire expedition.',
+  DIAL: 'Heals 2-16 (2d8) hit points on a hero.',
+  BADIAL: 'Inflicts 2-16 spiritual damage on an enemy.',
+  LATUDIC: 'Reveals secret doors in front of the party.',
+  DIALMA: 'Heals 3-24 (3d8) hit points on a hero.',
+  BADIALMA: 'Inflicts 3-24 spiritual damage on an enemy.',
+  LITOKAN: 'Pillar of sacred flame inflicting 3d8 damage on an enemy group.',
+  KANDI: 'Divines the coordinates and depth of fallen party members.',
+  DI: 'Resurrects a dead hero (small chance of turning to ashes).',
+  BADI: 'Death word attempting to slay an enemy outright.',
+  LORTO: 'Blades of holy light inflicting 6d6 damage on an enemy group.',
+  MADI: 'Fully restores all HP and cures all afflictions except death.',
+  MABADI: 'Reduces an enemy to 1-8 HP with sacred wrath.',
+  LOKTOFEI: 'Emergency divine recall to Castle (party loses all gold and gear).',
+  LOKTOFEIT: 'Emergency divine recall to Castle (party loses all gold and gear).',
+  MALIKTO: 'Holy celestial wrath inflicting 12d6 damage to all monsters.',
+  KADORTO: 'Supreme resurrection: restores life to dead or ashed heroes at full HP.'
+};
+
+export function getSpellDescription(
+  spell?: { name: string; description?: string; descriptionEn?: string } | null,
+  lang: 'en' | 'fr' = 'en'
+): string {
+  if (!spell) return '';
+  if (lang === 'en') {
+    return spell.descriptionEn || SPELL_DESCRIPTIONS_EN[spell.name.toUpperCase()] || spell.description || '';
+  }
+  return spell.description || SPELL_DESCRIPTIONS_EN[spell.name.toUpperCase()] || '';
+}

@@ -48,6 +48,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { getActiveStatusEffects, TActiveStatusEffect } from '../engine/statusSystem';
+import { getSpellDescription } from '../engine/spellEngine';
 import { useI18n } from '../i18n';
 
 interface CharacterSheetModalProps {
@@ -341,7 +342,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
 
   const statusInfo = statusConfig[hero.status] || statusConfig.OK;
   const ageYears = Math.floor(hero.age / 52);
-  const activeEffects = getActiveStatusEffects(hero);
+  const activeEffects = getActiveStatusEffects(hero, lang);
 
   const renderEffectIcon = (name: string, className = "w-3.5 h-3.5") => {
     switch (name) {
@@ -1080,7 +1081,7 @@ export const CharacterSheetModal: React.FC<CharacterSheetModalProps> = ({
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-300 leading-snug">
-                        {spell.description}
+                        {getSpellDescription(spell, lang)}
                       </p>
                     </div>
                   ))}

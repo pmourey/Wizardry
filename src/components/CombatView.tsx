@@ -49,6 +49,7 @@ import {
   Check
 } from 'lucide-react';
 import { getActiveStatusEffects } from '../engine/statusSystem';
+import { getSpellDescription } from '../engine/spellEngine';
 
 interface CombatViewProps {
   party: TCharacter[];
@@ -480,7 +481,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5 sm:gap-2">
           {party.map((hero, hIdx) => {
-            const effs = getActiveStatusEffects(hero);
+            const effs = getActiveStatusEffects(hero, lang);
             const isTurn = !isResolving && activeHero && activeHero.id === hero.id;
 
             return (
@@ -837,7 +838,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                                 <span>{sp.name}</span>
                                 <span className="text-[10px] text-purple-400">T{sp.tier}</span>
                               </div>
-                              <div className="text-[11px] text-slate-400 line-clamp-1">{sp.description}</div>
+                              <div className="text-[11px] text-slate-400 line-clamp-1">{getSpellDescription(sp, lang)}</div>
                             </button>
                           ))}
                         </div>
@@ -978,7 +979,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                                     {sp && <span className="text-[10px] text-purple-400 font-mono">{sp.name}</span>}
                                   </div>
                                   <div className="text-[11px] text-slate-400 line-clamp-1">
-                                    {sp ? sp.description : itm.healPts > 0 ? (lang === 'fr' ? `Régénération passive (+${itm.healPts} PV/tour)` : `Passive regeneration (+${itm.healPts} HP/round)`) : (lang === 'fr' ? 'Objet magique' : 'Magic item')}
+                                    {sp ? getSpellDescription(sp, lang) : itm.healPts > 0 ? (lang === 'fr' ? `Régénération passive (+${itm.healPts} PV/tour)` : `Passive regeneration (+${itm.healPts} HP/round)`) : (lang === 'fr' ? 'Objet magique' : 'Magic item')}
                                   </div>
                                 </button>
                               );

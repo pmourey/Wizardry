@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { WIZARDRY_SCENARIOS, WizardryScenarioMeta, getLocalizedScenario } from '../data/scenariosCatalog';
 import { TCharacter } from '../types/wizardry';
 import { useLanguage, UI_TEXT } from '../utils/language';
+import { useI18n } from '../i18n';
 import {
   Sparkles,
   Compass,
@@ -46,7 +47,7 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
   getStorageKeysForScenario,
   onOpenManuals
 }) => {
-  const [lang, setLang] = useLanguage();
+  const { lang, setLang } = useI18n();
   const t = UI_TEXT[lang];
 
   const [selectedId, setSelectedId] = useState<string>(activeScenarioId || 'proving-grounds');

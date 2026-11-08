@@ -1136,7 +1136,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                       </div>
                       {/* Active Status Badges */}
                       <div className="flex flex-wrap gap-0.5 sm:gap-1 pt-1 min-h-[16px] sm:min-h-[18px]">
-                        {getActiveStatusEffects(hero).map(eff => (
+                        {getActiveStatusEffects(hero, lang).map(eff => (
                           <span 
                             key={eff.id}
                             className={`text-[8px] sm:text-[9px] font-bold px-1 py-0.2 rounded border ${eff.bgColor} ${eff.borderColor} ${eff.color}`}
@@ -1375,7 +1375,7 @@ export const CastleView: React.FC<CastleViewProps> = ({
                 }
 
                 return patients.map(h => {
-                  const effs = getActiveStatusEffects(h);
+                  const effs = getActiveStatusEffects(h, lang);
                   const hasAilment = effs.length > 0;
                   const isDeceasedRoster = !party.some(p => p.id === h.id);
 

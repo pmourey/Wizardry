@@ -490,7 +490,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             <button
               onClick={onExpand}
               className="p-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 transition active:scale-95"
-              title="Agrandir en plein écran (M)"
+              title={t.miniMap.expandModalBtn}
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </button>
@@ -501,7 +501,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
             <button
               onClick={onClose}
               className="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition active:scale-95"
-              title="Fermer la minicarte"
+              title={t.miniMap.closeMinimapBtn}
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -521,11 +521,11 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           </span>
         </div>
 
-        {/* Orientation Compass Rose (N / O / E / S) */}
-        <div className="bg-slate-950/90 border border-slate-800/90 px-1.5 py-0.5 rounded text-[8px] font-mono flex flex-col items-center leading-none select-none shrink-0" title={`Orientation : ${dirNames[direction]}`}>
+        {/* Orientation Compass Rose (N / W-O / E / S) */}
+        <div className="bg-slate-950/90 border border-slate-800/90 px-1.5 py-0.5 rounded text-[8px] font-mono flex flex-col items-center leading-none select-none shrink-0" title={lang === 'en' ? `Heading: ${dirNames[direction]}` : `Orientation : ${dirNames[direction]}`}>
           <span className={direction === 0 ? 'text-amber-400 font-bold' : 'text-slate-600'}>N</span>
           <div className="flex gap-2.5 my-0.5">
-            <span className={direction === 3 ? 'text-amber-400 font-bold' : 'text-slate-600'}>O</span>
+            <span className={direction === 3 ? 'text-amber-400 font-bold' : 'text-slate-600'}>{lang === 'en' ? 'W' : 'O'}</span>
             <span className={direction === 1 ? 'text-amber-400 font-bold' : 'text-slate-600'}>E</span>
           </div>
           <span className={direction === 2 ? 'text-amber-400 font-bold' : 'text-slate-600'}>S</span>
@@ -537,7 +537,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         className="flex flex-col items-center justify-center overflow-hidden bg-slate-950 rounded-lg p-1.5 sm:p-2 border border-slate-800/80 relative w-full cursor-pointer select-none touch-manipulation"
-        title={variant === 'modal' ? 'Glisser ou cliquer sur la carte pour explorer' : undefined}
+        title={variant === 'modal' ? (lang === 'en' ? 'Drag or click on the map to explore' : 'Glisser ou cliquer sur la carte pour explorer') : undefined}
       >
         <svg
           viewBox={`-${svgPad} -${svgPad} ${totalSvgWidth} ${totalSvgHeight}`}

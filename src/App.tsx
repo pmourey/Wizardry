@@ -802,7 +802,13 @@ export default function App() {
       const maxUses = ev.aux0 > 0 ? ev.aux0 : (ev.aux0 === -1 ? 1 : 0);
       if (maxUses > 0 && used >= maxUses) {
         if (searching) {
-          announce('Gardiens déjà vaincus', ['Les créatures gardiennes de cette salle ont déjà été terrassées.', 'La voie est libre.'], undefined, x, y);
+          announce(
+            lang === 'en' ? 'Guardians Already Defeated' : 'Gardiens déjà vaincus', 
+            lang === 'en' 
+              ? ['The guardian creatures of this room have already been slain.', 'The way is clear.'] 
+              : ['Les créatures gardiennes de cette salle ont déjà été terrassées.', 'La voie est libre.'], 
+            undefined, x, y
+          );
         }
         return false;
       }
@@ -846,12 +852,19 @@ export default function App() {
           ];
 
       announce(
-        "Sanctuaire du Pentagramme (Repos & Invocation)",
-        [
-          ...pentagramLines,
-          "✨ Points de Vie et Sorts magiques entièrement régénérés !",
-          "L'Archi-Mage Werdna et ses serviteurs sont parés pour l'assaut."
-        ],
+        lang === 'en' ? "Pentagram Sanctuary (Rest & Summoning)" : "Sanctuaire du Pentagramme (Repos & Invocation)",
+        lang === 'en'
+          ? [
+              "In the center glows an occult summoning pentagram.",
+              "Glowing red runes envelop Arch-Mage Werdna with protective energy.",
+              "✨ Hit Points and Spell Slots fully restored!",
+              "Arch-Mage Werdna and his servants are primed for battle."
+            ]
+          : [
+              ...pentagramLines,
+              "✨ Points de Vie et Sorts magiques entièrement régénérés !",
+              "L'Archi-Mage Werdna et ses serviteurs sont parés pour l'assaut."
+            ],
         undefined,
         x,
         y
@@ -873,8 +886,8 @@ export default function App() {
         markEventUsed(key, used + 1);
         if (ev.message?.length) {
           const title = ev.description?.toLowerCase().includes('sign') || ev.description?.toLowerCase().includes('message')
-            ? 'Panneau ou inscription murale'
-            : 'Inscription ou vision';
+            ? (lang === 'en' ? 'Sign or Wall Inscription' : 'Panneau ou inscription murale')
+            : (lang === 'en' ? 'Inscription or Vision' : 'Inscription ou vision');
           announce(title, ev.message, undefined, x, y);
         }
         return false;
@@ -882,21 +895,34 @@ export default function App() {
         if (used > 0) return false;
         markEventUsed(key, used + 1);
         const got = ev.itemId !== undefined ? giveItemToParty(ev.itemId) : null;
-        announce('Un objet est trouvé', ev.message?.length ? ev.message : ['Un objet gît ici.'], got || undefined, x, y);
+        announce(
+          lang === 'en' ? 'An Item Was Found' : 'Un objet est trouvé', 
+          ev.message?.length ? ev.message : [lang === 'en' ? 'An item lies here.' : 'Un objet gît ici.'], 
+          got || undefined, x, y
+        );
         return false;
       }
       case 'BACK_TO_CASTLE':
-        if (ev.message?.length) announce('Une lueur étrange', ev.message, undefined, x, y);
+        if (ev.message?.length) announce(lang === 'en' ? 'A Strange Glow' : 'Une lueur étrange', ev.message, undefined, x, y);
         handleTakeStairs(0, 0, 0);
         return true;
       case 'SEARCH_FIGHT': {
         if (!searching) {
-          if (ev.message?.length) announce('Une salle singulière', ev.message, 'Fouillez (Inspecter) pour en savoir plus.', x, y);
+          if (ev.message?.length) announce(
+            lang === 'en' ? 'A Peculiar Room' : 'Une salle singulière', 
+            ev.message, 
+            lang === 'en' ? 'Search (Inspect) to discover more.' : 'Fouillez (Inspecter) pour en savoir plus.', 
+            x, y
+          );
           return false;
         }
         if (ev.monsterId !== undefined) {
           if (used > 0 && ev.uses !== 'ALWAYS') {
-            announce('Salle dégagée', ['Les créatures gardiennes de cette salle ont déjà été vaincues.'], undefined, x, y);
+            announce(
+              lang === 'en' ? 'Room Cleared' : 'Salle dégagée', 
+              [lang === 'en' ? 'The guardian creatures of this room have already been defeated.' : 'Les créatures gardiennes de cette salle ont déjà été vaincues.'], 
+              undefined, x, y
+            );
             return false;
           }
           markEventUsed(key, used + 1);
@@ -905,22 +931,36 @@ export default function App() {
         }
         if (ev.itemId !== undefined) {
           if (used > 0 && ev.uses !== 'ALWAYS') {
-            announce('Lieu déjà fouillé', ['Vous avez déjà fouillé cet endroit de fond en comble.', 'Il ne reste plus rien d\'intéressant ici.'], undefined, x, y);
+            announce(
+              lang === 'en' ? 'Area Already Searched' : 'Lieu déjà fouillé', 
+              [lang === 'en' ? 'You have thoroughly searched this area.' : 'Vous avez déjà fouillé cet endroit de fond en comble.', lang === 'en' ? 'Nothing of interest remains here.' : 'Il ne reste plus rien d\'intéressant ici.'], 
+              undefined, x, y
+            );
             return false;
           }
           const hero = party.find(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.possessions.length < 8);
           if (!hero) {
-            announce('Inventaire plein !', ['Un objet précieux repose ici, mais tous vos inventaires sont saturés.', 'Libérez au moins un emplacement d\'inventaire pour le ramasser !'], undefined, x, y);
+            announce(
+              lang === 'en' ? 'Inventory Full!' : 'Inventaire plein !', 
+              [lang === 'en' ? 'A valuable object rests here, but all hero inventories are full.' : 'Un objet précieux repose ici, mais tous vos inventaires sont saturés.', lang === 'en' ? 'Free up at least one inventory slot to pick it up!' : 'Libérez au moins un emplacement d\'inventaire pour le ramasser !'], 
+              undefined, x, y
+            );
             return false;
           }
           markEventUsed(key, used + 1);
           const got = giveItemToParty(ev.itemId);
           sounds.playFanfare();
-          announce('Fouille fructueuse !', ev.message || [], got || undefined, x, y);
+          announce(
+            lang === 'en' ? 'Search Successful!' : 'Fouille fructueuse !', 
+            ev.message || [], 
+            got || undefined, x, y
+          );
           addAdventureEvent(
             'DISCOVERY',
-            'Découverte d\'un objet précieux',
-            `Lors de la fouille de la case (${x}, ${y}), ${got ?? 'un objet a été récupéré'}.`,
+            lang === 'en' ? 'Discovery of a Valuable Item' : 'Découverte d\'un objet précieux',
+            lang === 'en' 
+              ? `While searching square (${x}, ${y}), ${got ?? 'an item was recovered'}.` 
+              : `Lors de la fouille de la case (${x}, ${y}), ${got ?? 'un objet a été récupéré'}.`,
             undefined,
             dungeonLevel,
             { x, y }
@@ -930,7 +970,7 @@ export default function App() {
         return false;
       }
       default:
-        if (ev.message?.length) announce('Message', ev.message, undefined, x, y);
+        if (ev.message?.length) announce(lang === 'en' ? 'Message' : 'Message', ev.message, undefined, x, y);
         return false;
     }
   };
@@ -951,9 +991,9 @@ export default function App() {
       if (!hasItem) {
         sounds.playBump();
         announce(
-          'Passage bloqué',
-          gate.message?.length ? gate.message : ['Il manque un objet pour passer.'],
-          `Objet requis : ${ITEMS_DATABASE.find(i => i.id === gate.itemId)?.name ?? gate.itemId}`,
+          lang === 'en' ? 'Passage Blocked' : 'Passage bloqué',
+          gate.message?.length ? gate.message : [lang === 'en' ? 'An item is missing to pass.' : 'Il manque un objet pour passer.'],
+          (lang === 'en' ? 'Required item: ' : 'Objet requis : ') + `${ITEMS_DATABASE.find(i => i.id === gate.itemId)?.name ?? gate.itemId}`,
           newX,
           newY
         );
@@ -986,9 +1026,9 @@ export default function App() {
         const targetY = (sqrDef.aux1 !== undefined && sqrDef.aux1 >= 0) ? sqrDef.aux1 : 0;
         addAdventureEvent(
           'LOSS', 
-          'Chute dans un puits !', 
-          `Le sol cède : l'escouade tombe au niveau ${sqrDef.aux0}.`, 
-          `Arrivée en coordonnées (E${targetX}, N${targetY})`, 
+          lang === 'en' ? 'Fall Down a Chute!' : 'Chute dans un puits !', 
+          lang === 'en' ? `The floor gives way: the party falls to Floor ${sqrDef.aux0}.` : `Le sol cède : l'escouade tombe au niveau ${sqrDef.aux0}.`, 
+          lang === 'en' ? `Landed at coordinates (E${targetX}, N${targetY})` : `Arrivée en coordonnées (E${targetX}, N${targetY})`, 
           dungeonLevel, 
           { x: newX, y: newY }
         );
@@ -1014,8 +1054,10 @@ export default function App() {
         sounds.playBump();
         addAdventureEvent(
           'LOSS',
-          'Chute dans une fosse piégée !',
-          `Le sol s'est brusquement dérobé sous les pas de l'escouade. Vos héros subissent des dégâts de chute (${totalDamage} PV au total).`,
+          lang === 'en' ? 'Fell into a Pit Trap!' : 'Chute dans une fosse piégée !',
+          lang === 'en' 
+            ? `The floor suddenly gives way under the party's boots. Your heroes suffer fall damage (${totalDamage} total HP).` 
+            : `Le sol s'est brusquement dérobé sous les pas de l'escouade. Vos héros subissent des dégâts de chute (${totalDamage} PV au total).`,
           undefined,
           dungeonLevel,
           { x: newX, y: newY }
@@ -1038,12 +1080,12 @@ export default function App() {
         setPosX(sqrDef.aux2);
         setPosY(sqrDef.aux1);
         announce(
-          'Téléportation magique mystique',
+          lang === 'en' ? 'Mystic Teleportation' : 'Téléportation magique mystique',
           [
-            'Un souffle arcanique invisible déforme l\'espace !',
-            'L\'escouade a été mystérieusement téléportée !'
+            lang === 'en' ? 'An invisible arcane ripple twists space!' : 'Un souffle arcanique invisible déforme l\'espace !',
+            lang === 'en' ? 'The party has been mysteriously teleported!' : 'L\'escouade a été mystérieusement téléportée !'
           ],
-          `Coordonnées actuelles : (E${sqrDef.aux2}, N${sqrDef.aux1})`,
+          (lang === 'en' ? 'Current coordinates: ' : 'Coordonnées actuelles : ') + `(E${sqrDef.aux2}, N${sqrDef.aux1})`,
           sqrDef.aux2,
           sqrDef.aux1
         );
@@ -1076,9 +1118,11 @@ export default function App() {
       if (updatedParty.every(p => p.status === 'DEAD' || p.status === 'ASHES')) {
         addAdventureEvent(
           'LOSS',
-          "Hécatombe causée par le poison",
-          "Le venin a insidieusement drainé les dernières forces de l'escouade. Tous vos héros se sont effondrés.",
-          `Lieu du drame : Niveau ${dungeonLevel}, position (${newX}, ${newY})`,
+          lang === 'en' ? "Party Succumbed to Poison" : "Hécatombe causée par le poison",
+          lang === 'en' 
+            ? "Deadly venom insidiously drained the party's strength. All heroes have collapsed." 
+            : "Le venin a insidieusement drainé les dernières forces de l'escouade. Tous vos héros se sont effondrés.",
+          (lang === 'en' ? 'Location: Floor ' : 'Lieu du drame : Niveau ') + `${dungeonLevel}, (${newX}, ${newY})`,
           dungeonLevel,
           { x: newX, y: newY }
         );
@@ -1185,10 +1229,10 @@ export default function App() {
       if (oppWall === 'DOOR' || oppWall === 'HIDEDOOR') {
         sounds.playBump();
         announce(
-          "Passage à sens unique",
+          lang === 'en' ? "One-Way Passage" : "Passage à sens unique",
           [
-            "Vous tentez d'enfoncer la porte, mais elle résiste comme un mur d'acier massif.",
-            "Cette porte ne s'ouvre que depuis l'autre côté (passage à sens unique)."
+            lang === 'en' ? "You attempt to batter down the door, but it resists like a wall of solid steel." : "Vous tentez d'enfoncer la porte, mais elle résiste comme un mur d'acier massif.",
+            lang === 'en' ? "This door opens only from the other side (one-way passage)." : "Cette porte ne s'ouvre que depuis l'autre côté (passage à sens unique)."
           ],
           undefined,
           posX,
@@ -1209,10 +1253,10 @@ export default function App() {
       revealSecretDoor(posX, posY, direction);
       sounds.playDoor();
       announce(
-        "Porte secrète enfoncée !",
+        lang === 'en' ? "Secret Door Battered Open!" : "Porte secrète enfoncée !",
         [
-          "D'un coup vigoureux, vous forcez le panneau secret camouflé dans la pierre !",
-          "La porte dérobée cède : le passage restera désormais ouvert et praticable pour le groupe."
+          lang === 'en' ? "With a powerful kick, you force open the secret panel camouflaged in the stone!" : "D'un coup vigoureux, vous forcez le panneau secret camouflé dans la pierre !",
+          lang === 'en' ? "The hidden door yields: the passage will now remain open and accessible to the party." : "La porte dérobée cède : le passage restera désormais ouvert et praticable pour le groupe."
         ],
         undefined,
         posX,
@@ -1734,17 +1778,17 @@ export default function App() {
         const isDown = targetFloor > dungeonLevel;
         announce(
           isCastle 
-            ? "Escalier vers le Château" 
+            ? (lang === 'en' ? "Stairs to Castle" : "Escalier vers le Château")
             : isDown 
-              ? `Escalier descendant (Niveau ${targetFloor})` 
-              : `Escalier montant (Niveau ${targetFloor})`,
+              ? (lang === 'en' ? `Stairs Down (Floor ${targetFloor})` : `Escalier descendant (Niveau ${targetFloor})`)
+              : (lang === 'en' ? `Stairs Up (Floor ${targetFloor})` : `Escalier montant (Niveau ${targetFloor})`),
           [
             isCastle
-              ? "Vous inspectez les marches de pierre : cet escalier remonte directement vers la cour et la sécurité du Château."
+              ? (lang === 'en' ? "You inspect the stone steps: these stairs lead directly back to the safety of the Castle." : "Vous inspectez les marches de pierre : cet escalier remonte directement vers la cour et la sécurité du Château.")
               : isDown
-                ? `Vous inspectez les marches taillées dans la roche : cet escalier s'enfonce dans les profondeurs vers le Niveau ${targetFloor}.`
-                : `Vous inspectez les marches de pierre : cet escalier remonte vers les couloirs du Niveau ${targetFloor}.`,
-            "Pour emprunter cet escalier, cliquez sur le bouton 'Emprunter' ou appuyez sur la touche (Y)."
+                ? (lang === 'en' ? `You inspect the stone steps: these stairs descend into the depths to Floor ${targetFloor}.` : `Vous inspectez les marches taillées dans la roche : cet escalier s'enfonce dans les profondeurs vers le Niveau ${targetFloor}.`)
+                : (lang === 'en' ? `You inspect the stone steps: these stairs lead up to the corridors of Floor ${targetFloor}.` : `Vous inspectez les marches de pierre : cet escalier remonte vers les couloirs du Niveau ${targetFloor}.`),
+            lang === 'en' ? "To take these stairs, click 'Take Stairs' or press (Y)." : "Pour emprunter cet escalier, cliquez sur le bouton 'Emprunter' ou appuyez sur la touche (Y)."
           ],
           undefined,
           posX,
@@ -1768,17 +1812,17 @@ export default function App() {
       const isDown = targetFloor > dungeonLevel;
       announce(
         isCastle 
-          ? "Escalier vers le Château" 
+          ? (lang === 'en' ? "Stairs to Castle" : "Escalier vers le Château")
           : isDown 
-            ? `Escalier descendant (Niveau ${targetFloor})` 
-            : `Escalier montant (Niveau ${targetFloor})`,
+            ? (lang === 'en' ? `Stairs Down (Floor ${targetFloor})` : `Escalier descendant (Niveau ${targetFloor})`)
+            : (lang === 'en' ? `Stairs Up (Floor ${targetFloor})` : `Escalier montant (Niveau ${targetFloor})`),
         [
           isCastle
-            ? "Vous inspectez les marches de pierre : cet escalier remonte directement vers la cour et la sécurité du Château."
+            ? (lang === 'en' ? "You inspect the stone steps: these stairs lead directly back to the safety of the Castle." : "Vous inspectez les marches de pierre : cet escalier remonte directement vers la cour et la sécurité du Château.")
             : isDown
-              ? `Vous inspectez les marches taillées dans la roche : cet escalier s'enfonce dans les profondeurs vers le Niveau ${targetFloor}.`
-              : `Vous inspectez les marches de pierre : cet escalier remonte vers les couloirs du Niveau ${targetFloor}.`,
-          "Pour emprunter cet escalier, cliquez sur le bouton 'Emprunter' ou appuyez sur la touche (Y)."
+              ? (lang === 'en' ? `You inspect the stone steps: these stairs descend into the depths to Floor ${targetFloor}.` : `Vous inspectez les marches taillées dans la roche : cet escalier s'enfonce dans les profondeurs vers le Niveau ${targetFloor}.`)
+              : (lang === 'en' ? `You inspect the stone steps: these stairs lead up to the corridors of Floor ${targetFloor}.` : `Vous inspectez les marches de pierre : cet escalier remonte vers les couloirs du Niveau ${targetFloor}.`),
+          lang === 'en' ? "To take these stairs, click 'Take Stairs' or press (Y)." : "Pour emprunter cet escalier, cliquez sur le bouton 'Emprunter' ou appuyez sur la touche (Y)."
         ],
         undefined,
         posX,
@@ -1832,13 +1876,19 @@ export default function App() {
       if (roll < detectChance) {
         revealSecretDoor(posX, posY, direction);
         sounds.playDoor();
-        const scoutName = scout ? scout.name : 'Le groupe';
+        const scoutName = scout ? scout.name : (lang === 'en' ? 'The party' : 'Le groupe');
         announce(
-          "Porte secrète découverte !",
+          lang === 'en' ? "Secret Door Discovered!" : "Porte secrète découverte !",
           [
-            `${scoutName} examine attentivement les blocs de pierre et décèle un interstice dissimulé.`,
-            "Un panneau secret pivote doucement et le passage est désormais ouvert !",
-            "Vous pouvez à présent franchir cette porte librement (en avançant normalement)."
+            lang === 'en' 
+              ? `${scoutName} carefully inspects the masonry and detects a concealed fissure.` 
+              : `${scoutName} examine attentivement les blocs de pierre et décèle un interstice dissimulé.`,
+            lang === 'en' 
+              ? "A secret panel smoothly pivots: the passage is now open!" 
+              : "Un panneau secret pivote doucement et le passage est désormais ouvert !",
+            lang === 'en' 
+              ? "You can now pass through freely by walking forward." 
+              : "Vous pouvez à présent franchir cette porte librement (en avançant normalement)."
           ],
           undefined,
           posX,
@@ -1846,8 +1896,10 @@ export default function App() {
         );
         addAdventureEvent(
           'DISCOVERY',
-          'Porte secrète découverte',
-          `Une porte dérobée a été trouvée en (${posX}, ${posY}) par ${scoutName}. Le passage reste désormais ouvert et praticable.`,
+          lang === 'en' ? 'Secret Door Discovered' : 'Porte secrète découverte',
+          lang === 'en' 
+            ? `A hidden door was found at (${posX}, ${posY}) by ${scoutName}. The passage remains open and passable.` 
+            : `Une porte dérobée a été trouvée en (${posX}, ${posY}) par ${scoutName}. Le passage reste désormais ouvert et praticable.`,
           undefined,
           dungeonLevel,
           { x: posX, y: posY }
@@ -1855,10 +1907,10 @@ export default function App() {
       } else {
         sounds.playBump();
         announce(
-          "Inspection de la paroi",
+          lang === 'en' ? "Wall Inspection" : "Inspection de la paroi",
           [
-            "Vous tâtez attentivement la surface de la roche à la recherche d'une aspérité ou d'une fente.",
-            "La paroi semble solide et aucun mécanisme n'apparaît pour l'instant."
+            lang === 'en' ? "You feel the rock surface carefully for cracks or levers." : "Vous tâtez attentivement la surface de la roche à la recherche d'une aspérité ou d'une fente.",
+            lang === 'en' ? "The wall appears solid and reveals no mechanism for now." : "La paroi semble solide et aucun mécanisme n'apparaît pour l'instant."
           ],
           undefined,
           posX,
@@ -1870,10 +1922,10 @@ export default function App() {
 
     if (facingWall === 'WALL' && (oppWall === 'DOOR' || oppWall === 'HIDEDOOR')) {
       announce(
-        "Passage à sens unique",
+        lang === 'en' ? "One-Way Passage" : "Passage à sens unique",
         [
-          "Vous examinez attentivement les joints de la paroi rocheuse.",
-          "Vous distinguez la découpe d'un ancien passage scellé, mais aucun mécanisme n'existe de ce côté : il s'agit d'un passage à sens unique, accessible uniquement depuis l'autre côté !"
+          lang === 'en' ? "You examine the seams in the rocky surface." : "Vous examinez attentivement les joints de la paroi rocheuse.",
+          lang === 'en' ? "You recognize the outline of an ancient passage, but there is no latch on this side: this is a one-way door, openable only from the other side!" : "Vous distinguez la découpe d'un ancien passage scellé, mais aucun mécanisme n'existe de ce côté : il s'agit d'un passage à sens unique, accessible uniquement depuis l'autre côté !"
         ],
         undefined,
         posX,
@@ -1887,8 +1939,11 @@ export default function App() {
       triggerBattleEncounter();
     } else {
       announce(
-        'Inspection des lieux',
-        ['Vous examinez attentivement les dalles et les parois environnantes.', 'Rien de particulier n\'attire votre attention.'],
+        lang === 'en' ? 'Area Inspection' : 'Inspection des lieux',
+        [
+          lang === 'en' ? 'You carefully inspect the floor tiles and surrounding walls.' : 'Vous examinez attentivement les dalles et les parois environnantes.',
+          lang === 'en' ? 'Nothing of note catches your eye.' : 'Rien de particulier n\'attire votre attention.'
+        ],
         undefined,
         posX,
         posY
@@ -2122,10 +2177,14 @@ export default function App() {
                 } else {
                   sounds.playBump();
                   announce(
-                    "Donjon Inaccessible",
+                    lang === 'en' ? "Dungeon Inaccessible" : "Donjon Inaccessible",
                     [
-                      "Votre escouade est vide ou tous vos aventuriers sont décédés.",
-                      "Rendez-vous à la Taverne de Gilgamesh pour former une escouade de héros vivants avant de descendre dans le donjon !"
+                      lang === 'en' 
+                        ? "Your party is empty or all adventurers are deceased." 
+                        : "Votre escouade est vide ou tous vos aventuriers sont décédés.",
+                      lang === 'en'
+                        ? "Visit Gilgamesh's Tavern to assemble an active party of living heroes before venturing into the maze!"
+                        : "Rendez-vous à la Taverne de Gilgamesh pour former une escouade de héros vivants avant de descendre dans le donjon !"
                     ],
                     undefined,
                     0,
