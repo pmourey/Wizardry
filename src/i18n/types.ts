@@ -109,6 +109,10 @@ export interface CommonTranslations {
   dungeonSearchBtn: string;
   dungeonStairsTag: string;
   dungeonLightTag: string;
+  dungeonDarkZoneTag: string;
+  dungeonDarkZoneTooltip: string;
+  dungeonLomilwaTag: string;
+  dungeonMilwaTag: string;
   dungeonForward: string;
   dungeonBackward: string;
   dungeonTurnLeft: string;
@@ -583,6 +587,9 @@ export interface MiniMapTranslations {
   revealAllTooltip: string;
   legendToggleBtn: string;
   closeBtn: string;
+  closeMinimapBtn: string;
+  expandModalBtn: string;
+  viewMapBtn: string;
   coordinates: (x: number, y: number) => string;
 
   // Tooltips

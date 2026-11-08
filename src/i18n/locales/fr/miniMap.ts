@@ -11,6 +11,9 @@ export const miniMapFr: MiniMapTranslations = {
   revealAllTooltip: 'Révéler toutes les salles et couloirs du niveau',
   legendToggleBtn: 'Afficher / Masquer Légende',
   closeBtn: 'Fermer la Carte',
+  closeMinimapBtn: 'Fermer la Carte',
+  expandModalBtn: 'Agrandir en Plein Écran',
+  viewMapBtn: 'Consulter la Carte',
   coordinates: (x: number, y: number) => `(${x}, ${y})`,
 
   // Tooltips

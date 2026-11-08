@@ -10,6 +10,7 @@ interface DungeonRenderer3DProps {
   lightLevel: number;
   isDarkZone?: boolean;
   wireframeMode?: boolean;
+  lang?: 'en' | 'fr';
 }
 
 export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
@@ -19,7 +20,8 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
   direction,
   lightLevel,
   isDarkZone = false,
-  wireframeMode = false
+  wireframeMode = false,
+  lang = 'en'
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -719,48 +721,6 @@ export const DungeonRenderer3D: React.FC<DungeonRenderer3DProps> = ({
           backgroundSize: '100% 4px'
         }}
       />
-
-      {/* Atmospheric Torch Light Level Gauge in Viewport */}
-      <div className="absolute bottom-3 left-4 z-10 pointer-events-none flex items-center gap-2 select-none">
-        <div className={`px-2.5 py-1 rounded-lg backdrop-blur-md border text-[11px] font-mono flex items-center gap-2 transition-all duration-300 shadow-lg ${
-          isDarkZone 
-            ? 'bg-black/85 border-purple-900/60 text-purple-300'
-            : lightLevel > 20
-              ? 'bg-amber-950/80 border-amber-500/80 text-amber-200 shadow-amber-950/40'
-              : lightLevel > 0
-                ? 'bg-slate-900/85 border-amber-600/50 text-amber-300'
-                : 'bg-slate-900/80 border-slate-700/60 text-slate-400'
-        }`}>
-          {isDarkZone ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-              <span className="font-sans font-bold">Zone d'Obscurité Magique</span>
-            </>
-          ) : (
-            <>
-              <span className={`w-2 h-2 rounded-full ${
-                lightLevel > 20 ? 'bg-amber-300 animate-ping' : lightLevel > 0 ? 'bg-amber-500 animate-pulse' : 'bg-slate-500'
-              }`} />
-              <span className="font-sans font-semibold">
-                {lightLevel > 25 
-                  ? 'Clarté Divine (LOMILWA)' 
-                  : lightLevel > 0 
-                    ? `Lumière Magique (+${lightLevel})` 
-                    : 'Torche Standard'}
-              </span>
-              {/* Degradation bar */}
-              <div className="w-16 h-1.5 bg-black/60 rounded-full overflow-hidden border border-slate-700/40 ml-1">
-                <div 
-                  className={`h-full transition-all duration-500 ${
-                    lightLevel > 20 ? 'bg-amber-400' : lightLevel > 0 ? 'bg-amber-500' : 'bg-slate-600'
-                  }`}
-                  style={{ width: `${Math.max(15, Math.min(100, lightLevel > 0 ? (lightLevel / 30) * 100 : 25))}%` }}
-                />
-              </div>
-            </>
-          )}
-        </div>
-      </div>
     </div>
   );
 };

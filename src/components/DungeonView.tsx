@@ -40,6 +40,7 @@ import {
   ShieldCheck, 
   Flame, 
   Sparkles, 
+  EyeOff,
   X,
   ArrowUp,
   ArrowLeft,
@@ -900,15 +901,34 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
         {/* Buffs and View toggles */}
         <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
-          {lightLevel > 0 && (
-            <div className="flex items-center gap-1 text-amber-400 font-bold text-[11px] md:text-xs" title={lang === 'fr' ? "Lumière magique Milwa/Lomilwa active" : "Magical light Milwa/Lomilwa active"}>
-              <Flame className="w-3 h-3 md:w-3.5 md:h-3.5 animate-pulse" />
-              <span className="hidden sm:inline">{t.dungeonLightTag}</span> <span>({lightLevel > 999 ? '∞' : lightLevel})</span>
+          {isDarkZone ? (
+            <div 
+              className="flex items-center gap-1 text-purple-300 bg-purple-950/80 border border-purple-500/60 px-2 py-0.5 rounded text-[11px] md:text-xs font-bold animate-pulse" 
+              title={t.dungeonDarkZoneTooltip}
+            >
+              <EyeOff className="w-3 h-3 md:w-3.5 md:h-3.5" />
+              <span>{t.dungeonDarkZoneTag}</span>
             </div>
+          ) : (
+            lightLevel > 0 && (
+              <div 
+                className="flex items-center gap-1 text-amber-300 bg-amber-950/70 border border-amber-600/50 px-2 py-0.5 rounded text-[11px] md:text-xs font-bold" 
+                title={lightLevel > 25 
+                  ? (lang === 'fr' ? "Clarté Divine (LOMILWA actif)" : "Divine Radiance (LOMILWA active)") 
+                  : (lang === 'fr' ? "Lumière Magique (MILWA actif)" : "Magical Light (MILWA active)")}
+              >
+                <Flame className="w-3 h-3 md:w-3.5 md:h-3.5 animate-pulse text-amber-400" />
+                <span className="hidden sm:inline">{lightLevel > 25 ? t.dungeonLomilwaTag : t.dungeonMilwaTag}</span> 
+                <span className="font-mono text-amber-200">({lightLevel > 999 ? '∞' : lightLevel})</span>
+              </div>
+            )
           )}
           {acModifier > 0 && (
-            <div className="flex items-center gap-1 text-blue-400 font-bold text-[11px] md:text-xs" title={t.dungeonShieldTooltip}>
-              <ShieldCheck className="w-3 h-3 md:w-3.5 md:h-3.5" />
+            <div 
+              className="flex items-center gap-1 text-blue-300 bg-blue-950/70 border border-blue-600/50 px-2 py-0.5 rounded text-[11px] md:text-xs font-bold" 
+              title={t.dungeonShieldTooltip}
+            >
+              <ShieldCheck className="w-3 h-3 md:w-3.5 md:h-3.5 text-blue-400" />
               <span className="hidden sm:inline">{t.dungeonShieldMaporfic}</span>
             </div>
           )}
@@ -957,6 +977,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             lightLevel={lightLevel}
             isDarkZone={isDarkZone}
             wireframeMode={wireframeMode}
+            lang={lang}
           />
 
           {/* Fallen Heroes / Lost Bodies Recovery Box */}
@@ -1019,18 +1040,6 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             </div>
           )}
 
-          {/* Collapsed HUD Mini-Map button */}
-          {!hudMinimapVisible && (
-            <button
-              onClick={() => { setHudMinimapVisible(true); sounds.playTurn(); }}
-              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 rounded-lg text-amber-400 text-xs font-bold flex items-center gap-1.5 shadow-xl backdrop-blur-md transition active:scale-95"
-              title="Ouvrir la minicarte (M)"
-            >
-              <Map className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Ouvrir Minicarte</span>
-              <span className="sm:hidden">Carte</span>
-            </button>
-          )}
           {/* Stairs Detected Floating Banner */}
           {isStairs && stairsTargetLvl !== undefined && (
             <div className="fixed top-2 sm:top-4 left-1/2 -translate-x-1/2 z-[55] flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 border border-amber-500/80 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-2xl backdrop-blur-md max-w-[calc(100vw-1rem)]">
@@ -1978,7 +1987,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
       {/* FULL TACTICAL CARTOGRAPHY MODAL */}
       {showMinimap && !showCamp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 overflow-y-auto safe-top safe-bottom safe-left safe-right animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 sm:bg-black/90 backdrop-blur-md p-0 sm:p-3 md:p-6 overflow-y-auto safe-top safe-bottom safe-left safe-right animate-fadeIn">
           <MiniMap
             maze={maze}
             x={x}

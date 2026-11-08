@@ -423,7 +423,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
   return (
     <div className={`select-none transition-all flex flex-col ${
       variant === 'modal' 
-        ? 'bg-slate-900 border border-slate-700 rounded-xl sm:rounded-2xl shadow-2xl p-2.5 sm:p-5 max-w-lg w-full max-h-[92vh] overflow-y-auto safe-top safe-bottom' 
+        ? 'bg-slate-900 border-0 sm:border border-slate-700/80 rounded-none sm:rounded-2xl shadow-2xl p-2 sm:p-4 md:p-5 w-full h-full sm:h-auto sm:max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-none sm:max-h-[96vh] overflow-y-auto safe-top safe-bottom justify-between' 
         : variant === 'sidebar'
         ? 'bg-slate-950/80 border border-slate-800 rounded-xl p-2 sm:p-3'
         : 'bg-slate-950/90 backdrop-blur-md border border-slate-800/90 rounded-xl shadow-2xl p-2 sm:p-3 w-[260px] sm:w-[280px]'
@@ -541,9 +541,11 @@ export const MiniMap: React.FC<MiniMapProps> = ({
       >
         <svg
           viewBox={`-${svgPad} -${svgPad} ${totalSvgWidth} ${totalSvgHeight}`}
-          width={totalSvgWidth}
-          height={totalSvgHeight}
-          className="max-w-full h-auto aspect-square overflow-visible"
+          className={`aspect-square mx-auto block overflow-visible ${
+            variant === 'modal'
+              ? 'w-full h-auto max-w-[min(92vw,54vh)] sm:max-w-[min(84vw,60vh)] md:max-w-[min(80vw,65vh)] lg:max-w-[min(75vw,70vh)]'
+              : 'w-full h-auto max-w-full'
+          }`}
           style={{ imageRendering: 'pixelated' }}
         >
           {/* Defs: gradients & patterns */}
@@ -633,7 +635,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
               specialFill = '#881337';
               tileBorder = '#f43f5e';
               tileBorderWidth = 1;
-              tooltip = lang === 'fr' ? `☠ Fossepiège (${cx}, ${cy})` : `☠ Pitfall Trap (${cx}, ${cy})`;
+              tooltip = lang === 'fr' ? `☠ Fosse piégée (${cx}, ${cy})` : `☠ Pitfall Trap (${cx}, ${cy})`;
             } else if (specialType === 'SPINNER') {
               specialFill = '#0e7490';
               tileBorder = '#22d3ee';
@@ -1197,7 +1199,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-red-400 font-bold">☠</span>
-            <span>{lang === 'fr' ? 'Fossepiège' : 'Pitfall'}</span>
+            <span>{lang === 'fr' ? 'Fosse piégée' : 'Pitfall'}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-cyan-400 font-bold">↻</span>

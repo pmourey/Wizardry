@@ -11,6 +11,9 @@ export const miniMapEn: MiniMapTranslations = {
   revealAllTooltip: 'Reveal all rooms and corridors (exploration aid)',
   legendToggleBtn: 'Toggle Legend',
   closeBtn: 'Close Map',
+  closeMinimapBtn: 'Close Map',
+  expandModalBtn: 'Expand to Fullscreen',
+  viewMapBtn: 'View Map',
   coordinates: (x: number, y: number) => `(${x}, ${y})`,
 
   // Tooltips
