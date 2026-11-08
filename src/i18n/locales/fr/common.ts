@@ -19,6 +19,8 @@ export const commonFr: CommonTranslations = {
   exportPySide6: 'Export PySide6',
   manualsBtn: 'Manuels & Guides',
   manualsTooltip: 'Télécharger les manuels officiels & guides Zimlab',
+  cheatNavBtn: 'Triche',
+  cheatNavTooltip: "Console de triche & outils de développement (F2) : XP pour l'Auberge, Or, Clés d'ascenseurs Wizardry 1, Soins rapides",
   scenarioMenuTooltip: 'Ouvrir le menu principal de sélection des scénarios',
   langSwitchFrTooltip: "Afficher l'interface et les scénarios en Français",
   langSwitchEnTooltip: 'Display interface and scenarios in English',

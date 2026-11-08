@@ -19,6 +19,8 @@ export const commonEn: CommonTranslations = {
   exportPySide6: 'Export PySide6',
   manualsBtn: 'Manuals & Guides',
   manualsTooltip: 'Download official manuals & Zimlab clue books',
+  cheatNavBtn: 'Cheats',
+  cheatNavTooltip: 'Cheat & Developer Console (F2): Inn EXP, Gold, Wizardry 1 Elevator Keys, Quick Heal',
   scenarioMenuTooltip: 'Open scenario selection menu',
   langSwitchFrTooltip: "Afficher l'interface et les scénarios en Français",
   langSwitchEnTooltip: 'Display interface and scenarios in English',

@@ -2125,10 +2125,10 @@ export default function App() {
           <button
             onClick={() => setShowCheatModal(true)}
             className="flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-600/40 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition shadow-sm"
-            title="Console de triche (F2) : XP pour l'Auberge, Or, Clés d'ascenseurs Wizardry 1, Soins rapides"
+            title={t.cheatNavTooltip}
           >
             <Zap className="w-3.5 h-3.5 fill-current text-rose-400" />
-            <span className="hidden sm:inline">Triche</span>
+            <span className="hidden sm:inline">{t.cheatNavBtn}</span>
           </button>
 
           {!isItchioBuild && (
@@ -2137,7 +2137,7 @@ export default function App() {
               className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition"
             >
               <FileCode className="w-3.5 h-3.5" />
-              <span>Export PySide6</span>
+              <span>{t.exportPySide6}</span>
             </button>
           )}
         </div>
