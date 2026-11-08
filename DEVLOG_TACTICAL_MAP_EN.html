@@ -1,0 +1,101 @@
+<h2>📜 itch.io Devlog — Tactical Update: Direct Mini-Map Exploration, Elevator Ergonomics &amp; Refined Cartography</h2>
+
+<p>
+  <strong>Date:</strong> November 2026<br />
+  <strong>Version:</strong> v3.5.2<br />
+  <strong>Platforms:</strong> Web Browser (HTML5/WebGL), itch.io, Android APK
+</p>
+
+<hr />
+
+<h3>🗺️ 1. Real-Time Tactical Exploration Directly on the Expanded Mini-Map</h3>
+
+<p>
+  One of our most requested features is finally here: 
+  <strong>you can now explore the dungeon and navigate your adventuring party directly from the full tactical mini-map (<code>M Key</code>)!</strong>
+</p>
+
+<ul>
+  <li>
+    <strong>Full Keyboard Navigation:</strong> Move forward (<code>W</code> in QWERTY / <code>Z</code> in AZERTY / <code>↑</code>), 90° turns (<code>A</code> / <code>D</code> / <code>Q</code> in AZERTY / <code>←</code> / <code>→</code>), instant 180° turnaround (<code>S</code> / <code>↓</code>), bash open doors (<code>K</code> or <code>Spacebar</code>), and inspect/search the current tile (<code>I</code>).
+  </li>
+  <li>
+    <strong>Integrated Touch &amp; D-Pad Controls:</strong> An ergonomic tactical control pad appears beneath the map with dedicated buttons optimized for touchscreen mobile play and mouse controls.
+  </li>
+  <li>
+    <strong>Direct Touchscreen Gestures (Swipes &amp; Taps):</strong> Swipe your finger or click directly across the floor grid to move forward or rotate your party in any direction.
+  </li>
+  <li>
+    <strong>Persistent Map Mode Memory:</strong> Your preferred map mode (expanded modal or compact corner HUD overlay) is now remembered across turns. Exiting combat or breaking camp immediately restores the exact cartographic view you had active.
+  </li>
+</ul>
+
+<hr />
+
+<h3>🔍 2. Authentic Cartography &amp; Visual Symbols</h3>
+
+<p>
+  The mini-map's vector SVG rendering engine underwent a comprehensive optimization pass for fidelity to the original 1981 Sir-Tech Pascal mechanics:
+</p>
+
+<ul>
+  <li>
+    <strong>Calibrated Wall &amp; Door Thickness:</strong> Reduced wall and door stroke widths for clean, airy, pinpoint readability across complex 20×20 floor grids.
+  </li>
+  <li>
+    <strong>One-Way Doors:</strong> Directional arrows clearly slice through the door with filled heads rendered on a dedicated foreground layer—fully supporting toroidal wrap-around perimeter borders (e.g., coordinates <code>19, 9</code> and <code>1, 19</code>).
+  </li>
+  <li>
+    <strong>Unified Pitfall Traps (Pits):</strong> Replaced obsolete crosshairs with a bright rose skull <code>☠</code> icon on an alert purple background, matching the map legend.
+  </li>
+  <li>
+    <strong>Authentic Secret Door Discovery:</strong> Restored canonical 1981 UCSD Pascal mechanics—party perception stats determine secret door discovery chances; once detected and kicked open, the secret passage remains permanently known and accessible without requiring re-inspection.
+  </li>
+  <li>
+    <strong>Restored Open Passages:</strong> Corrected open corridors at <code>(19, 1)</code> South and <code>(11, 0)</code> West on Floor 3 that were previously obstructed by solid rock walls.
+  </li>
+  <li>
+    <strong>Discreet Test / Cheat Reveal Mode:</strong> The mini-map is an authentic mapping tool honoring fog of war. A discreet "Test / Cheat Tool" toggle checkbox has been integrated into the legend to enable complete floor reveal for functional verification without spoiling standard immersion.
+  </li>
+</ul>
+
+<hr />
+
+<h3>🛗 3. Elevator System &amp; Front-Layer Rendering Priority</h3>
+
+<ul>
+  <li>
+    <strong>Eliminated Primitive Browser Prompts:</strong> Legacy <code>window.prompt</code> dialogs have been completely removed in favor of a rich graphical floor selection modal.
+  </li>
+  <li>
+    <strong>Rapid Floor Selection:</strong> Touch buttons for every accessible floor (Floors 1 to 4 for the primary elevator, Floors 4 to 9 for the express elevator), direct number key hotkeys (<code>1</code>, <code>2</code>, <code>3</code>, <code>4</code>), and quick exit via <code>Esc</code>.
+  </li>
+  <li>
+    <strong>Guaranteed Front-Layer Priority (<code>z-index</code>):</strong>
+    <ul>
+      <li>The elevator selector dialog now renders in the absolute foreground above the expanded mini-map.</li>
+      <li>Floating action banners (<code>🛗 Elevator [Operate (E)]</code>, <code>▲ Stairs [Take Stairs (Y)]</code>) remain visible and interactive above the map.</li>
+      <li>All dungeon discovery modals, wall inscriptions (<code>scenarioMessage</code>), and fallen adventurer recovery alerts render with top priority without being obscured by the map.</li>
+    </ul>
+  </li>
+</ul>
+
+<hr />
+
+<h3>📦 4. Availability &amp; Download Links</h3>
+
+<ul>
+  <li>
+    <strong>Play Directly in Browser:</strong> <a href="https://pmourey.github.io/Wizardry/" target="_blank">On GitHub Pages</a> and on the official <strong>itch.io</strong> game page.
+  </li>
+  <li>
+    <strong>HTML5 / itch.io Archive:</strong> <code>wizardry-itchio.zip</code> updated with the latest compiled assets and scripts.
+  </li>
+  <li>
+    <strong>Native Android App:</strong> <code>Remix-Wizardry-v3.5.apk</code> available for direct download.
+  </li>
+</ul>
+
+<p>
+  <em>Thank you for your continuous feedback and testing! May your blade strike true in the depths of Trebor's dungeon!</em> ⚔️
+</p>
