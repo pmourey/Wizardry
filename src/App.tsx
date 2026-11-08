@@ -31,6 +31,7 @@ import { ChestView } from './components/ChestView';
 import { PySide6Exporter } from './components/PySide6Exporter';
 import { ScenarioMenuView } from './components/ScenarioMenuView';
 import { ManualsModal } from './components/ManualsModal';
+import { ScenarioGuideModal } from './components/ScenarioGuideModal';
 import { CheatModal } from './components/CheatModal';
 import { VictoryModal } from './components/VictoryModal';
 import { getCharacterChevrons } from './utils/awards';
@@ -350,6 +351,9 @@ export default function App() {
   } | null>(null);
   const [showManualsModal, setShowManualsModal] = useState<boolean>(false);
   const [manualsScenarioTarget, setManualsScenarioTarget] = useState<string | undefined>(undefined);
+  const [showScenarioGuideModal, setShowScenarioGuideModal] = useState<boolean>(false);
+  const [guideScenarioTarget, setGuideScenarioTarget] = useState<string | undefined>(undefined);
+  const [guideFloorTarget, setGuideFloorTarget] = useState<number | undefined>(undefined);
   const [soundOn, setSoundOn] = useState<boolean>(true);
   const [musicOn, setMusicOn] = useState<boolean>(() => music.isEnabled());
   const [currentMusicTitle, setCurrentMusicTitle] = useState<string>(() => music.getCurrentTrackTitle());
@@ -2164,6 +2168,11 @@ export default function App() {
               setManualsScenarioTarget(scenId);
               setShowManualsModal(true);
             }}
+            onOpenGuide={(scenId) => {
+              setGuideScenarioTarget(scenId);
+              setGuideFloorTarget(undefined);
+              setShowScenarioGuideModal(true);
+            }}
           />
         ) : null}
 
@@ -2251,6 +2260,12 @@ export default function App() {
             onReturnToCastle={handleReturnPartyToCastle}
             onTakeStairs={handleTakeStairs}
             onTriggerEncounter={() => triggerBattleEncounter()}
+            activeScenarioId={activeScenarioId}
+            onOpenGuide={(scenId, floor) => {
+              setGuideScenarioTarget(scenId || activeScenarioId);
+              setGuideFloorTarget(floor || dungeonLevel);
+              setShowScenarioGuideModal(true);
+            }}
           />
         )}
 
@@ -2530,6 +2545,15 @@ export default function App() {
         isOpen={showManualsModal}
         onClose={() => setShowManualsModal(false)}
         initialScenarioId={manualsScenarioTarget}
+      />
+
+      {/* Scenario & Floor Strategy Guide Modal (Oracle) */}
+      <ScenarioGuideModal
+        isOpen={showScenarioGuideModal}
+        onClose={() => setShowScenarioGuideModal(false)}
+        activeScenarioId={guideScenarioTarget || activeScenarioId}
+        currentFloor={location === 'MAZE' ? dungeonLevel : undefined}
+        initialFloor={guideFloorTarget}
       />
 
       {/* Standalone Cheat Console Modal */}

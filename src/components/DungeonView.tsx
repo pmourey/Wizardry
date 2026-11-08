@@ -28,6 +28,8 @@ import { getSpellDescription } from '../engine/spellEngine';
 import { MiniMap, loadMiniMapPrefs, saveMiniMapPrefs } from './MiniMap';
 import { CharacterSheetModal } from './CharacterSheetModal';
 import { MusicScreener } from './MusicScreener';
+import { useGuidanceLevel } from '../utils/guidanceManager';
+import { getFloorGuide, getLocalizedFloorGuide } from '../data/scenarioFloorGuides';
 import { 
   Compass, 
   Eye, 
@@ -97,6 +99,8 @@ interface DungeonViewProps {
   onReturnToCastle: () => void;
   onTakeStairs?: (targetLevel: number, targetX: number, targetY: number) => void;
   onTriggerEncounter: () => void;
+  activeScenarioId?: string;
+  onOpenGuide?: (scenarioId?: string, floor?: number) => void;
 }
 
 export const DungeonView: React.FC<DungeonViewProps> = ({
@@ -124,7 +128,9 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   onInspectArea,
   onReturnToCastle,
   onTakeStairs,
-  onTriggerEncounter
+  onTriggerEncounter,
+  activeScenarioId = 'proving-grounds',
+  onOpenGuide
 }) => {
   const { t, lang } = useI18n();
   const [wireframeMode, setWireframeMode] = useState<boolean>(() => loadMiniMapPrefs().wireframeMode);
@@ -147,6 +153,18 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
   const visitedTiles = propVisitedTiles || localVisitedTiles;
   const setVisitedTiles = propSetVisitedTiles || setLocalVisitedTiles;
+
+  // Guidance and Floor Strategy Oracle state
+  const [guidanceLevel] = useGuidanceLevel();
+  const [floorBannerDismissedForLevel, setFloorBannerDismissedForLevel] = useState<number | null>(null);
+
+  const currentFloorGuide = useMemo(() => {
+    if (!activeScenarioId) return null;
+    const raw = getFloorGuide(activeScenarioId, maze.level);
+    return getLocalizedFloorGuide(raw, lang);
+  }, [activeScenarioId, maze.level, lang]);
+
+  const showFloorBanner = guidanceLevel !== 'OFF' && floorBannerDismissedForLevel !== maze.level && !!currentFloorGuide;
 
   // Fallen heroes from any party wipeout lying at current coordinates
   const fallenHeroesHere = allCharacters.filter(c => 
@@ -310,8 +328,12 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
     } else if (key === 'i') {
       e.preventDefault();
       onInspectArea();
+    } else if (key === 'h') {
+      e.preventDefault();
+      onOpenGuide?.(activeScenarioId, maze.level);
+      sounds.playTurn();
     }
-  }, [showCamp, showCharacterSheetModal, showMinimap, showStairsPrompt, showElevatorModal, isStairs, isElevator, elevatorMinLvl, elevatorMaxLvl, onTakeStairs, currentSqrDef, x, y, direction, maze, keyboardLayout]);
+  }, [showCamp, showCharacterSheetModal, showMinimap, showStairsPrompt, showElevatorModal, isStairs, isElevator, elevatorMinLvl, elevatorMaxLvl, onTakeStairs, currentSqrDef, x, y, direction, maze, keyboardLayout, onOpenGuide, activeScenarioId]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -1026,6 +1048,52 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             </div>
           )}
 
+          {/* Interactive Contextual Floor Strategy Oracle Banner */}
+          {showFloorBanner && currentFloorGuide && (
+            <div className="fixed top-2 sm:top-3 left-1/2 -translate-x-1/2 z-[52] max-w-lg w-[calc(100vw-1.5rem)] bg-slate-950/95 border border-amber-500/80 rounded-xl p-3 shadow-2xl backdrop-blur-md animate-fadeIn flex items-start gap-2.5">
+              <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+                <Compass className="w-4 h-4 animate-spin-slow" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wide truncate">
+                    {lang === 'en' ? `Floor ${maze.level} Oracle Guidance` : `Oracle de l'Étage ${maze.level}`}
+                  </span>
+                  <button
+                    onClick={() => setFloorBannerDismissedForLevel(maze.level)}
+                    className="text-slate-400 hover:text-white p-0.5"
+                    title={lang === 'en' ? 'Dismiss' : 'Fermer'}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-200 line-clamp-2 mt-0.5 leading-snug">
+                  {guidanceLevel === 'SUBTLE' ? currentFloorGuide.subtleClue : currentFloorGuide.summary}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  {onOpenGuide && (
+                    <button
+                      onClick={() => {
+                        onOpenGuide(activeScenarioId, maze.level);
+                        setFloorBannerDismissedForLevel(maze.level);
+                      }}
+                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 text-[11px] font-bold rounded-md transition shadow flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>{lang === 'en' ? 'Open Floor Guide' : "Consulter l'Aide"}</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setFloorBannerDismissedForLevel(maze.level)}
+                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-md transition"
+                  >
+                    {lang === 'en' ? 'Dismiss' : 'Compris'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Persistent On-Screen Mini-Map HUD Overlay */}
           {hudMinimapVisible && (
             <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 pointer-events-auto max-w-[calc(100vw-1rem)] sm:max-w-[280px] drop-shadow-2xl">
@@ -1120,7 +1188,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
           {/* Mobile Quick Action Buttons & Stairs */}
           <div className="flex-1 flex flex-col justify-between gap-1.5 min-w-0">
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-4 gap-1">
               <button
                 onClick={() => { setShowCamp(true); sounds.playTurn(); }}
                 className="py-2 px-1 bg-slate-800 active:bg-slate-700 border border-slate-700/60 rounded-lg flex flex-col items-center justify-center text-slate-200 font-semibold transition active:scale-95"
@@ -1144,6 +1212,17 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 <Eye className="w-4 h-4 text-amber-400" />
                 <span className="text-[10px] truncate mt-0.5">{lang === 'en' ? 'Search' : 'Chercher'}</span>
               </button>
+
+              {onOpenGuide && (
+                <button
+                  onClick={() => { onOpenGuide(activeScenarioId, maze.level); sounds.playTurn(); }}
+                  className="py-2 px-1 bg-slate-800 active:bg-slate-700 border border-amber-600/50 rounded-lg flex flex-col items-center justify-center text-amber-300 font-semibold transition active:scale-95"
+                  title={lang === 'en' ? 'Floor Guide (H)' : 'Guide / Oracle (H)'}
+                >
+                  <Compass className="w-4 h-4 text-amber-400" />
+                  <span className="text-[10px] truncate mt-0.5">{lang === 'en' ? 'Guide (H)' : 'Oracle (H)'}</span>
+                </button>
+              )}
             </div>
 
             {/* Dynamic Stairs, Elevator or 180 Turnaround button */}
@@ -1267,6 +1346,16 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                 <Eye className="w-4 h-4 text-amber-400" />
                 <span>{t.dungeon.inspectAreaBtn}</span>
               </button>
+
+              {onOpenGuide && (
+                <button
+                  onClick={() => { onOpenGuide(activeScenarioId, maze.level); sounds.playTurn(); }}
+                  className="w-full p-2.5 bg-slate-800/80 hover:bg-slate-800 border border-amber-600/40 rounded-lg flex items-center gap-2 text-amber-300 font-semibold transition"
+                >
+                  <Compass className="w-4 h-4 text-amber-400" />
+                  <span>{lang === 'en' ? 'Floor Guide (H)' : 'Guide des Étages (H)'}</span>
+                </button>
+              )}
             </div>
           </div>
 

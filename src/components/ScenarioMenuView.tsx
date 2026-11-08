@@ -3,6 +3,8 @@ import { WIZARDRY_SCENARIOS, WizardryScenarioMeta, getLocalizedScenario } from '
 import { TCharacter } from '../types/wizardry';
 import { useLanguage, UI_TEXT } from '../utils/language';
 import { useI18n } from '../i18n';
+import { useGuidanceLevel } from '../utils/guidanceManager';
+import { HINT_LEVELS, HintLevel } from '../data/scenarioFloorGuides';
 import {
   Sparkles,
   Compass,
@@ -16,7 +18,11 @@ import {
   Cpu,
   Languages,
   ShieldAlert,
-  BookOpen
+  BookOpen,
+  HelpCircle,
+  Eye,
+  EyeOff,
+  Shield
 } from 'lucide-react';
 
 interface ScenarioLocalSummary {
@@ -39,16 +45,19 @@ interface ScenarioMenuViewProps {
     usedEvents: string;
   };
   onOpenManuals?: (scenarioId?: string) => void;
+  onOpenGuide?: (scenarioId?: string) => void;
 }
 
 export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
   activeScenarioId,
   onSelectScenario,
   getStorageKeysForScenario,
-  onOpenManuals
+  onOpenManuals,
+  onOpenGuide
 }) => {
   const { lang, setLang } = useI18n();
   const t = UI_TEXT[lang];
+  const [guidanceLevel, setGuidanceLevel] = useGuidanceLevel();
 
   const [selectedId, setSelectedId] = useState<string>(activeScenarioId || 'proving-grounds');
   const [filterTheme, setFilterTheme] = useState<'ALL' | 'LVL1' | 'HIGH' | 'ORIENTAL' | 'GOTHIC' | 'SCIFI'>('ALL');
@@ -549,6 +558,67 @@ export const ScenarioMenuView: React.FC<ScenarioMenuViewProps> = ({
                       : `This scenario uses its own isolated local save on the Wizardry v3.2 engine. Extraction of its ${selectedScenario.diskFileName} disk via scripts/extract_pgmo.py loads its dedicated maps, monsters, and items.`}
                   </span>
                 </div>
+              )}
+
+              {/* Guidance Level Configuration Card */}
+              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{lang === 'fr' ? "Niveau d'Aide & Guidage Interactif" : "Guidance & Floor Hints"}</span>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-amber-300">
+                    {lang === 'fr' ? HINT_LEVELS[guidanceLevel].badgeFr : HINT_LEVELS[guidanceLevel].badgeEn}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(['OFF', 'SUBTLE', 'STRATEGY', 'EXHAUSTIVE'] as HintLevel[]).map(lvlKey => {
+                    const meta = HINT_LEVELS[lvlKey];
+                    const isSelected = guidanceLevel === lvlKey;
+                    return (
+                      <button
+                        key={lvlKey}
+                        onClick={() => setGuidanceLevel(lvlKey)}
+                        className={`p-2 rounded-lg text-left text-xs transition border flex flex-col gap-0.5 ${
+                          isSelected
+                            ? `${meta.colorClass} ring-1 ring-amber-400/50 shadow-sm`
+                            : 'border-slate-800 bg-slate-900/70 hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        <div className="font-bold flex items-center gap-1.5 text-[11px]">
+                          {lvlKey === 'OFF' && <EyeOff className="w-3 h-3" />}
+                          {lvlKey === 'SUBTLE' && <Eye className="w-3 h-3" />}
+                          {lvlKey === 'STRATEGY' && <Shield className="w-3 h-3" />}
+                          {lvlKey === 'EXHAUSTIVE' && <Sparkles className="w-3 h-3" />}
+                          <span className="truncate">{lang === 'fr' ? meta.titleFr.split(' ')[0] : meta.titleEn.split(' ')[0]}</span>
+                        </div>
+                        <div className="text-[10px] opacity-80 line-clamp-1">
+                          {lang === 'fr' ? meta.taglineFr : meta.taglineEn}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="text-[11px] text-slate-400 leading-snug pt-0.5 border-t border-slate-900">
+                  {lang === 'fr' ? HINT_LEVELS[guidanceLevel].descriptionFr : HINT_LEVELS[guidanceLevel].descriptionEn}
+                </div>
+              </div>
+
+              {/* View Floor Strategy Guide Button */}
+              {onOpenGuide && (
+                <button
+                  onClick={() => onOpenGuide(selectedScenario.id)}
+                  className="w-full py-2.5 px-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-emerald-600/40 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-2 transition"
+                >
+                  <Compass className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>
+                    {lang === 'fr'
+                      ? `🗺️ Guide Stratégique des Étages (Oracle)`
+                      : `🗺️ Floor Strategy Guide & Walkthrough`}
+                  </span>
+                </button>
               )}
 
               {/* Manual & Guides button for selected scenario */}
