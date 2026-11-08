@@ -27,6 +27,7 @@ import { getActiveStatusEffects, canHeroCastSpells } from '../engine/statusSyste
 import { getSpellDescription } from '../engine/spellEngine';
 import { MiniMap, loadMiniMapPrefs, saveMiniMapPrefs } from './MiniMap';
 import { CharacterSheetModal } from './CharacterSheetModal';
+import { MusicScreener } from './MusicScreener';
 import { 
   Compass, 
   Eye, 
@@ -979,6 +980,9 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
             wireframeMode={wireframeMode}
             lang={lang}
           />
+
+          {/* Discreet Music Screener for Dungeon Exploration & Artist Attribution */}
+          <MusicScreener lang={lang} />
 
           {/* Fallen Heroes / Lost Bodies Recovery Box */}
           {fallenHeroesHere.length > 0 && (

@@ -352,6 +352,7 @@ export default function App() {
   const [manualsScenarioTarget, setManualsScenarioTarget] = useState<string | undefined>(undefined);
   const [soundOn, setSoundOn] = useState<boolean>(true);
   const [musicOn, setMusicOn] = useState<boolean>(() => music.isEnabled());
+  const [currentMusicTitle, setCurrentMusicTitle] = useState<string>(() => music.getCurrentTrackTitle());
   const [lastWipeoutInfo, setLastWipeoutInfo] = useState<{ x: number; y: number; level: number; heroes: string[]; reason?: 'COMBAT' | 'ROCK' | 'POISON' } | null>(
     () => savedSession?.lastWipeoutInfo || null
   );
@@ -717,6 +718,15 @@ export default function App() {
       music.playTrack('02-castle');
     }
   }, [showScenarioMenu, location, dungeonLevel, combatGroups]);
+
+  // Keep track of current music title updates (including Léo Jean dynamic piano tracks)
+  useEffect(() => {
+    const handleTrackChange = () => {
+      setCurrentMusicTitle(music.getCurrentTrackTitle());
+    };
+    window.addEventListener('wizardry_track_change', handleTrackChange);
+    return () => window.removeEventListener('wizardry_track_change', handleTrackChange);
+  }, []);
 
   // Global Cheat Key shortcut (F2 or Ctrl+Shift+C)
   useEffect(() => {
@@ -2108,7 +2118,7 @@ export default function App() {
                 ? 'bg-slate-800 hover:bg-slate-700 text-amber-300 border-amber-600/30'
                 : 'bg-slate-900 hover:bg-slate-800 text-slate-500 border-slate-800'
             }`}
-            title={musicOn ? t.musicActive(music.getCurrentTrackTitle() || 'We Love Wizardry') : t.musicInactive}
+            title={musicOn ? t.musicActive(currentMusicTitle || music.getCurrentTrackTitle() || 'We Love Wizardry') : t.musicInactive}
           >
             <Music className={`w-3.5 h-3.5 ${musicOn ? 'text-amber-400' : 'text-slate-500'}`} />
             <span className="hidden xl:inline">{musicOn ? t.music : t.mute}</span>
