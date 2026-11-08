@@ -523,6 +523,17 @@ const PROVING_GROUNDS_GUIDES: Record<number, FloorGuide> = {
       'Counter draining spectres using Priest Turn Undead.',
       'Reach the stairs to Floor 7 at (19, 0).'
     ],
+    strategicTipsFr: [
+      "Les Spectres (Wraiths) et Ombres (Shades) peuvent drainer 1 niveau d'expérience par coup réussi. Ne les laissez jamais attaquer : utilisez le Renvoi des Prêtres (Dispel) ou Zilwan et Tiltowait dès le 1er tour.",
+      "Deux tourbillons invisibles modifient votre cap à votre insu. Relancez Dumapic à chaque carrefour.",
+      "La fosse en (8, 18) inflige 6d8 dégâts : contournez impérativement ce secteur."
+    ],
+    strategicTipsEn: [
+      "Wraiths and Shades can permanently drain 1 experience level per successful hit. Never let them strike: use Priest Dispel Undead or Zilwan/Tiltowait on round 1.",
+      "Two invisible spinners silently rotate your facing direction. Confirm coordinates regularly with Dumapic.",
+      "The pit at (8, 18) deals 6d8 damage: steer clear of this sector."
+    ],
+
     hazards: [
       {
         nameFr: 'Fosse abyssale en (8, 18)',
@@ -571,6 +582,17 @@ const PROVING_GROUNDS_GUIDES: Record<number, FloorGuide> = {
       'Use elevator 4-9 for regular supply runs.',
       'Locate the stairs leading down to Floor 8.'
     ],
+    strategicTipsFr: [
+      "Ce niveau est un dédale de téléporteurs interconnectés. Notez soigneusement vos coordonnées Dumapic après chaque téléportation pour tracer les liaisons.",
+      "Les Géants du Feu et Chimères possèdent d'énormes réserves de PV et résistent aux sorts de flammes. Utilisez Dalto (Blizzard) et concentrez les attaques physiques.",
+      "L'ascenseur privé 4-9 en (0, 10) est votre bouée de sauvetage pour remonter au Château."
+    ],
+    strategicTipsEn: [
+      "This floor is an interconnected web of teleporters. Record your Dumapic coordinates after each jump to map out the connections.",
+      "Fire Giants and Chimeras have huge HP pools and resist flame spells. Cast Dalto (Blizzard) and focus heavy weapon strikes.",
+      "The private 4-9 elevator at (0, 10) is your lifeline back to the surface Castle."
+    ],
+
     hazards: [
       {
         nameFr: 'Téléporteurs en boucle',
@@ -619,6 +641,17 @@ const PROVING_GROUNDS_GUIDES: Record<number, FloorGuide> = {
       'Level Priest to 13 to unlock Madi and Malikto.',
       'Prepare for the final descent into Floors 9 and 10.'
     ],
+    strategicTipsFr: [
+      "C'est le terrain de chasse idéal pour obtenir les armes les plus puissantes du jeu (Lame Muramasa, Shuriken, Armure du Seigneur) dans les coffres.",
+      "Les Démons Majeurs (#93) peuvent invoquer d'autres démons en boucle. Lancez Montino immédiatement pour bloquer leurs incantations et éliminez-les sans tarder.",
+      "Assurez-vous que vos Mages et Prêtres atteignent le niveau 13 pour maîtriser Tiltowait, Madi et Malikto avant de descendre plus bas."
+    ],
+    strategicTipsEn: [
+      "This is the premier farming floor for endgame legendary loot (Muramasa Blade, Shuriken, Lord's Garb) from chest rewards.",
+      "Greater Demons (#93) can summon reinforcements in an endless chain. Cast Montino round 1 to silence their magic and finish them quickly.",
+      "Ensure your Mages and Priests reach Level 13 to unlock Tiltowait, Madi, and Malikto before descending further."
+    ],
+
     hazards: [
       {
         nameFr: 'Démons majeurs invocateurs',
@@ -667,6 +700,17 @@ const PROVING_GROUNDS_GUIDES: Record<number, FloorGuide> = {
       'Verify all heroes are at full HP with identified high-end gear.',
       'Step into the chute at (0, 13) to plunge into Floor 10.'
     ],
+    strategicTipsFr: [
+      "Dernier arrêt de l'ascenseur rapide 4-9 en (10, 0). Aucun escalier ne descend au niveau 10 : le seul passage est la chute en (0, 13) !",
+      "AVERTISSEMENT CRITIQUE : Une fois dans la chute vers le Sous-sol 10, il est impossible de remonter à pied ! Votre Mage DOIT impérativement connaître le sort MALOR (Niveau 7) pour pouvoir téléporter l'escouade vers la surface après la victoire.",
+      "Soignez tous vos aventuriers au maximum et vérifiez que vos inventaires ne sont pas encombrés d'objets inutiles avant de sauter."
+    ],
+    strategicTipsEn: [
+      "Final stop of express elevator 4-9 at (10, 0). No stairs descend to Level 10: the sole entrance is the one-way chute at (0, 13)!",
+      "CRITICAL WARNING: Once you jump down the chute to Floor 10, there is no physical path back up! Your Mage MUST know MALOR (Tier 7) to teleport the party to the Castle after defeating Werdna.",
+      "Heal all adventurers to max HP and verify inventory slots before taking the plunge."
+    ],
+
     hazards: [
       {
         nameFr: "Chute sans retour vers l'étage 10 (0, 13)",
@@ -1311,32 +1355,42 @@ export function getFloorGuide(scenarioId: string, floor: number): FloorGuide {
 }
 
 export function getLocalizedFloorGuide(guide: FloorGuide, lang: 'fr' | 'en') {
+  const strat = (lang === 'fr' ? guide.strategicTipsFr : guide.strategicTipsEn) 
+    || (lang === 'fr' ? guide.strategicTipsEn : guide.strategicTipsFr) 
+    || [];
+  const obj = (lang === 'fr' ? guide.objectivesFr : guide.objectivesEn) 
+    || (lang === 'fr' ? guide.objectivesEn : guide.objectivesFr) 
+    || [];
+  const spells = (lang === 'fr' ? guide.spellRecommendationsFr : guide.spellRecommendationsEn) 
+    || (lang === 'fr' ? guide.spellRecommendationsEn : guide.spellRecommendationsFr) 
+    || [];
+
   return {
     floor: guide.floor,
-    title: lang === 'fr' ? guide.titleFr : guide.titleEn,
-    subtitle: lang === 'fr' ? guide.subtitleFr : guide.subtitleEn,
-    recommendedLevel: lang === 'fr' ? guide.recommendedLevelFr : guide.recommendedLevelEn,
-    summary: lang === 'fr' ? guide.summaryFr : guide.summaryEn,
-    subtleClue: lang === 'fr' ? guide.subtleClueFr : guide.subtleClueEn,
-    objectives: lang === 'fr' ? guide.objectivesFr : guide.objectivesEn,
-    strategicTips: lang === 'fr' ? guide.strategicTipsFr : guide.strategicTipsEn,
-    spellRecommendations: lang === 'fr' ? guide.spellRecommendationsFr : guide.spellRecommendationsEn,
-    hazards: guide.hazards.map(h => ({
-      name: lang === 'fr' ? h.nameFr : h.nameEn,
-      warning: lang === 'fr' ? h.warningFr : h.warningEn,
-      severity: h.severity
+    title: (lang === 'fr' ? guide.titleFr : guide.titleEn) || guide.titleFr || guide.titleEn || `Étage ${guide.floor}`,
+    subtitle: (lang === 'fr' ? guide.subtitleFr : guide.subtitleEn) || guide.subtitleFr || guide.subtitleEn || '',
+    recommendedLevel: (lang === 'fr' ? guide.recommendedLevelFr : guide.recommendedLevelEn) || guide.recommendedLevelFr || guide.recommendedLevelEn || 'Niveau 1+',
+    summary: (lang === 'fr' ? guide.summaryFr : guide.summaryEn) || guide.summaryFr || guide.summaryEn || '',
+    subtleClue: (lang === 'fr' ? guide.subtleClueFr : guide.subtleClueEn) || guide.subtleClueFr || guide.subtleClueEn || '',
+    objectives: obj,
+    strategicTips: strat,
+    spellRecommendations: spells,
+    hazards: (guide.hazards || []).map(h => ({
+      name: (lang === 'fr' ? h.nameFr : h.nameEn) || h.nameFr || h.nameEn || '',
+      warning: (lang === 'fr' ? h.warningFr : h.warningEn) || h.warningFr || h.warningEn || '',
+      severity: h.severity || 'MEDIUM'
     })),
-    keyLocations: guide.keyLocations.map(k => ({
-      x: k.x,
-      y: k.y,
-      name: lang === 'fr' ? k.nameFr : k.nameEn,
-      description: lang === 'fr' ? k.descriptionFr : k.descriptionEn,
-      type: k.type
+    keyLocations: (guide.keyLocations || []).map(k => ({
+      x: k.x ?? 0,
+      y: k.y ?? 0,
+      name: (lang === 'fr' ? k.nameFr : k.nameEn) || k.nameFr || k.nameEn || '',
+      description: (lang === 'fr' ? k.descriptionFr : k.descriptionEn) || k.descriptionFr || k.descriptionEn || '',
+      type: k.type || 'STAIRS'
     })),
-    monsterTips: guide.monsterTips?.map(m => ({
-      monsterName: m.monsterName,
-      threat: lang === 'fr' ? m.threatFr : m.threatEn,
-      counterStrategy: lang === 'fr' ? m.counterStrategyFr : m.counterStrategyEn
+    monsterTips: (guide.monsterTips || []).map(m => ({
+      monsterName: m.monsterName || '',
+      threat: (lang === 'fr' ? m.threatFr : m.threatEn) || m.threatFr || m.threatEn || '',
+      counterStrategy: (lang === 'fr' ? m.counterStrategyFr : m.counterStrategyEn) || m.counterStrategyFr || m.counterStrategyEn || ''
     }))
   };
 }

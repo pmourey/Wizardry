@@ -280,7 +280,7 @@ export const ScenarioGuideModal: React.FC<ScenarioGuideModalProps> = ({
                   <span>{lang === 'fr' ? "Périls Cardinaux Détectés" : "Detected Major Perils"}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {guide.hazards.map((haz, idx) => (
+                  {guide.hazards?.map((haz, idx) => (
                     <div key={idx} className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs space-y-1">
                       <div className="font-bold text-rose-300 flex items-center justify-between">
                         <span>{haz.name}</span>
@@ -320,7 +320,7 @@ export const ScenarioGuideModal: React.FC<ScenarioGuideModalProps> = ({
                     <span>{lang === 'fr' ? "Objectifs Stratégiques Clés" : "Key Strategic Objectives"}</span>
                   </div>
                   <ul className="space-y-1.5 text-xs text-slate-200">
-                    {guide.objectives.map((obj, idx) => (
+                    {guide.objectives?.map((obj, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <span className="text-emerald-400 shrink-0 font-bold">•</span>
                         <span>{obj}</span>
@@ -338,7 +338,7 @@ export const ScenarioGuideModal: React.FC<ScenarioGuideModalProps> = ({
                     <span>{lang === 'fr' ? "Conseils de Combat & Survie" : "Combat & Survival Tactics"}</span>
                   </div>
                   <ul className="space-y-2 text-xs text-slate-300">
-                    {guide.strategicTips.map((tip, idx) => (
+                    {guide.strategicTips?.map((tip, idx) => (
                       <li key={idx} className="flex items-start gap-2 bg-slate-950 p-2.5 rounded-lg border border-slate-800/80">
                         <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                         <span className="leading-relaxed">{tip}</span>
@@ -394,7 +394,7 @@ export const ScenarioGuideModal: React.FC<ScenarioGuideModalProps> = ({
                   <span>{lang === 'fr' ? "Pièges & Anomalies du Labyrinthe" : "Hazards & Maze Anomalies"}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {guide.hazards.map((haz, idx) => (
+                  {guide.hazards?.map((haz, idx) => (
                     <div key={idx} className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs space-y-1">
                       <div className="font-bold text-rose-300 flex items-center justify-between">
                         <span>{haz.name}</span>
@@ -422,7 +422,7 @@ export const ScenarioGuideModal: React.FC<ScenarioGuideModalProps> = ({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                    {guide.keyLocations.map((loc, idx) => (
+                    {guide.keyLocations?.map((loc, idx) => (
                       <div key={idx} className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-xs space-y-1 hover:border-emerald-600/50 transition">
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-white truncate">{loc.name}</span>
