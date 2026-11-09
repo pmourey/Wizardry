@@ -67,9 +67,12 @@ import {
   Keyboard,
   Sparkles,
   BookOpen,
-  Zap
+  Zap,
+  Scroll,
+  Languages
 } from 'lucide-react';
 import { RETURN_OF_WERDNA_STARTER_PARTY } from './data/scenarios/return-of-werdnaData';
+import { localizeScenarioMessageLines } from './data/scenarioMessageTranslations';
 
 export function getStorageKeysForScenario(scenarioId: string) {
   if (!scenarioId || scenarioId === 'proving-grounds') {
@@ -745,12 +748,25 @@ export default function App() {
   }, []);
 
   // Per-square usage counters for scenario events (key: level:x:y)
-  const [scenarioMessage, setScenarioMessage] = useState<{ title: string; lines: string[]; details?: string } | null>(null);
+  const [scenarioMessage, setScenarioMessage] = useState<{ 
+    title: string; 
+    lines: string[]; 
+    originalLines?: string[];
+    details?: string;
+  } | null>(null);
+  const [showOriginalMessage, setShowOriginalMessage] = useState<boolean>(false);
 
   // Shows a scenario message on screen and keeps a trace in the adventure journal
   const announce = (title: string, lines: string[], details: string | undefined, x: number, y: number) => {
-    setScenarioMessage({ title, lines, details });
-    addAdventureEvent('DISCOVERY', title, lines.join(' ').replace(/\s+/g, ' ').trim(), details, dungeonLevel, { x, y });
+    const loc = localizeScenarioMessageLines(lines, lang);
+    setShowOriginalMessage(false);
+    setScenarioMessage({ 
+      title, 
+      lines: loc.lines, 
+      originalLines: loc.isTranslated ? (loc.originalLines || lines) : undefined,
+      details 
+    });
+    addAdventureEvent('DISCOVERY', title, loc.lines.join(' ').replace(/\s+/g, ' ').trim(), details, dungeonLevel, { x, y });
   };
 
   const eventUsesRef = useRef<Record<string, number>>(
@@ -2509,26 +2525,79 @@ export default function App() {
 
         {scenarioMessage && (
           <div
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn"
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn"
             onClick={() => setScenarioMessage(null)}
           >
             <div
-              className="max-w-xl w-full max-h-[80vh] overflow-y-auto bg-slate-900 border-2 border-amber-500/60 rounded-xl p-6 shadow-2xl space-y-3"
+              className="max-w-xl w-full max-h-[85vh] overflow-y-auto bg-slate-950 border-2 border-amber-500/80 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-3.5 text-slate-100"
               onClick={e => e.stopPropagation()}
             >
-              <h3 className="text-amber-400 font-serif font-bold tracking-wider text-sm uppercase">{scenarioMessage.title}</h3>
-              <div className="font-mono text-xs text-slate-200 leading-relaxed whitespace-pre-wrap">
-                {scenarioMessage.lines.join('\n')}
+              {/* Header with Title and Language Toggle */}
+              <div className="flex items-center justify-between gap-3 border-b border-amber-500/30 pb-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+                    <Scroll className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-amber-400 font-serif font-black tracking-wide text-sm sm:text-base uppercase truncate">
+                      {scenarioMessage.title}
+                    </h3>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {lang === 'fr' ? 'Message & Inscription du Donjon' : 'Dungeon Inscription'}
+                    </span>
+                  </div>
+                </div>
+
+                {scenarioMessage.originalLines && (
+                  <button
+                    onClick={() => setShowOriginalMessage(prev => !prev)}
+                    className="px-2.5 py-1 text-[11px] rounded-lg font-mono font-semibold transition border border-amber-500/40 bg-slate-900 hover:bg-slate-800 text-amber-300 flex items-center gap-1.5 shrink-0"
+                    title={lang === 'fr' ? 'Basculer entre la version française et la version originale anglaise' : 'Toggle between translated and original text'}
+                  >
+                    <Languages className="w-3.5 h-3.5" />
+                    <span>{showOriginalMessage ? 'Version FR' : 'Original EN (1981)'}</span>
+                  </button>
+                )}
               </div>
-              {scenarioMessage.details && (
-                <div className="text-xs text-amber-300 border-t border-slate-700 pt-2">{scenarioMessage.details}</div>
+
+              {/* Message Content */}
+              <div className="bg-slate-900/90 rounded-xl p-4 border border-slate-800/80 font-mono text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap selection:bg-amber-500/30 shadow-inner">
+                {showOriginalMessage && scenarioMessage.originalLines
+                  ? scenarioMessage.originalLines.join('\n')
+                  : scenarioMessage.lines.join('\n')}
+              </div>
+
+              {/* Status footer for translation */}
+              {!showOriginalMessage && scenarioMessage.originalLines && (
+                <div className="text-[11px] text-slate-400 flex items-center justify-between px-1">
+                  <span className="italic flex items-center gap-1 text-emerald-400">
+                    <span>✓ Traduit en français</span>
+                  </span>
+                  <button 
+                    onClick={() => setShowOriginalMessage(true)}
+                    className="text-amber-400 hover:underline hover:text-amber-300"
+                  >
+                    Voir l'original anglais (Apple II 1981) ↗
+                  </button>
+                </div>
               )}
+
+              {/* Details if present */}
+              {scenarioMessage.details && (
+                <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>{scenarioMessage.details}</span>
+                </div>
+              )}
+
+              {/* Continue button */}
               <button
                 autoFocus
                 onClick={() => setScenarioMessage(null)}
-                className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition"
+                className="w-full py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 rounded-xl text-xs sm:text-sm font-bold transition shadow-lg flex items-center justify-center gap-2"
               >
-                {t.common.continueBtn}
+                <span>{t.common.continueBtn}</span>
+                <span className="text-[10px] font-normal opacity-80">(Entrée / Espace)</span>
               </button>
             </div>
           </div>
