@@ -2017,17 +2017,59 @@ export default function App() {
     setParty(prev => prev.map(restore));
   };
 
-  // Cheat (console): Respawn Werdna and reset encounter flags on Level 10
-  const handleRespawnWerdna = () => {
-    delete eventUsesRef.current['10:17:3'];
-    delete eventUsesRef.current['10:17:4'];
+  // Cheat (console): Respawn bosses or reset fixed encounter flags
+  const handleRespawnBosses = (eventKeys?: string[], targetFloor?: number) => {
     const keys = getStorageKeysForScenario(activeScenarioId);
+    if (!eventKeys || eventKeys.length === 0) {
+      // Reset all encounter keys for this scenario
+      const bundle = SCENARIO_BUNDLES[activeScenarioId] || SCENARIO_BUNDLES['proving-grounds'];
+      bundle.mazes.forEach(m => {
+        m.events?.forEach(ev => {
+          delete eventUsesRef.current[`${m.level}:${ev.x}:${ev.y}`];
+        });
+      });
+      // Also clear known canonical boss keys
+      delete eventUsesRef.current['10:17:3'];
+      delete eventUsesRef.current['10:17:4'];
+      delete eventUsesRef.current['1:13:5'];
+      localStorage.setItem(keys.usedEvents, JSON.stringify(eventUsesRef.current));
+
+      // Regenerate fight maps for all floors of this scenario
+      const updatedFightMaps: Record<number, boolean[][]> = {};
+      bundle.mazes.forEach(m => {
+        const maze = getMazeForFloor(m.level, activeScenarioId);
+        updatedFightMaps[m.level] = generateFightMap(maze);
+      });
+      setFightMapsByLevel(prev => ({ ...prev, ...updatedFightMaps }));
+      return;
+    }
+
+    // Specific boss keys
+    const affectedFloors = new Set<number>();
+    for (const k of eventKeys) {
+      delete eventUsesRef.current[k];
+      const [lvlStr] = k.split(':');
+      const lvl = Number(lvlStr);
+      if (!isNaN(lvl) && lvl > 0) {
+        affectedFloors.add(lvl);
+      }
+    }
+    if (targetFloor) affectedFloors.add(targetFloor);
+
     localStorage.setItem(keys.usedEvents, JSON.stringify(eventUsesRef.current));
-    const l10Maze = getMazeForFloor(10);
-    setFightMapsByLevel(prev => ({
-      ...prev,
-      [10]: generateFightMap(l10Maze)
-    }));
+
+    // Regenerate fight maps for affected floors
+    const updatedFightMaps: Record<number, boolean[][]> = {};
+    affectedFloors.forEach(lvl => {
+      const maze = getMazeForFloor(lvl, activeScenarioId);
+      updatedFightMaps[lvl] = generateFightMap(maze);
+    });
+    setFightMapsByLevel(prev => ({ ...prev, ...updatedFightMaps }));
+  };
+
+  // Cheat (console): Respawn Werdna and reset encounter flags on Level 10 (compatibility alias)
+  const handleRespawnWerdna = () => {
+    handleRespawnBosses(['10:17:3', '10:17:4', '10:0:0'], 10);
   };
 
   return (
@@ -2566,6 +2608,7 @@ export default function App() {
         allCharacters={allCharacters}
         setAllCharacters={setAllCharacters}
         onRestoreAllHeroes={handleCheatRestoreParty}
+        onRespawnBosses={handleRespawnBosses}
         onRespawnWerdna={handleRespawnWerdna}
       />
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TCharacter } from '../types/wizardry';
 import { ITEMS_DATABASE, getExpForNextLevel } from '../data/provingGroundsData';
+import { getScenarioCheatConfig, ScenarioBossDef } from '../data/scenarioCheatConfig';
 import { sounds } from '../utils/soundEffects';
 import { useI18n } from '../i18n';
 import {
@@ -13,9 +14,10 @@ import {
   Check,
   Crown,
   ShieldAlert,
-  Flame,
   Award,
-  Skull
+  Skull,
+  RotateCcw,
+  Swords
 } from 'lucide-react';
 
 interface CheatModalProps {
@@ -27,6 +29,7 @@ interface CheatModalProps {
   allCharacters: TCharacter[];
   setAllCharacters: React.Dispatch<React.SetStateAction<TCharacter[]>>;
   onRestoreAllHeroes: () => void;
+  onRespawnBosses?: (eventKeys?: string[], targetFloor?: number) => void;
   onRespawnWerdna?: () => void;
 }
 
@@ -39,6 +42,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
   allCharacters,
   setAllCharacters,
   onRestoreAllHeroes,
+  onRespawnBosses,
   onRespawnWerdna
 }) => {
   const { t, lang } = useI18n();
@@ -49,6 +53,8 @@ export const CheatModal: React.FC<CheatModalProps> = ({
   const [customExp, setCustomExp] = useState<number>(100000);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const cheatConfig = getScenarioCheatConfig(activeScenarioId);
+
   if (!isOpen) return null;
 
   const showNotification = (msg: string) => {
@@ -56,7 +62,7 @@ export const CheatModal: React.FC<CheatModalProps> = ({
     sounds.playFanfare();
     setTimeout(() => {
       setNotice(null);
-    }, 4000);
+    }, 4500);
   };
 
   // Helper to update party and roster in sync
@@ -96,22 +102,22 @@ export const CheatModal: React.FC<CheatModalProps> = ({
     updateHeroes(h => {
       h.exp = Math.max(0, (h.exp || 0) + amount);
     });
-    const targetLabel = selectedHeroId === 'ALL' ? (lang === 'fr' ? 'tout le groupe' : 'the entire party') : party.find(p => p.id === selectedHeroId)?.name || 'hero';
+    const targetLabel =
+      selectedHeroId === 'ALL'
+        ? (lang === 'fr' ? 'tout le groupe' : 'the entire party')
+        : party.find(p => p.id === selectedHeroId)?.name || 'hero';
     showNotification(`🌟 +${amount.toLocaleString()} XP -> ${targetLabel}`);
   };
 
   const handleSetTargetLevelExp = (desiredLvl: number) => {
     if (desiredLvl <= 1) return;
-    let count = 0;
 
     updateHeroes(h => {
       const currentLvl = h.charLevel || 1;
       if (currentLvl < desiredLvl) {
-        // Total EXP needed to reach desiredLvl
         const targetExpNeeded = getExpForNextLevel(h.class, desiredLvl - 1) + 1;
         if (h.exp < targetExpNeeded) {
           h.exp = targetExpNeeded;
-          count++;
         }
       }
     });
@@ -119,11 +125,11 @@ export const CheatModal: React.FC<CheatModalProps> = ({
     showNotification(t.cheat.levelSetSuccess(desiredLvl));
   };
 
-  // 3. Wizardry 1 Elevator Keys & Blue Ribbon Injector
+  // 3. Scenario-Aware Quest Item Injection
   const handleGiveItem = (itemId: number, itemName: string) => {
     const item = ITEMS_DATABASE.find(i => i.id === itemId);
     if (!item) {
-      alert(`Item #${itemId} not found in database.`);
+      alert(`Item #${itemId} (${itemName}) not found in the current scenario database.`);
       return;
     }
 
@@ -137,9 +143,10 @@ export const CheatModal: React.FC<CheatModalProps> = ({
     // Check if already in party
     const alreadyHas = party.some(h => h.possessions.some(p => p.itemIndex === itemId));
     if (alreadyHas) {
-      const confirmMsg = lang === 'fr' 
-        ? `Le groupe possède déjà l'objet "${itemName}". Voulez-vous en ajouter un exemplaire supplémentaire ?`
-        : `Party already has "${itemName}". Add another copy?`;
+      const confirmMsg =
+        lang === 'fr'
+          ? `Le groupe possède déjà l'objet "${itemName}". Voulez-vous en ajouter un exemplaire supplémentaire ?`
+          : `Party already has "${itemName}". Add another copy?`;
       if (!window.confirm(confirmMsg)) {
         return;
       }
@@ -147,35 +154,31 @@ export const CheatModal: React.FC<CheatModalProps> = ({
 
     targetHero.possessions.push({
       equipped: false,
-      cursed: false,
+      cursed: item.cursed || false,
       identified: true,
       itemIndex: item.id
     });
 
     setParty([...party]);
-    setAllCharacters(allCharacters.map(c => c.id === targetHero.id ? targetHero : c));
+    setAllCharacters(allCharacters.map(c => (c.id === targetHero.id ? targetHero : c)));
     showNotification(`🔑 "${item.name}" -> ${targetHero.name}`);
   };
 
-  // One-click Elevator Bundle (Bronze Key, Silver Key, Blue Ribbon)
-  const handleGiveElevatorKeyBundle = () => {
-    const bundleItems = [
-      { id: 97, name: 'BRONZE KEY' },
-      { id: 98, name: 'SILVER KEY' },
-      { id: 100, name: 'BLUE RIBBON' }
-    ];
-
+  // Primary Bundle Injector
+  const handleGivePrimaryBundle = () => {
+    const itemIds = cheatConfig.primaryBundleItemIds;
     let givenCount = 0;
     const updatedParty = [...party];
 
-    for (const itemDef of bundleItems) {
-      const alreadyHas = updatedParty.some(h => h.possessions.some(p => p.itemIndex === itemDef.id));
+    for (const id of itemIds) {
+      const alreadyHas = updatedParty.some(h => h.possessions.some(p => p.itemIndex === id));
       if (!alreadyHas) {
         const receiver = updatedParty.find(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.possessions.length < 8);
-        if (receiver) {
+        const itemDef = ITEMS_DATABASE.find(i => i.id === id);
+        if (receiver && itemDef) {
           receiver.possessions.push({
             equipped: false,
-            cursed: false,
+            cursed: itemDef.cursed || false,
             identified: true,
             itemIndex: itemDef.id
           });
@@ -185,42 +188,41 @@ export const CheatModal: React.FC<CheatModalProps> = ({
     }
 
     setParty(updatedParty);
-    setAllCharacters(allCharacters.map(c => {
-      const inParty = updatedParty.find(p => p.id === c.id);
-      return inParty || c;
-    }));
+    setAllCharacters(
+      allCharacters.map(c => {
+        const inParty = updatedParty.find(p => p.id === c.id);
+        return inParty || c;
+      })
+    );
 
     if (givenCount > 0) {
       showNotification(t.cheat.keysGivenSuccess);
     } else {
-      showNotification(lang === 'fr' ? `ℹ️ Le groupe possède déjà l'ensemble des clés et le Blue Ribbon.` : 'ℹ️ Party already possesses all elevator keys and Blue Ribbon.');
+      showNotification(
+        lang === 'fr'
+          ? "ℹ️ Le groupe possède déjà l'ensemble des reliques de ce pack."
+          : 'ℹ️ Party already possesses all items in this pack.'
+      );
     }
   };
 
-  // All W1 Quest Artifacts Bundle (Statuettes, Keys, Ribbon)
-  const handleGiveAllW1QuestItems = () => {
-    const allW1Items = [
-      { id: 97, name: 'BRONZE KEY' },
-      { id: 98, name: 'SILVER KEY' },
-      { id: 99, name: 'GOLD KEY' },
-      { id: 100, name: 'BLUE RIBBON' },
-      { id: 95, name: 'STATUETTE/BEAR' },
-      { id: 96, name: 'STATUETTE/FROG' }
-    ];
-
+  // All Scenario Quest Items Bundle
+  const handleGiveAllScenarioQuestItems = () => {
+    const itemIds = cheatConfig.allQuestItemIds;
     let given = 0;
     const updatedParty = [...party];
 
-    for (const itm of allW1Items) {
-      const has = updatedParty.some(h => h.possessions.some(p => p.itemIndex === itm.id));
+    for (const id of itemIds) {
+      const has = updatedParty.some(h => h.possessions.some(p => p.itemIndex === id));
       if (!has) {
         const hero = updatedParty.find(h => h.status !== 'DEAD' && h.status !== 'ASHES' && h.possessions.length < 8);
-        if (hero) {
+        const itemDef = ITEMS_DATABASE.find(i => i.id === id);
+        if (hero && itemDef) {
           hero.possessions.push({
             equipped: false,
-            cursed: false,
+            cursed: itemDef.cursed || false,
             identified: true,
-            itemIndex: itm.id
+            itemIndex: itemDef.id
           });
           given++;
         }
@@ -228,12 +230,42 @@ export const CheatModal: React.FC<CheatModalProps> = ({
     }
 
     setParty(updatedParty);
-    setAllCharacters(allCharacters.map(c => {
-      const inParty = updatedParty.find(p => p.id === c.id);
-      return inParty || c;
-    }));
+    setAllCharacters(
+      allCharacters.map(c => {
+        const inParty = updatedParty.find(p => p.id === c.id);
+        return inParty || c;
+      })
+    );
 
     showNotification(t.cheat.keysGivenSuccess);
+  };
+
+  // Boss Respawn Handlers
+  const handleTriggerBossRespawn = (boss: ScenarioBossDef) => {
+    if (onRespawnBosses) {
+      onRespawnBosses(boss.eventKeys, boss.floor);
+    } else if (onRespawnWerdna) {
+      onRespawnWerdna();
+    }
+    const name = lang === 'fr' ? boss.nameFr : boss.nameEn;
+    const msg =
+      lang === 'fr'
+        ? `⚔️ ${name} a réapparu (${boss.coordsText}) ! Le combat est prêt.`
+        : `⚔️ ${name} has respawned (${boss.coordsText})! The battle awaits.`;
+    showNotification(msg);
+  };
+
+  const handleResetAllScenarioEncounters = () => {
+    if (onRespawnBosses) {
+      onRespawnBosses([], undefined);
+    } else if (onRespawnWerdna) {
+      onRespawnWerdna();
+    }
+    const msg =
+      lang === 'fr'
+        ? "🔄 Tous les gardiens et boss vaincus de ce scénario ont été réinitialisés !"
+        : "🔄 All defeated guardians and scenario bosses have been reset!";
+    showNotification(msg);
   };
 
   return (
@@ -249,12 +281,12 @@ export const CheatModal: React.FC<CheatModalProps> = ({
               <Zap className="w-6 h-6 fill-current animate-pulse" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-950/80 text-rose-300 border border-rose-600/40">
                   DEVELOPER / CHEAT ENGINE
                 </span>
-                <span className="text-[10px] font-mono text-slate-400">
-                  Scenario: {activeScenarioId}
+                <span className="text-[10px] font-mono text-amber-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                  {lang === 'fr' ? cheatConfig.titleFr : cheatConfig.titleEn}
                 </span>
               </div>
               <h2 className="text-xl md:text-2xl font-serif font-black text-rose-200 mt-1">
@@ -262,8 +294,8 @@ export const CheatModal: React.FC<CheatModalProps> = ({
               </h2>
               <p className="text-xs text-slate-300 mt-0.5">
                 {lang === 'fr' 
-                  ? "Modifiez l'or, les points d'XP pour le passage à l'Auberge, et injectez les clés d'ascenseurs et ruban bleu."
-                  : 'Adjust gold, EXP points for the Adventurer Inn, and inject elevator keys and blue ribbon.'}
+                  ? "Actions arcaniques et triches contextuelles adaptées au scénario en cours."
+                  : 'Arcane actions and cheats contextually adapted to the active scenario.'}
               </p>
             </div>
           </div>
@@ -357,8 +389,8 @@ export const CheatModal: React.FC<CheatModalProps> = ({
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
                   {lang === 'fr'
-                    ? "Conformément aux règles authentiques de Wizardry, les héros ne montent pas de niveau automatiquement en combat mais en se reposant à l'Auberge de l'Aventurier. Cette triche calcule et attribue la quantité exacte d'XP requise pour atteindre le niveau cible souhaité lors du repos aux Écuries (gratuit) ou dans une chambre."
-                    : "In authentic Wizardry, adventurers do not level up in combat, but by resting at the Adventurer's Inn. This cheat calculates and grants the exact EXP required to achieve the desired level upon resting."}
+                    ? "Conformément aux règles authentiques de Wizardry, les héros montent de niveau en se reposant à l'Auberge de l'Aventurier. Cette triche calcule et attribue la quantité exacte d'XP requise pour atteindre le niveau cible souhaité lors du repos aux Écuries (gratuit) ou en chambre."
+                    : "In authentic Wizardry, adventurers level up by resting at the Adventurer's Inn. This cheat calculates and grants the exact EXP required to achieve the desired level upon resting at the Stables or in a room."}
                 </p>
 
                 <div className="flex items-center gap-3 pt-2">
@@ -487,115 +519,192 @@ export const CheatModal: React.FC<CheatModalProps> = ({
             </div>
           )}
 
-          {/* TAB 3: WIZARDRY 1 ELEVATOR KEYS & BLUE RIBBON */}
+          {/* TAB 3: SCENARIO-AWARE QUEST ITEMS & KEYS */}
           {activeTab === 'KEYS' && (
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                <div className="flex items-center gap-2 text-sky-300 font-bold text-sm">
-                  <Key className="w-4 h-4 text-sky-400" />
-                  <span>{t.cheat.tabKeys}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sky-300 font-bold text-sm">
+                    <Key className="w-4 h-4 text-sky-400" />
+                    <span>{lang === 'fr' ? "Objets de Quête & Clés Spécifiques au Scénario" : "Scenario-Specific Quest Items & Keys"}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-700/40">
+                    {lang === 'fr' ? cheatConfig.titleFr : cheatConfig.titleEn}
+                  </span>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {lang === 'fr'
-                    ? "Dans Wizardry I : Proving Grounds of the Mad Overlord, les ascenseurs du donjon de Trebor nécessitent des objets spéciaux dans l'inventaire :"
-                    : "In Wizardry I: Proving Grounds of the Mad Overlord, Trebor's dungeon elevators require specific items:"}
-                </p>
-                <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                  <li><strong>BRONZE KEY (#97) & SILVER KEY (#98)</strong> : {lang === 'fr' ? "Permettent de déverrouiller l'ascenseur des Niveaux 1 à 4." : "Unlocks the elevator connecting Floors 1 to 4."}</li>
-                  <li><strong>BLUE RIBBON (#100)</strong> : {lang === 'fr' ? "Le ruban bleu de Trebor, indispensable au 4e sous-sol (10, 1) pour l'ascenseur express (Niveaux 4 à 9/10) !" : "Trebor's officer badge, required on Floor 4 (10, 1) for the express elevator (Floors 4 to 9/10)!"}</li>
-                  <li><strong>STATUETTES (#95 & #96)</strong> : {lang === 'fr' ? "Portes blindées du 4e sous-sol." : "Fortified doors on Floor 4."}</li>
-                </ul>
 
-                {/* 1-Click Bundle */}
-                <div className="pt-2">
-                  <button
-                    onClick={handleGiveElevatorKeyBundle}
-                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white font-black text-xs tracking-wide shadow flex items-center justify-center gap-2 transition"
-                  >
-                    <Key className="w-4 h-4" />
-                    <span>🔑 {lang === 'fr' ? "Injecter le Pack Ascenseurs : Bronze Key + Silver Key + Blue Ribbon" : "Inject Elevator Bundle: Bronze Key + Silver Key + Blue Ribbon"}</span>
-                  </button>
-                </div>
+                <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                  {lang === 'fr' ? cheatConfig.questLoreFr : cheatConfig.questLoreEn}
+                </p>
+
+                {/* 1-Click Primary Bundle */}
+                {cheatConfig.primaryBundleItemIds.length > 0 && (
+                  <div className="pt-2">
+                    <button
+                      onClick={handleGivePrimaryBundle}
+                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white font-black text-xs tracking-wide shadow flex items-center justify-center gap-2 transition"
+                    >
+                      <Key className="w-4 h-4" />
+                      <span>🔑 {lang === 'fr' ? cheatConfig.primaryBundleNameFr : cheatConfig.primaryBundleNameEn}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Individual Item Injections */}
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-                  {lang === 'fr' ? "Ajout d'objets de quête individuels :" : "Grant Individual Quest Items:"}
+                  {lang === 'fr' ? "Ajout d'objets de quête individuels de ce scénario :" : "Grant Individual Scenario Quest Items:"}
                 </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  {[
-                    { id: 94, name: "WERDNA'S AMULET", desc: "Amulette de Werdna (#94) - Final Relic" },
-                    { id: 97, name: 'BRONZE KEY', desc: 'Bronze Key (#97)' },
-                    { id: 98, name: 'SILVER KEY', desc: 'Silver Key (#98)' },
-                    { id: 100, name: 'BLUE RIBBON', desc: 'Blue Ribbon (#100)' },
-                    { id: 99, name: 'GOLD KEY', desc: 'Gold Key (#99)' },
-                    { id: 95, name: 'STATUETTE/BEAR', desc: 'Bear Statuette (#95)' },
-                    { id: 96, name: 'STATUETTE/FROG', desc: 'Frog Statuette (#96)' },
-                  ].map(itm => (
-                    <button
-                      key={itm.id}
-                      onClick={() => handleGiveItem(itm.id, itm.name)}
-                      className="p-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-left flex items-center justify-between transition group"
-                    >
-                      <span className="font-semibold text-slate-200 group-hover:text-amber-300">{itm.desc}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-300 font-mono">+ {lang === 'fr' ? 'Ajouter' : 'Add'}</span>
-                    </button>
-                  ))}
-                </div>
 
-                <div className="pt-2 border-t border-slate-800 flex justify-end">
-                  <button
-                    onClick={handleGiveAllW1QuestItems}
-                    className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/40 text-xs font-bold transition"
-                  >
-                    🎁 {t.cheat.giveAllKeysBtn}
-                  </button>
-                </div>
+                {cheatConfig.questItems.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">
+                    {lang === 'fr'
+                      ? "Ce scénario ne comporte aucun objet de quête répertorié dans sa base d'objets."
+                      : "This scenario has no registered quest items in its item database."}
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {cheatConfig.questItems.map(itm => (
+                      <button
+                        key={itm.id}
+                        onClick={() => handleGiveItem(itm.id, itm.name)}
+                        className="p-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-left flex items-center justify-between transition group"
+                        title={lang === 'fr' ? itm.descFr : itm.descEn}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="font-semibold text-slate-200 group-hover:text-amber-300 truncate">
+                            {itm.name}
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {lang === 'fr' ? itm.descFr : itm.descEn}
+                          </div>
+                        </div>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-sky-300 font-mono shrink-0">
+                          + {lang === 'fr' ? 'Ajouter' : 'Add'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {cheatConfig.allQuestItemIds.length > 0 && (
+                  <div className="pt-2 border-t border-slate-800 flex justify-end">
+                    <button
+                      onClick={handleGiveAllScenarioQuestItems}
+                      className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/40 text-xs font-bold transition"
+                    >
+                      🎁 {lang === 'fr' ? "Donner Tous les Objets de Quête de ce Scénario" : "Grant All Scenario Quest Items"}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* TAB 4: RESTORE / HEAL */}
+          {/* TAB 4: RESTORE / HEAL & SCENARIO BOSS RESPAWNS */}
           {activeTab === 'RESTORE' && (
-            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
-              <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
-                <HeartPulse className="w-4 h-4" />
-                <span>{t.cheat.tabRestore}</span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                {lang === 'fr'
-                  ? "Restaure immédiatement l'intégralité des points de vie (PV Max), réinitialise tous les statuts (mort, cendres, paralysie, pétrification, sommeil) à l'état normal (OK), dissipe le poison et recharge les points de sorts de l'ensemble de la guilde."
-                  : "Fully restores Hit Points (Max HP), resets all afflictions (dead, ashes, paralysis, petrified, asleep) to OK status, cleanses poison, and recharges spell points for all guild members."}
-              </p>
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-4">
+                <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
+                  <HeartPulse className="w-4 h-4" />
+                  <span>{t.cheat.tabRestore}</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {lang === 'fr'
+                    ? "Restaure immédiatement l'intégralité des points de vie (PV Max), dissipe tous les statuts invalidants (mort, cendres, paralysie, pétrification, sommeil) à l'état normal (OK), soigne le poison et recharge les points de sorts de l'ensemble de la guilde."
+                    : "Fully restores Hit Points (Max HP), resets all afflictions (dead, ashes, paralysis, petrified, asleep) to OK status, cleanses poison, and recharges spell points for all guild members."}
+                </p>
 
-              <button
-                onClick={() => {
-                  onRestoreAllHeroes();
-                  showNotification(t.cheat.restoreSuccess);
-                }}
-                className="w-full py-3 px-4 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs tracking-wide shadow flex items-center justify-center gap-2 transition"
-              >
-                <HeartPulse className="w-4 h-4 fill-current" />
-                <span>{t.cheat.restoreAllHpBtn}</span>
-              </button>
-
-              <div className="pt-3 border-t border-slate-800 space-y-1.5">
                 <button
                   onClick={() => {
-                    onRespawnWerdna?.();
-                    showNotification(t.cheat.werdnaRespawnedSuccess);
+                    onRestoreAllHeroes();
+                    showNotification(t.cheat.restoreSuccess);
                   }}
-                  className="w-full py-3 px-4 rounded-xl bg-purple-900/80 hover:bg-purple-800 border border-purple-500/50 text-purple-200 font-bold text-xs tracking-wide shadow flex items-center justify-center gap-2 transition"
+                  className="w-full py-3 px-4 rounded-xl bg-rose-700 hover:bg-rose-600 text-white font-bold text-xs tracking-wide shadow flex items-center justify-center gap-2 transition"
                 >
-                  <Skull className="w-4 h-4 text-purple-400" />
-                  <span>{t.cheat.respawnWerdnaBtn}</span>
+                  <HeartPulse className="w-4 h-4 fill-current" />
+                  <span>{t.cheat.restoreAllHpBtn}</span>
                 </button>
-                <p className="text-[11px] text-slate-400 text-center">
-                  {lang === 'fr' 
-                    ? "Permet d'affronter Werdna et sa garde à nouveau en case (17, 3) du Niveau 10 sans recommencer une partie."
-                    : "Allows confronting Werdna and his guard again at Floor 10 (17, 3) without restarting a new game."}
+              </div>
+
+              {/* Scenario-Specific Boss and Encounter Respawns */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-purple-300 font-bold text-sm">
+                    <Skull className="w-4 h-4 text-purple-400" />
+                    <span>{lang === 'fr' ? "Réapparition des Monstres & Boss Vaincus" : "Respawn Defeated Bosses & Guardians"}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-purple-300 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800/40">
+                    {lang === 'fr' ? cheatConfig.titleFr : cheatConfig.titleEn}
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {lang === 'fr'
+                    ? "Permet de réaffronter les créatures légendaires et boss déjà terrassés sans devoir réinitialiser l'ensemble de votre aventure."
+                    : "Allows confronting legendary monsters and defeated storyline bosses again without restarting the whole game."}
                 </p>
+
+                {cheatConfig.bosses.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">
+                    {lang === 'fr'
+                      ? "Aucun combat unique de boss persistant n'est configuré pour ce scénario."
+                      : "No persistent unique boss fights are registered for this scenario."}
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {cheatConfig.bosses.map(boss => (
+                      <div
+                        key={boss.id}
+                        className="p-3 rounded-xl bg-slate-900 border border-purple-900/60 space-y-2"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Swords className="w-4 h-4 text-purple-400 shrink-0" />
+                            <span className="font-bold text-sm text-purple-200">
+                              {lang === 'fr' ? boss.nameFr : boss.nameEn}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/50">
+                            {boss.coordsText}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                          {lang === 'fr' ? boss.descriptionFr : boss.descriptionEn}
+                        </p>
+
+                        <button
+                          onClick={() => handleTriggerBossRespawn(boss)}
+                          className="w-full py-2 px-3 rounded-lg bg-purple-900/80 hover:bg-purple-800 text-purple-100 font-bold text-xs border border-purple-600/50 flex items-center justify-center gap-2 transition"
+                        >
+                          <Skull className="w-3.5 h-3.5" />
+                          <span>
+                            {lang === 'fr'
+                              ? `Faire réapparaître : ${boss.nameFr}`
+                              : `Respawn: ${boss.nameEn}`}
+                          </span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Universal reset all encounters button */}
+                <div className="pt-2 border-t border-slate-800">
+                  <button
+                    onClick={handleResetAllScenarioEncounters}
+                    className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 font-bold text-xs border border-amber-600/40 flex items-center justify-center gap-2 transition"
+                  >
+                    <RotateCcw className="w-4 h-4 text-amber-400" />
+                    <span>
+                      {lang === 'fr'
+                        ? "🔄 Réinitialiser tous les boss & gardiens vaincus de ce scénario"
+                        : "🔄 Reset all defeated bosses & fixed guardians of this scenario"}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
