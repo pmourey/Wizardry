@@ -307,6 +307,14 @@ export const EXACT_SCENARIO_MESSAGES_FR: Record<string, string[]> = {
     "et des fragments d'armures rouillées broyées par la roche."
   ],
 
+  "LYING IN FRONT OF THE DOOR IS A BEAST WITH THE HEAD OF A MAN AND THE BODY OF A LION. IN AN HYPNOTIC VOICE IT INTONES: \"ENTER HERE, THE VERY FEW WHO CAN GIVE THE ANSWER TRUE OF THIS RIDDLE ASKED OF YOU. SEARCH THIS LEVEL, IF YOU DARE SEARCH EACH DEN AND MONSTER LAIR THREE CLUES HAVE I HIDDEN THERE. SEARCH EACH PASSAGE AND EACH ROOM FOR A KING WITHIN HIS TOMB FOR THE ANSWER WAS HIS DOOM. IF YOU LIVE, YOU SHOULD NOT LOSE FOR THE ANSWER TO THIS RUSE LIES CONFUSED AMONG THE CLUES.\"": [
+    "Devant la porte repose une bête au corps de lion et à la tête d'homme. D'une voix envoûtante, elle déclame :",
+    "« Entrent ici les rares élus qui donneront la réponse véritable à l'énigme qui leur est posée.",
+    "Fouillez cet étage si vous l'osez, parcourez chaque tanière et antre de monstre : trois indices y sont cachés.",
+    "Explorez chaque couloir pour trouver un roi dans son tombeau, car la réponse causa son trépas.",
+    "Si vous survivez, la solution à cette ruse se dévoilera au milieu de ces indices. »"
+  ],
+
   "YOU STAND AT THE ENTRANCE OF WHAT SEEMS TO BE A HUGE CAVERN. THE FLOOR AND WALLS ARE COVERED WITH MOISTURE; THE AIR IS COOL AND DANK. FROM THE VAULTED CEILING HANG GREAT STALACTITES, AND UNKNOWN SMALL ANIMALS SQUEAK AND SCURRY IN THE DARKNESS.": [
     "Vous vous tenez à l'entrée d'une cavité monumentale.",
     "La roche ruisselle d'humidité et l'air y est frais et saturé d'embruns.",
@@ -317,6 +325,54 @@ export const EXACT_SCENARIO_MESSAGES_FR: Record<string, string[]> = {
   // ==========================================
   // WIZARDRY 3: LEGACY OF LLYLGAMYN
   // ==========================================
+  "I AM AROUND YOU ALWAYS, BUT YOU HAVE NEVER SEEN ME. YOU WOULD NEVER LEAVE ME, BUT WERE I GONE, YOU WOULD NOT CRY OUT FOR ME. WHAT AM I?": [
+    "« Je suis tout autour de vous en permanence,",
+    "mais vous ne m'avez jamais vu.",
+    "",
+    "Jamais vous ne me quitteriez,",
+    "mais si je venais à disparaître,",
+    "vous n'auriez même plus le souffle pour m'appeler.",
+    "",
+    "Qui suis-je ? »"
+  ],
+
+  "AN ELEGANTLY DRESSED WOMAN WITH A WHIP DEMANDS, \"WHAT'S THE PASSWORD, BOYS?\"": [
+    "Une femme élégamment vêtue armée d'un fouet s'avance d'un pas assuré et exige :",
+    "« Quel est le mot de passe, les garçons ? »"
+  ],
+
+  "OURS IS AN UNEASY FRIENDSHIP. YOUR FATHERS TOILED LONG TO TAME ME, BUT EVEN NOW I WILL GO MY OWN WAY IF YOU DO NOT TEND ME WELL. I AM A POWERFUL DESTROYER, YET MY FRAILTY IS GREAT. WHAT AM I?": [
+    "« Notre amitié est tumultueuse et périlleuse.",
+    "Vos ancêtres ont peiné de longs siècles pour m'apprivoiser,",
+    "mais encore aujourd'hui, je détruis tout sur mon passage si l'on cesse de me nourrir.",
+    "Je suis un fléau dévastateur, et pourtant d'une grande fragilité.",
+    "",
+    "Qui suis-je ? »"
+  ],
+
+  "I AM ONE OF THE DECK OF SEVENTY-EIGHT, AND VICTORY I FORETELL. TWO BOLD STEEDS DRAW ME FORTH, AND STARS SHINE FROM MY CROWN. WHAT CARD AM I?": [
+    "« J'appartiens à un jeu sacré de soixante-dix-huit arcanes,",
+    "et j'annonce le triomphe et la conquête.",
+    "Deux fiers destriers me propulsent en avant,",
+    "et les étoiles resplendissent sur ma couronne.",
+    "",
+    "Quelle carte de tarot suis-je ? »"
+  ],
+
+  "ON MY ROLL, YOU MOVE FORWARD; MY TURN IS YOUR TURN. WHAT AM I?": [
+    "« Quand je roule, vous avancez dans votre périple ;",
+    "mon tour est aussi votre tour.",
+    "",
+    "Qui suis-je ? »"
+  ],
+
+  "BLACK FIGURE ON A BLACK HORSE, HE CARRIES THE WHITE ROSE. THE RISING SUN -- CHANGE WILL COME IT FOLLOWS WHEREVER HE GOES. WHAT CARD AM I?": [
+    "« Une silhouette sombre juchée sur un destrier noir,",
+    "il porte une rose blanche.",
+    "Le soleil levant annonce le grand bouleversement qui l'accompagne partout où il passe.",
+    "",
+    "Quelle carte de tarot suis-je ? »"
+  ],
   "YOU STAND ON A BEACH. BEYOND IT LIES A DARK LAKE, IN WHICH IS A SMALL ISLAND.": [
     "Vous vous tenez sur une rive sablonneuse.",
     "Au-delà s'étend un lac aux eaux sombres et profondes,",

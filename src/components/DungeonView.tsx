@@ -1075,7 +1075,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                       <button
                         onClick={() => setIsFloorBannerExpanded(true)}
                         className="text-amber-400 hover:text-amber-300 hover:bg-slate-800/80 p-1 rounded transition"
-                        title={lang === 'en' ? 'Expand view / Read full text' : 'Agrandir la fenêtre / Lire la suite'}
+                        title={lang === 'en' ? 'Expand view' : 'Agrandir la fenêtre'}
                       >
                         <Maximize2 className="w-3.5 h-3.5" />
                       </button>
@@ -1088,27 +1088,10 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                       </button>
                     </div>
                   </div>
-                  <div 
-                    onClick={() => setIsFloorBannerExpanded(true)}
-                    className="cursor-pointer group mt-0.5"
-                    title={lang === 'en' ? 'Click to read full advice' : 'Cliquer pour agrandir et lire tout le texte'}
-                  >
-                    <p className="text-[11px] text-slate-200 line-clamp-2 leading-snug group-hover:text-amber-200 transition">
-                      {guidanceLevel === 'SUBTLE' ? currentFloorGuide.subtleClue : currentFloorGuide.summary}
-                    </p>
-                    <span className="text-[10px] text-amber-400/90 group-hover:text-amber-300 font-semibold underline underline-offset-2 inline-flex items-center gap-1 mt-0.5">
-                      <span>{lang === 'en' ? 'Expand & read more...' : 'Agrandir pour lire la suite...'}</span>
-                      <ChevronDown className="w-3 h-3" />
-                    </span>
-                  </div>
+                  <p className="text-[11px] text-slate-200 line-clamp-2 mt-1 leading-snug">
+                    {guidanceLevel === 'SUBTLE' ? currentFloorGuide.subtleClue : currentFloorGuide.summary}
+                  </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <button
-                      onClick={() => setIsFloorBannerExpanded(true)}
-                      className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-semibold rounded-md transition flex items-center gap-1"
-                    >
-                      <Maximize2 className="w-3 h-3" />
-                      <span>{lang === 'en' ? 'Expand' : 'Agrandir'}</span>
-                    </button>
                     {onOpenGuide && (
                       <button
                         onClick={() => {

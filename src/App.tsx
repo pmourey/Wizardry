@@ -33,6 +33,7 @@ import { ScenarioMenuView } from './components/ScenarioMenuView';
 import { ManualsModal } from './components/ManualsModal';
 import { ScenarioGuideModal } from './components/ScenarioGuideModal';
 import { CheatModal } from './components/CheatModal';
+import { RiddleModal } from './components/RiddleModal';
 import { VictoryModal } from './components/VictoryModal';
 import { getCharacterChevrons } from './utils/awards';
 import { WIZARDRY_SCENARIOS, getLocalizedScenario } from './data/scenariosCatalog';
@@ -347,6 +348,12 @@ export default function App() {
       (window.location.hostname.includes('itch.zone') || window.location.hostname.includes('itch.io')));
   const [showPySide6Export, setShowPySide6Export] = useState<boolean>(false);
   const [showCheatModal, setShowCheatModal] = useState<boolean>(false);
+  const [activeRiddle, setActiveRiddle] = useState<{
+    event: TMazeEvent;
+    x: number;
+    y: number;
+    key: string;
+  } | null>(null);
   const [victoryCelebration, setVictoryCelebration] = useState<{
     show: boolean;
     expBonus: number;
@@ -822,6 +829,25 @@ export default function App() {
     return `${hero.name} reçoit : ${item.name}`;
   };
 
+  /** Handles successful resolution of an interactive dungeon riddle */
+  const handleRiddleSolved = (answerGiven: string, ev: TMazeEvent) => {
+    const key = `${dungeonLevel}:${ev.x}:${ev.y}`;
+    const used = eventUsesRef.current[key] || 0;
+    markEventUsed(key, used + 1);
+    sounds.playFanfare();
+    const got = ev.itemId !== undefined ? giveItemToParty(ev.itemId) : null;
+    addAdventureEvent(
+      'DISCOVERY',
+      lang === 'fr' ? 'Énigme Résolue !' : 'Riddle Solved!',
+      lang === 'fr' 
+        ? `L'énigme aux coordonnées (${ev.x}, ${ev.y}) a été résolue avec la réponse « ${answerGiven} ».${got ? ' ' + got : ''}`
+        : `Riddle at (${ev.x}, ${ev.y}) was solved with answer "${answerGiven}".${got ? ' ' + got : ''}`,
+      got || undefined,
+      dungeonLevel,
+      { x: ev.x, y: ev.y }
+    );
+  };
+
   /** Handles a scenario special square. Returns true when a combat/transition started. */
   const handleSquareEvent = (ev: TMazeEvent, x: number, y: number, searching: boolean): boolean => {
     const key = `${dungeonLevel}:${x}:${y}`;
@@ -999,7 +1025,36 @@ export default function App() {
         }
         return false;
       }
+      case 'RIDDLE': {
+        if (used > 0 && ev.uses !== 'ALWAYS') {
+          announce(
+            lang === 'fr' ? 'Énigme Déjà Résolue' : 'Riddle Already Solved',
+            [lang === 'fr' ? "Le mécanisme de cette énigme a déjà été résolu et déverrouillé." : "This riddle mechanism has already been solved and unlocked."],
+            undefined,
+            x,
+            y
+          );
+          return false;
+        }
+        setActiveRiddle({ event: ev, x, y, key });
+        return false;
+      }
       default:
+        // Any scenario square that carries a riddle answer triggers the interactive riddle prompt
+        if (ev.answer) {
+          if (used > 0 && ev.uses !== 'ALWAYS') {
+            announce(
+              lang === 'fr' ? 'Énigme Déjà Résolue' : 'Riddle Already Solved',
+              [lang === 'fr' ? "Le mécanisme de cette énigme a déjà été résolu et déverrouillé." : "This riddle mechanism has already been solved and unlocked."],
+              undefined,
+              x,
+              y
+            );
+            return false;
+          }
+          setActiveRiddle({ event: ev, x, y, key });
+          return false;
+        }
         if (ev.message?.length) announce(lang === 'en' ? 'Message' : 'Message', ev.message, undefined, x, y);
         return false;
     }
@@ -2666,6 +2721,19 @@ export default function App() {
         currentFloor={location === 'MAZE' ? dungeonLevel : undefined}
         initialFloor={guideFloorTarget}
       />
+
+      {/* Interactive Dungeon Riddle Prompt Modal */}
+      {activeRiddle && (
+        <RiddleModal
+          isOpen={!!activeRiddle}
+          onClose={() => setActiveRiddle(null)}
+          event={activeRiddle.event}
+          x={activeRiddle.x}
+          y={activeRiddle.y}
+          dungeonLevel={dungeonLevel}
+          onSuccess={(answer, ev) => handleRiddleSolved(answer, ev)}
+        />
+      )}
 
       {/* Standalone Cheat Console Modal */}
       <CheatModal
