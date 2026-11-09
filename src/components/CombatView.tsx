@@ -935,7 +935,7 @@ export const CombatView: React.FC<CombatViewProps> = ({
                         {!pendingItemAction && (
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                             {usableItems.map(({ slot, sIdx, itm }) => {
-                              const sp = itm.spellPower > 0 ? SPELLS.find(s => s.id === item.spellPower) : null;
+                              const sp = itm.spellPower > 0 ? SPELLS.find(s => s.id === itm.spellPower) : null;
                               const isTargetAlly = Boolean(
                                 (sp && FRIENDLY_HEALING_SPELLS.has(sp.name)) ||
                                 (!sp && (
