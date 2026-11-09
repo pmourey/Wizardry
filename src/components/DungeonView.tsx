@@ -63,7 +63,13 @@ import {
   FileText,
   FlaskConical,
   AlertTriangle,
-  Trash2
+  Trash2,
+  Maximize2,
+  Minimize2,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  BookOpen
 } from 'lucide-react';
 
 interface DungeonViewProps {
@@ -157,6 +163,11 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
   // Guidance and Floor Strategy Oracle state
   const [guidanceLevel] = useGuidanceLevel();
   const [floorBannerDismissedForLevel, setFloorBannerDismissedForLevel] = useState<number | null>(null);
+  const [isFloorBannerExpanded, setIsFloorBannerExpanded] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsFloorBannerExpanded(false);
+  }, [maze.level]);
 
   const currentFloorGuide = useMemo(() => {
     if (!activeScenarioId) return null;
@@ -1050,48 +1061,215 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
 
           {/* Interactive Contextual Floor Strategy Oracle Banner */}
           {showFloorBanner && currentFloorGuide && (
-            <div className="fixed top-2 sm:top-3 left-1/2 -translate-x-1/2 z-[52] max-w-lg w-[calc(100vw-1.5rem)] bg-slate-950/95 border border-amber-500/80 rounded-xl p-3 shadow-2xl backdrop-blur-md animate-fadeIn flex items-start gap-2.5">
-              <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
-                <Compass className="w-4 h-4 animate-spin-slow" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wide truncate">
-                    {lang === 'en' ? `Floor ${maze.level} Oracle Guidance` : `Oracle de l'Étage ${maze.level}`}
-                  </span>
-                  <button
-                    onClick={() => setFloorBannerDismissedForLevel(maze.level)}
-                    className="text-slate-400 hover:text-white p-0.5"
-                    title={lang === 'en' ? 'Dismiss' : 'Fermer'}
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+            !isFloorBannerExpanded ? (
+              <div className="fixed top-2 sm:top-3 left-1/2 -translate-x-1/2 z-[52] max-w-lg w-[calc(100vw-1.5rem)] bg-slate-950/95 border border-amber-500/80 rounded-xl p-3 shadow-2xl backdrop-blur-md animate-fadeIn flex items-start gap-2.5">
+                <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+                  <Compass className="w-4 h-4 animate-spin-slow" />
                 </div>
-                <p className="text-[11px] text-slate-200 line-clamp-2 mt-0.5 leading-snug">
-                  {guidanceLevel === 'SUBTLE' ? currentFloorGuide.subtleClue : currentFloorGuide.summary}
-                </p>
-                <div className="mt-2 flex items-center gap-2">
-                  {onOpenGuide && (
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wide truncate">
+                      {lang === 'en' ? `Floor ${maze.level} Oracle Guidance` : `Oracle de l'Étage ${maze.level}`}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setIsFloorBannerExpanded(true)}
+                        className="text-amber-400 hover:text-amber-300 hover:bg-slate-800/80 p-1 rounded transition"
+                        title={lang === 'en' ? 'Expand view / Read full text' : 'Agrandir la fenêtre / Lire la suite'}
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setFloorBannerDismissedForLevel(maze.level)}
+                        className="text-slate-400 hover:text-white p-1 rounded transition"
+                        title={lang === 'en' ? 'Dismiss' : 'Fermer'}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div 
+                    onClick={() => setIsFloorBannerExpanded(true)}
+                    className="cursor-pointer group mt-0.5"
+                    title={lang === 'en' ? 'Click to read full advice' : 'Cliquer pour agrandir et lire tout le texte'}
+                  >
+                    <p className="text-[11px] text-slate-200 line-clamp-2 leading-snug group-hover:text-amber-200 transition">
+                      {guidanceLevel === 'SUBTLE' ? currentFloorGuide.subtleClue : currentFloorGuide.summary}
+                    </p>
+                    <span className="text-[10px] text-amber-400/90 group-hover:text-amber-300 font-semibold underline underline-offset-2 inline-flex items-center gap-1 mt-0.5">
+                      <span>{lang === 'en' ? 'Expand & read more...' : 'Agrandir pour lire la suite...'}</span>
+                      <ChevronDown className="w-3 h-3" />
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
                     <button
-                      onClick={() => {
-                        onOpenGuide(activeScenarioId, maze.level);
-                        setFloorBannerDismissedForLevel(maze.level);
-                      }}
-                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 text-[11px] font-bold rounded-md transition shadow flex items-center gap-1"
+                      onClick={() => setIsFloorBannerExpanded(true)}
+                      className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[11px] font-semibold rounded-md transition flex items-center gap-1"
                     >
-                      <Sparkles className="w-3 h-3" />
-                      <span>{lang === 'en' ? 'Open Floor Guide' : "Consulter l'Aide"}</span>
+                      <Maximize2 className="w-3 h-3" />
+                      <span>{lang === 'en' ? 'Expand' : 'Agrandir'}</span>
                     </button>
-                  )}
-                  <button
-                    onClick={() => setFloorBannerDismissedForLevel(maze.level)}
-                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-md transition"
-                  >
-                    {lang === 'en' ? 'Dismiss' : 'Compris'}
-                  </button>
+                    {onOpenGuide && (
+                      <button
+                        onClick={() => {
+                          onOpenGuide(activeScenarioId, maze.level);
+                          setFloorBannerDismissedForLevel(maze.level);
+                        }}
+                        className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 text-[11px] font-bold rounded-md transition shadow flex items-center gap-1"
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        <span>{lang === 'en' ? 'Floor Guide' : "Guide Complet"}</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setFloorBannerDismissedForLevel(maze.level)}
+                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-md transition"
+                    >
+                      {lang === 'en' ? 'Dismiss' : 'Compris'}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="fixed top-3 sm:top-6 left-1/2 -translate-x-1/2 z-[60] max-w-xl sm:max-w-2xl w-[calc(100vw-1.5rem)] max-h-[82vh] bg-slate-950/98 border-2 border-amber-500/90 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden animate-fadeIn">
+                {/* Expanded Header */}
+                <div className="px-4 py-3 bg-gradient-to-r from-slate-900 via-amber-950/40 to-slate-900 border-b border-amber-500/40 flex items-center justify-between gap-3 shrink-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="p-1.5 rounded-lg bg-amber-500/20 border border-amber-500/30 text-amber-400 shrink-0">
+                      <Compass className="w-4 h-4 animate-spin-slow" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs sm:text-sm font-bold text-amber-300 uppercase tracking-wide truncate">
+                          {lang === 'en' ? `Floor ${maze.level} Oracle Guidance` : `Oracle de l'Étage ${maze.level}`}
+                        </span>
+                        {currentFloorGuide.recommendedLevel && (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-amber-500/30 text-amber-300">
+                            {currentFloorGuide.recommendedLevel}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-400 truncate">
+                        {currentFloorGuide.title} {currentFloorGuide.subtitle ? `— ${currentFloorGuide.subtitle}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => setIsFloorBannerExpanded(false)}
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition flex items-center gap-1 text-[11px]"
+                      title={lang === 'en' ? 'Reduce window' : 'Réduire la fenêtre'}
+                    >
+                      <Minimize2 className="w-4 h-4 text-amber-400" />
+                      <span className="hidden sm:inline">{lang === 'en' ? 'Minimize' : 'Réduire'}</span>
+                    </button>
+                    <button
+                      onClick={() => setFloorBannerDismissedForLevel(maze.level)}
+                      className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
+                      title={lang === 'en' ? 'Close for this floor' : 'Fermer pour cet étage'}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Scrollable Content */}
+                <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-slate-200 text-xs sm:text-sm leading-relaxed scrollbar-thin">
+                  {/* Subtle Clue / Prophetic Whisper */}
+                  {currentFloorGuide.subtleClue && (
+                    <div className="p-3 sm:p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                      <div className="text-[11px] font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>{lang === 'en' ? 'Mystic Oracle Whisper' : 'Murmure Mystique de l\'Oracle'}</span>
+                      </div>
+                      <p className="italic text-amber-100 font-serif leading-snug">
+                        « {currentFloorGuide.subtleClue} »
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Floor Overview / Strategic Summary */}
+                  {guidanceLevel !== 'SUBTLE' && currentFloorGuide.summary && (
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                        {lang === 'en' ? 'Strategic Overview' : 'Aperçu & Enjeux de l\'Étage'}
+                      </h4>
+                      <p className="text-slate-200 leading-relaxed whitespace-pre-line">
+                        {currentFloorGuide.summary}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Key Objectives */}
+                  {guidanceLevel !== 'SUBTLE' && currentFloorGuide.objectives && currentFloorGuide.objectives.length > 0 && (
+                    <div className="bg-slate-900/70 rounded-xl p-3 border border-slate-800">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-amber-300 mb-2 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                        <span>{lang === 'en' ? 'Floor Objectives' : 'Objectifs Clés'}</span>
+                      </h4>
+                      <ul className="space-y-1.5">
+                        {currentFloorGuide.objectives.map((obj, i) => (
+                          <li key={i} className="text-xs text-slate-300 flex items-start gap-2">
+                            <span className="text-amber-400 font-bold mt-0.5">•</span>
+                            <span>{obj}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Tactical Advice */}
+                  {guidanceLevel !== 'SUBTLE' && currentFloorGuide.tacticalAdvice && currentFloorGuide.tacticalAdvice.length > 0 && (
+                    <div className="bg-slate-900/70 rounded-xl p-3 border border-slate-800">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-sky-300 mb-2 flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5 text-sky-400" />
+                        <span>{lang === 'en' ? 'Tactical Advice' : 'Conseils Tactiques'}</span>
+                      </h4>
+                      <ul className="space-y-1.5">
+                        {currentFloorGuide.tacticalAdvice.map((tip, i) => (
+                          <li key={i} className="text-xs text-slate-300 flex items-start gap-2">
+                            <span className="text-sky-400 font-bold mt-0.5">▸</span>
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Expanded Footer Actions */}
+                <div className="px-4 py-3 bg-slate-900/90 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                  <button
+                    onClick={() => setIsFloorBannerExpanded(false)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition flex items-center gap-1.5"
+                  >
+                    <Minimize2 className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{lang === 'en' ? 'Reduce' : 'Réduire la fenêtre'}</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {onOpenGuide && (
+                      <button
+                        onClick={() => {
+                          onOpenGuide(activeScenarioId, maze.level);
+                          setFloorBannerDismissedForLevel(maze.level);
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-bold transition shadow-lg flex items-center gap-1.5"
+                      >
+                        <BookOpen className="w-3.5 h-3.5" />
+                        <span>{lang === 'en' ? 'Full Strategy Guide' : 'Guide Complet du Scénario'}</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setFloorBannerDismissedForLevel(maze.level)}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs transition"
+                    >
+                      {lang === 'en' ? 'Dismiss' : 'Fermer'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
           )}
 
           {/* Persistent On-Screen Mini-Map HUD Overlay */}

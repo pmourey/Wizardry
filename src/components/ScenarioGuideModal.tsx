@@ -27,7 +27,9 @@ import {
   BookOpen,
   Zap,
   CheckCircle2,
-  Navigation
+  Navigation,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 interface ScenarioGuideModalProps {
@@ -47,6 +49,7 @@ export const ScenarioGuideModal: React.FC<ScenarioGuideModalProps> = ({
 }) => {
   const { lang } = useI18n();
   const [guidanceLevel, setGuidanceLevel] = useGuidanceLevel();
+  const [isMaximized, setIsMaximized] = useState<boolean>(false);
 
   const scenarioMeta = useMemo(() => {
     const raw = WIZARDRY_SCENARIOS.find(s => s.id === activeScenarioId) || WIZARDRY_SCENARIOS[0];
@@ -95,11 +98,11 @@ export const ScenarioGuideModal: React.FC<ScenarioGuideModalProps> = ({
 
   return (
     <div 
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 backdrop-blur-md p-2 md:p-4 animate-fadeIn"
+      className={`fixed inset-0 z-[80] flex items-center justify-center bg-black/85 backdrop-blur-md ${isMaximized ? 'p-0' : 'p-2 md:p-4'} animate-fadeIn`}
       onClick={onClose}
     >
       <div 
-        className="w-full max-w-5xl max-h-[92vh] bg-slate-950 border border-amber-600/50 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100"
+        className={`${isMaximized ? 'w-screen h-screen max-w-none max-h-none rounded-none border-0' : 'w-full max-w-5xl max-h-[92vh] rounded-2xl border border-amber-600/50'} bg-slate-950 shadow-2xl flex flex-col overflow-hidden text-slate-100 transition-all duration-200`}
         onClick={e => e.stopPropagation()}
       >
         {/* MODAL HEADER */}
@@ -126,6 +129,15 @@ export const ScenarioGuideModal: React.FC<ScenarioGuideModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsMaximized(prev => !prev)}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
+              title={isMaximized 
+                ? (lang === 'fr' ? 'Réduire la fenêtre' : 'Restore window') 
+                : (lang === 'fr' ? 'Agrandir la fenêtre (Plein écran)' : 'Maximize window')}
+            >
+              {isMaximized ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            </button>
             <button
               onClick={onClose}
               className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition"
