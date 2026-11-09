@@ -1101,7 +1101,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                         className="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-slate-950 text-[11px] font-bold rounded-md transition shadow flex items-center gap-1"
                       >
                         <Sparkles className="w-3 h-3" />
-                        <span>{lang === 'en' ? 'Floor Guide' : "Guide Complet"}</span>
+                        <span>{lang === 'en' ? 'Oracle Guide' : "Guide de l'Oracle"}</span>
                       </button>
                     )}
                     <button
@@ -1240,7 +1240,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                         className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-bold transition shadow-lg flex items-center gap-1.5"
                       >
                         <BookOpen className="w-3.5 h-3.5" />
-                        <span>{lang === 'en' ? 'Full Strategy Guide' : 'Guide Complet du Scénario'}</span>
+                        <span>{lang === 'en' ? 'Full Strategy Guide' : 'Guide Stratégique de l\'Oracle'}</span>
                       </button>
                     )}
                     <button
@@ -1514,7 +1514,7 @@ export const DungeonView: React.FC<DungeonViewProps> = ({
                   className="w-full p-2.5 bg-slate-800/80 hover:bg-slate-800 border border-amber-600/40 rounded-lg flex items-center gap-2 text-amber-300 font-semibold transition"
                 >
                   <Compass className="w-4 h-4 text-amber-400" />
-                  <span>{lang === 'en' ? 'Floor Guide (H)' : 'Guide des Étages (H)'}</span>
+                  <span>{lang === 'en' ? 'Oracle Guide (H)' : "Guide de l'Oracle (H)"}</span>
                 </button>
               )}
             </div>

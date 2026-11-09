@@ -64,12 +64,14 @@ export const ScenarioGuideModal: React.FC<ScenarioGuideModalProps> = ({
   });
 
   useEffect(() => {
-    if (currentFloor && currentFloor >= 1 && currentFloor <= totalFloors) {
-      setSelectedFloor(currentFloor);
-    } else if (initialFloor && initialFloor >= 1 && initialFloor <= totalFloors) {
-      setSelectedFloor(initialFloor);
+    if (isOpen) {
+      if (initialFloor && initialFloor >= 1 && initialFloor <= totalFloors) {
+        setSelectedFloor(initialFloor);
+      } else if (currentFloor && currentFloor >= 1 && currentFloor <= totalFloors) {
+        setSelectedFloor(currentFloor);
+      }
     }
-  }, [currentFloor, initialFloor, totalFloors]);
+  }, [isOpen, currentFloor, initialFloor, totalFloors]);
 
   // Close on Escape key
   useEffect(() => {

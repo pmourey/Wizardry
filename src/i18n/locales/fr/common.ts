@@ -19,6 +19,8 @@ export const commonFr: CommonTranslations = {
   exportPySide6: 'Export PySide6',
   manualsBtn: 'Manuels & Guides',
   manualsTooltip: 'Télécharger les manuels officiels & guides Zimlab',
+  oracleBtn: 'Oracle',
+  oracleTooltip: "Consulter l'Oracle divin & le Guide Stratégique du scénario",
   cheatNavBtn: 'Triche',
   cheatNavTooltip: "Console de triche & outils de développement (F2) : XP pour l'Auberge, Or, Clés d'ascenseurs Wizardry 1, Soins rapides",
   scenarioMenuTooltip: 'Ouvrir le menu principal de sélection des scénarios',

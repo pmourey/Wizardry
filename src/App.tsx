@@ -67,7 +67,6 @@ import {
   Library,
   Keyboard,
   Sparkles,
-  BookOpen,
   Zap,
   Scroll,
   Languages
@@ -2208,15 +2207,17 @@ export default function App() {
 
           <button
             onClick={() => {
-              setManualsScenarioTarget(activeScenarioId);
-              setShowManualsModal(true);
+              setGuideScenarioTarget(activeScenarioId);
+              setGuideFloorTarget(location === 'MAZE' ? dungeonLevel : (activeScenarioId === 'return-of-werdna' ? 10 : 1));
+              setShowScenarioGuideModal(true);
+              sounds.playTurn();
             }}
-            className="flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-600/30"
-            title={t.manualsTooltip}
+            className="flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap shrink-0 transition bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-500/40 shadow-sm"
+            title={t.oracleTooltip}
           >
-            <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">{t.manualsBtn}</span>
-            <span className="sm:hidden">Docs</span>
+            <Compass className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">{t.oracleBtn}</span>
+            <span className="sm:hidden">{t.oracleBtn}</span>
           </button>
 
           <button

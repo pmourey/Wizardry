@@ -18,6 +18,8 @@ export interface CommonTranslations {
   exportPySide6: string;
   manualsBtn: string;
   manualsTooltip: string;
+  oracleBtn: string;
+  oracleTooltip: string;
   cheatNavBtn: string;
   cheatNavTooltip: string;
   scenarioMenuTooltip: string;
