@@ -16,7 +16,9 @@ import {
   formatDamageDice,
   recalculateCharacterCombatStats,
   canClassUseItem,
-  getUsableClassesList
+  getUsableClassesList,
+  getClassEligibility,
+  changeCharacterClass
 } from '../data/provingGroundsData';
 import { CharacterSheetModal } from './CharacterSheetModal';
 import { sounds } from '../utils/soundEffects';
@@ -42,7 +44,10 @@ import {
   RotateCcw,
   Undo2,
   Sliders,
-  BookOpen
+  BookOpen,
+  RefreshCw,
+  AlertTriangle,
+  ArrowRight
 } from 'lucide-react';
 import { getActiveStatusEffects } from '../engine/statusSystem';
 import { AdventureJournal } from './AdventureJournal';
@@ -128,8 +133,10 @@ export const CastleView: React.FC<CastleViewProps> = ({
   const [inspectingPartyIndex, setInspectingPartyIndex] = useState<number | null>(null);
   const [inspectingRosterHero, setInspectingRosterHero] = useState<TCharacter | null>(null);
 
-  // Character Creation state in Training Grounds
-  const [trainingMode, setTrainingMode] = useState<'CREATE' | 'RESPEC'>('CREATE');
+  // Character Creation / Class Change / Respec state in Training Grounds
+  const [trainingMode, setTrainingMode] = useState<'CREATE' | 'CHANGE_CLASS' | 'RESPEC'>('CREATE');
+  const [classChangeCharId, setClassChangeCharId] = useState<string>('');
+  const [pendingClassChange, setPendingClassChange] = useState<TClass | null>(null);
   const [newCharName, setNewCharName] = useState('');
   const [newCharRace, setNewCharRace] = useState<TRace>('HUMAN');
   const [newCharAlign, setNewCharAlign] = useState<TAlign>('GOOD');
@@ -748,6 +755,69 @@ export const CastleView: React.FC<CastleViewProps> = ({
     setAllCharacters(prev => prev.map(updateHero));
     sounds.playFanfare();
     setMessage(lang === 'fr' ? 'Caractéristiques mises à jour avec succès pour l\'aventurier !' : 'Attributes successfully updated for this adventurer!');
+  };
+
+  // Authentic Pascal Class Change (ROLLER.TEXT.pas: CHGCLASS, l. 617-682)
+  const handleConfirmClassChange = (heroId: string, newClass: TClass) => {
+    const hero = allCharacters.find(c => c.id === heroId) || party.find(c => c.id === heroId);
+    if (!hero) return;
+
+    if (hero.status !== 'OK' || hero.inMaze) {
+      sounds.playBump();
+      setMessage(
+        lang === 'fr'
+          ? `${hero.name} doit être vivant (OK) au Château pour changer de classe.`
+          : `${hero.name} must be alive (OK) at the Castle to change class.`
+      );
+      return;
+    }
+
+    const eligibility = getClassEligibility(hero.attrib, hero.align, lang)[newClass];
+    if (!eligibility?.eligible || hero.class === newClass) {
+      sounds.playBump();
+      return;
+    }
+
+    const updatedHero: TCharacter = {
+      ...hero,
+      attrib: { ...hero.attrib },
+      spellsKnown: [...(hero.spellsKnown || [])],
+      mageSpells: [...(hero.mageSpells || [0, 0, 0, 0, 0, 0, 0, 0])],
+      priestSpells: [...(hero.priestSpells || [0, 0, 0, 0, 0, 0, 0, 0])],
+      possessions: (hero.possessions || []).map(p => ({ ...p })),
+    };
+
+    const result = changeCharacterClass(updatedHero, newClass);
+    const oldClassName = getHeroClassName(result.oldClass);
+    const newClassName = getHeroClassName(result.newClass);
+    const yearsAdded = (result.ageAddedWeeks / 52).toFixed(1);
+
+    setParty(prev => prev.map(c => c.id === updatedHero.id ? updatedHero : c));
+    setAllCharacters(prev => prev.map(c => c.id === updatedHero.id ? updatedHero : c));
+    setPendingClassChange(null);
+    sounds.playFanfare();
+
+    onAddAdventureEvent?.(
+      'CASTLE',
+      lang === 'fr'
+        ? `Changement de classe : ${updatedHero.name} (${oldClassName} → ${newClassName})`
+        : `Class Change: ${updatedHero.name} (${oldClassName} → ${newClassName})`,
+      lang === 'fr'
+        ? `${updatedHero.name} devient ${newClassName} (Niveau 1). PV conservés (${updatedHero.hpLeft}/${updatedHero.hpMax}), ${result.preservedSpellsCount} sort(s) conservé(s), caractéristiques réinitialisées aux bases raciales (+${yearsAdded} ans).`
+        : `${updatedHero.name} becomes a Level 1 ${newClassName}. HP preserved (${updatedHero.hpLeft}/${updatedHero.hpMax}), ${result.preservedSpellsCount} spell(s) preserved, attributes reset to racial base (+${yearsAdded} yrs).`,
+      lang === 'fr'
+        ? `Règle Pascal (CHGCLASS) : ${result.unequippedCount} objet(s) déséquipé(s). Reposez-vous à l'Auberge pour recharger vos points de sorts.`
+        : `Pascal Rule (CHGCLASS): ${result.unequippedCount} item(s) unequipped. Rest at the Inn to recharge your spell points.`
+    );
+
+    const spellBonusNote = result.grantedSpellName
+      ? (lang === 'fr' ? ` Sort ${result.grantedSpellName} appris !` : ` Learned ${result.grantedSpellName}!`)
+      : '';
+    setMessage(
+      lang === 'fr'
+        ? `✨ ${updatedHero.name} est désormais ${newClassName} (Niv. 1) ! PV (${updatedHero.hpLeft}/${updatedHero.hpMax}) et ${result.preservedSpellsCount} sort(s) conservés.${spellBonusNote} Caractéristiques ramenées aux bases raciales (+${yearsAdded} ans). Reposez-vous à l'Auberge (Écuries gratuites incluses) pour recharger vos points de sorts !`
+        : `✨ ${updatedHero.name} is now a Level 1 ${newClassName}! HP (${updatedHero.hpLeft}/${updatedHero.hpMax}) and ${result.preservedSpellsCount} spell(s) preserved.${spellBonusNote} Attributes reset to racial base (+${yearsAdded} yrs). Rest at the Inn (even free Stables) to recharge spell points!`
+    );
   };
 
   const handleCreateNewHero = (chosenClass: TClass) => {
@@ -1453,17 +1523,35 @@ export const CastleView: React.FC<CastleViewProps> = ({
         {currentTab === 'TRAINING' && (
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Mode Switcher */}
-            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 bg-slate-900/90 border border-slate-800 p-1.5 rounded-xl">
               <button
                 onClick={() => { setTrainingMode('CREATE'); sounds.playTurn(); }}
-                className={`flex-1 py-2 px-4 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
+                className={`flex-1 py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
                   trainingMode === 'CREATE'
                     ? 'bg-amber-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
               >
-                <UserPlus className="w-4 h-4" />
+                <UserPlus className="w-4 h-4 shrink-0" />
                 <span>{t.castle.modeCreateHero}</span>
+              </button>
+              <button
+                onClick={() => {
+                  setTrainingMode('CHANGE_CLASS');
+                  setPendingClassChange(null);
+                  sounds.playTurn();
+                  if (!classChangeCharId && (party[0] || allCharacters[0])) {
+                    setClassChangeCharId((party[0] || allCharacters[0]).id);
+                  }
+                }}
+                className={`flex-1 py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
+                  trainingMode === 'CHANGE_CLASS'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <RefreshCw className="w-4 h-4 shrink-0" />
+                <span>{lang === 'fr' ? 'Changer de Classe' : 'Change Class'}</span>
               </button>
               <button
                 onClick={() => {
@@ -1473,13 +1561,13 @@ export const CastleView: React.FC<CastleViewProps> = ({
                     handleSelectCharForRespec((party[0] || allCharacters[0]).id);
                   }
                 }}
-                className={`flex-1 py-2 px-4 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
+                className={`flex-1 py-2 px-3 sm:px-4 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2 ${
                   trainingMode === 'RESPEC'
                     ? 'bg-amber-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white hover:bg-slate-800'
                 }`}
               >
-                <Sliders className="w-4 h-4" />
+                <Sliders className="w-4 h-4 shrink-0" />
                 <span>{t.castle.modeRespecStats}</span>
               </button>
             </div>
@@ -1650,33 +1738,39 @@ export const CastleView: React.FC<CastleViewProps> = ({
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {[
-                          { cls: 'FIGHTER' as const, name: t.character.classes.fighter, req: allocatedStats.STRENGTH >= 11, desc: `${t.character.attributes.strength.abbr} 11+` },
-                          { cls: 'MAGE' as const, name: t.character.classes.mage, req: allocatedStats.IQ >= 11, desc: `${t.character.attributes.iq.abbr} 11+` },
-                          { cls: 'PRIEST' as const, name: t.character.classes.priest, req: allocatedStats.PIETY >= 11 && newCharAlign !== 'NEUTRAL', desc: `${t.character.attributes.piety.abbr} 11+, !Neut` },
-                          { cls: 'THIEF' as const, name: t.character.classes.thief, req: allocatedStats.AGILITY >= 11 && newCharAlign !== 'GOOD', desc: `${t.character.attributes.agility.abbr} 11+, !Good` },
-                          { cls: 'BISHOP' as const, name: t.character.classes.bishop, req: allocatedStats.IQ >= 12 && allocatedStats.PIETY >= 12, desc: `${t.character.attributes.iq.abbr} 12+, ${t.character.attributes.piety.abbr} 12+` },
-                          { cls: 'SAMURAI' as const, name: t.character.classes.samurai, req: allocatedStats.STRENGTH >= 15 && allocatedStats.VITALITY >= 14, desc: `${t.character.attributes.strength.abbr} 15+, ${t.character.attributes.vitality.abbr} 14+` },
-                          { cls: 'LORD' as const, name: t.character.classes.lord, req: allocatedStats.STRENGTH >= 15 && allocatedStats.PIETY >= 12 && newCharAlign === 'GOOD', desc: `${t.character.attributes.strength.abbr} 15+, ${t.character.attributes.piety.abbr} 12+, Good` },
-                          { cls: 'NINJA' as const, name: t.character.classes.ninja, req: allocatedStats.STRENGTH >= 17 && allocatedStats.AGILITY >= 17 && newCharAlign === 'EVIL', desc: `${t.character.attributes.strength.abbr} 17+, ${t.character.attributes.agility.abbr} 17+, Evil` }
-                        ].map(item => (
-                          <button
-                            key={item.cls}
-                            disabled={!item.req}
-                            onClick={() => handleCreateNewHero(item.cls)}
-                            className={`p-2.5 rounded-xl text-left border transition flex flex-col justify-between ${
-                              item.req
-                                ? 'bg-slate-800 hover:bg-amber-600/90 text-white border-amber-600/40 hover:border-amber-400 cursor-pointer shadow-sm hover:scale-[1.02]'
-                                : 'bg-slate-900/60 text-slate-500 border-slate-800 opacity-40 cursor-not-allowed'
-                            }`}
-                          >
-                            <div className="font-bold text-xs flex items-center justify-between">
-                              <span>{item.name}</span>
-                              <span className="text-[10px] font-mono uppercase text-slate-400">{item.cls}</span>
-                            </div>
-                            <div className="text-[10px] text-slate-400 mt-1">{item.desc}</div>
-                          </button>
-                        ))}
+                        {(() => {
+                          const createElig = getClassEligibility(allocatedStats, newCharAlign, lang);
+                          return [
+                            { cls: 'FIGHTER' as const, name: t.character.classes.fighter, desc: `${t.character.attributes.strength.abbr} 11+` },
+                            { cls: 'MAGE' as const, name: t.character.classes.mage, desc: `${t.character.attributes.iq.abbr} 11+` },
+                            { cls: 'PRIEST' as const, name: t.character.classes.priest, desc: `${t.character.attributes.piety.abbr} 11+, !Neut` },
+                            { cls: 'THIEF' as const, name: t.character.classes.thief, desc: `${t.character.attributes.agility.abbr} 11+, !${lang === 'fr' ? 'Bon' : 'Good'}` },
+                            { cls: 'BISHOP' as const, name: t.character.classes.bishop, desc: `${t.character.attributes.iq.abbr} 12+, ${t.character.attributes.piety.abbr} 12+, !Neut` },
+                            { cls: 'SAMURAI' as const, name: t.character.classes.samurai, desc: `${t.character.attributes.strength.abbr} 15+, ${t.character.attributes.vitality.abbr} 14+, !${lang === 'fr' ? 'Mauv' : 'Evil'}` },
+                            { cls: 'LORD' as const, name: t.character.classes.lord, desc: `${t.character.attributes.strength.abbr} 15+, ${t.character.attributes.piety.abbr} 12+, ${lang === 'fr' ? 'Bon' : 'Good'}` },
+                            { cls: 'NINJA' as const, name: t.character.classes.ninja, desc: `${lang === 'fr' ? 'Toutes' : 'All'} 17+, ${lang === 'fr' ? 'Mauvais' : 'Evil'}` }
+                          ].map(item => {
+                            const elig = createElig[item.cls];
+                            return (
+                              <button
+                                key={item.cls}
+                                disabled={!elig.eligible}
+                                onClick={() => handleCreateNewHero(item.cls)}
+                                className={`p-2.5 rounded-xl text-left border transition flex flex-col justify-between ${
+                                  elig.eligible
+                                    ? 'bg-slate-800 hover:bg-amber-600/90 text-white border-amber-600/40 hover:border-amber-400 cursor-pointer shadow-sm hover:scale-[1.02]'
+                                    : 'bg-slate-900/60 text-slate-500 border-slate-800 opacity-40 cursor-not-allowed'
+                                }`}
+                              >
+                                <div className="font-bold text-xs flex items-center justify-between">
+                                  <span>{item.name}</span>
+                                  <span className="text-[10px] font-mono uppercase text-slate-400">{item.cls}</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-1">{item.desc}</div>
+                              </button>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -1684,7 +1778,287 @@ export const CastleView: React.FC<CastleViewProps> = ({
               </div>
             )}
 
-            {/* MODE 2: RESPEC EXISTING HERO */}
+            {/* MODE 2: CHANGE CLASS (Authentic Pascal ROLLER.TEXT: CHGCLASS) */}
+            {trainingMode === 'CHANGE_CLASS' && (() => {
+              const selectedCcHero = allCharacters.find(c => c.id === classChangeCharId) || party.find(c => c.id === classChangeCharId) || null;
+              const eligibilityMap = selectedCcHero ? getClassEligibility(selectedCcHero.attrib, selectedCcHero.align, lang) : null;
+              const raceBase = selectedCcHero ? (RACE_BASE_ATTRIBUTES[selectedCcHero.race] || RACE_BASE_ATTRIBUTES.HUMAN) : null;
+              const knownMageCount = selectedCcHero ? (selectedCcHero.spellsKnown || []).slice(1, 22).filter(Boolean).length : 0;
+              const knownPriestCount = selectedCcHero ? (selectedCcHero.spellsKnown || []).slice(22, 51).filter(Boolean).length : 0;
+              const totalKnownSpells = knownMageCount + knownPriestCount;
+              const heroAgeYears = selectedCcHero ? Math.floor((selectedCcHero.age || 18 * 52) / 52) : 18;
+              const canChangeStatus = selectedCcHero ? (selectedCcHero.status === 'OK' && !selectedCcHero.inMaze) : false;
+
+              const allClassesMeta: Array<{ cls: TClass; name: string; reqSummary: string }> = [
+                { cls: 'FIGHTER', name: t.character.classes.fighter, reqSummary: `${t.character.attributes.strength.abbr} 11+` },
+                { cls: 'MAGE', name: t.character.classes.mage, reqSummary: `${t.character.attributes.iq.abbr} 11+` },
+                { cls: 'PRIEST', name: t.character.classes.priest, reqSummary: `${t.character.attributes.piety.abbr} 11+, !Neut` },
+                { cls: 'THIEF', name: t.character.classes.thief, reqSummary: `${t.character.attributes.agility.abbr} 11+, !${lang === 'fr' ? 'Bon' : 'Good'}` },
+                { cls: 'BISHOP', name: t.character.classes.bishop, reqSummary: `${t.character.attributes.iq.abbr} 12+, ${t.character.attributes.piety.abbr} 12+, !Neut` },
+                { cls: 'SAMURAI', name: t.character.classes.samurai, reqSummary: `${t.character.attributes.strength.abbr} 15+, ${t.character.attributes.iq.abbr} 11+, ${t.character.attributes.piety.abbr} 10+, ${t.character.attributes.vitality.abbr} 14+, ${t.character.attributes.agility.abbr} 10+, !${lang === 'fr' ? 'Mauv' : 'Evil'}` },
+                { cls: 'LORD', name: t.character.classes.lord, reqSummary: `${t.character.attributes.strength.abbr} 15+, ${t.character.attributes.iq.abbr} 12+, ${t.character.attributes.piety.abbr} 12+, ${t.character.attributes.vitality.abbr} 15+, ${t.character.attributes.agility.abbr} 14+, ${t.character.attributes.luck.abbr} 15+, ${lang === 'fr' ? 'Bon' : 'Good'}` },
+                { cls: 'NINJA', name: t.character.classes.ninja, reqSummary: `${lang === 'fr' ? 'Toutes stats' : 'All stats'} 17+, ${lang === 'fr' ? 'Mauvais' : 'Evil'}` },
+              ];
+
+              return (
+                <div className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
+                    <div>
+                      <h2 className="text-lg font-serif font-bold text-white flex items-center gap-2">
+                        <RefreshCw className="w-5 h-5 text-amber-400" />
+                        <span>{lang === 'fr' ? 'Changement de Classe (Règles Pascal d\'Origine)' : 'Class Change (Original Pascal Rules)'}</span>
+                      </h2>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {lang === 'fr'
+                          ? 'Permet à un aventurier qualifié de changer de vocation tout en conservant ses PV et ses sorts déjà appris.'
+                          : 'Allows a qualified adventurer to switch vocation while preserving HP and all previously learned spells.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Authentic Pascal CHGCLASS Rules Summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-700/40 space-y-1">
+                      <div className="font-bold text-emerald-300 uppercase tracking-wider text-[11px]">
+                        {lang === 'fr' ? '✓ Conservé après le changement' : '✓ Preserved after class change'}
+                      </div>
+                      <ul className="text-slate-300 space-y-0.5 text-[11px] list-disc list-inside">
+                        <li>{lang === 'fr' ? 'Points de Vie (PV Max & actuels) intégralement conservés' : 'Hit Points (Max & current HP) fully preserved'}</li>
+                        <li>{lang === 'fr' ? 'Tous les sorts appris (Mage & Prêtre) — rechargeables à l\'Auberge' : 'All learned spells (Mage & Priest) — recharged at the Inn'}</li>
+                        <li>{lang === 'fr' ? 'Or, inventaire, médailles (chevrons) et niveau max atteint' : 'Gold, inventory, awards (chevrons) & max level reached'}</li>
+                      </ul>
+                    </div>
+                    <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-700/40 space-y-1">
+                      <div className="font-bold text-amber-300 uppercase tracking-wider text-[11px]">
+                        {lang === 'fr' ? '⚠ Règles Pascal (ROLLER.TEXT / CHGCLASS)' : '⚠ Pascal Rules (ROLLER.TEXT / CHGCLASS)'}
+                      </div>
+                      <ul className="text-slate-300 space-y-0.5 text-[11px] list-disc list-inside">
+                        <li>{lang === 'fr' ? 'Caractéristiques ramenées aux valeurs de base de la race (SETBASE)' : 'Attributes reset to racial base minimums (SETBASE)'}</li>
+                        <li>{lang === 'fr' ? 'Retour au Niveau 1 (0 XP), vieillissement de +5 à +7 ans' : 'Resets to Level 1 (0 XP), ages +5 to +7 years'}</li>
+                        <li>{lang === 'fr' ? 'Points de sorts à 0 (repos à l\'Auberge requis) ; objets non maudits déséquipés' : 'Spell points set to 0 (rest at Inn to recharge); non-cursed gear unequipped'}</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Hero Selector */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                      {lang === 'fr' ? "Choisir l'aventurier :" : 'Choose adventurer:'}
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                      {allCharacters.map(h => {
+                        const spellsCnt = (h.spellsKnown || []).filter(Boolean).length;
+                        const inParty = party.some(p => p.id === h.id);
+                        return (
+                          <button
+                            key={h.id}
+                            type="button"
+                            onClick={() => {
+                              setClassChangeCharId(h.id);
+                              setPendingClassChange(null);
+                              sounds.playTurn();
+                            }}
+                            className={`p-2.5 rounded-xl border text-left transition ${
+                              classChangeCharId === h.id
+                                ? 'bg-amber-950/60 border-amber-500 text-amber-300 ring-1 ring-amber-500'
+                                : 'bg-slate-800/80 border-slate-700/60 text-slate-300 hover:text-white'
+                            }`}
+                          >
+                            <div className="font-bold text-xs truncate flex items-center justify-between gap-1">
+                              <span className="truncate">{h.name}</span>
+                              {inParty && <span className="text-[8px] px-1 py-0.5 rounded bg-emerald-900/70 text-emerald-300 shrink-0">{lang === 'fr' ? 'GRP' : 'PTY'}</span>}
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate">{getHeroRaceName(h.race)} · {getHeroClassName(h.class)}</div>
+                            <div className="text-[9px] text-amber-400 font-mono flex items-center justify-between mt-0.5">
+                              <span>{t.character.lvlShort} {h.charLevel}</span>
+                              <span>{h.hpMax} PV{spellsCnt > 0 ? ` · ${spellsCnt}✦` : ''}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {selectedCcHero && eligibilityMap && raceBase && (
+                    <div className="space-y-4 pt-3 border-t border-slate-800">
+                      {!canChangeStatus && (
+                        <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-700/60 text-rose-200 text-xs flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                          <span>
+                            {lang === 'fr'
+                              ? `${selectedCcHero.name} n'est pas en état (statut : ${selectedCcHero.status}${selectedCcHero.inMaze ? ', dans le donjon' : ''}). Soignez-le au Temple de Cant avant de changer de classe.`
+                              : `${selectedCcHero.name} is unavailable (status: ${selectedCcHero.status}${selectedCcHero.inMaze ? ', in maze' : ''}). Restore them at the Temple of Cant first.`}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Selected Hero Current Stats & Base Reset Preview */}
+                      <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-xl space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-serif font-bold text-white">{selectedCcHero.name}</span>
+                            <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[11px] font-semibold text-amber-300">
+                              {getHeroClassName(selectedCcHero.class)} {t.character.lvlShort} {selectedCcHero.charLevel}
+                            </span>
+                            <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[11px] text-slate-300">
+                              {getHeroRaceName(selectedCcHero.race)} · {getHeroAlignName(selectedCcHero.align)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 text-xs font-mono">
+                            <span className="text-emerald-400">PV: {selectedCcHero.hpLeft}/{selectedCcHero.hpMax}</span>
+                            <span className="text-sky-400">
+                              {lang === 'fr' ? `Sorts: ${totalKnownSpells}` : `Spells: ${totalKnownSpells}`}
+                              {totalKnownSpells > 0 && ` (M:${knownMageCount} / P:${knownPriestCount})`}
+                            </span>
+                            <span className="text-slate-400">{heroAgeYears} {lang === 'fr' ? 'ans' : 'yrs'}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                          {(['STRENGTH', 'IQ', 'PIETY', 'VITALITY', 'AGILITY', 'LUCK'] as const).map(st => {
+                            const cur = selectedCcHero.attrib[st];
+                            const base = raceBase[st];
+                            const key = st === 'IQ' ? 'iq' : st.toLowerCase() as keyof typeof t.character.attributes;
+                            const info = t.character.attributes[key] || { label: st, abbr: st.slice(0, 3) };
+                            return (
+                              <div key={st} className="p-2 bg-slate-900/90 border border-slate-800 rounded-lg text-center">
+                                <div className="text-[10px] font-bold text-slate-400 uppercase">{info.abbr}</div>
+                                <div className="flex items-center justify-center gap-1 mt-0.5 font-mono">
+                                  <span className="text-sm font-black text-white">{cur}</span>
+                                  {cur !== base && (
+                                    <>
+                                      <ArrowRight className="w-3 h-3 text-amber-500" />
+                                      <span className="text-xs font-bold text-amber-400">{base}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="text-[9px] text-slate-500">
+                                  {lang === 'fr' ? `Base ${base}` : `Base ${base}`}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Eligible Target Classes Grid */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                          {lang === 'fr' ? 'Choisir la nouvelle classe :' : 'Choose New Class:'}
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                          {allClassesMeta.map(item => {
+                            const isCurrent = selectedCcHero.class === item.cls;
+                            const elig = eligibilityMap[item.cls];
+                            const isSelectable = canChangeStatus && !isCurrent && elig.eligible;
+                            const isSelectedTarget = pendingClassChange === item.cls;
+                            return (
+                              <button
+                                key={item.cls}
+                                type="button"
+                                disabled={!isSelectable}
+                                onClick={() => {
+                                  setPendingClassChange(item.cls);
+                                  sounds.playTurn();
+                                }}
+                                className={`p-3 rounded-xl text-left border transition flex flex-col justify-between ${
+                                  isCurrent
+                                    ? 'bg-slate-800/40 border-slate-700 text-slate-400 cursor-default'
+                                    : isSelectedTarget
+                                    ? 'bg-amber-600/30 border-amber-400 text-white ring-2 ring-amber-400/60 shadow-md'
+                                    : isSelectable
+                                    ? 'bg-slate-800 hover:bg-amber-600/20 text-white border-amber-600/40 hover:border-amber-400 cursor-pointer shadow-sm'
+                                    : 'bg-slate-900/60 text-slate-500 border-slate-800/80 opacity-55 cursor-not-allowed'
+                                }`}
+                              >
+                                <div className="font-bold text-xs flex items-center justify-between gap-1">
+                                  <span>{item.name}</span>
+                                  {isCurrent ? (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 uppercase">
+                                      {lang === 'fr' ? 'Actuelle' : 'Current'}
+                                    </span>
+                                  ) : elig.eligible ? (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 uppercase">
+                                      {lang === 'fr' ? 'Éligible' : 'Eligible'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-mono uppercase text-slate-500">{item.cls}</span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] mt-1.5 leading-snug">
+                                  {isCurrent ? (
+                                    <span className="text-slate-500">{item.reqSummary}</span>
+                                  ) : elig.eligible ? (
+                                    <span className="text-emerald-400/90">{item.reqSummary}</span>
+                                  ) : (
+                                    <span className="text-rose-400/90">
+                                      {lang === 'fr' ? 'Manque : ' : 'Missing: '}
+                                      {elig.missingReqs.join(', ')}
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Confirmation Banner for Pending Class Change */}
+                      {pendingClassChange && (
+                        <div className="p-4 rounded-xl bg-amber-950/40 border-2 border-amber-500/70 space-y-3 shadow-lg">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="text-sm font-bold text-amber-200 flex items-center gap-2">
+                              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                              <span>
+                                {lang === 'fr'
+                                  ? `Confirmer la reconversion de ${selectedCcHero.name} : ${getHeroClassName(selectedCcHero.class)} → ${getHeroClassName(pendingClassChange)} ?`
+                                  : `Confirm class change for ${selectedCcHero.name}: ${getHeroClassName(selectedCcHero.class)} → ${getHeroClassName(pendingClassChange)}?`}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-200 space-y-1">
+                            <div>
+                              • {lang === 'fr'
+                                ? `Niveau ${selectedCcHero.charLevel} → 1 (0 XP) · Âge : ${heroAgeYears} ans → ~${heroAgeYears + 5}-${heroAgeYears + 7} ans`
+                                : `Level ${selectedCcHero.charLevel} → 1 (0 XP) · Age: ${heroAgeYears} yrs → ~${heroAgeYears + 5}-${heroAgeYears + 7} yrs`}
+                            </div>
+                            <div className="text-emerald-300">
+                              • {lang === 'fr'
+                                ? `PV conservés : ${selectedCcHero.hpLeft}/${selectedCcHero.hpMax} · Sorts conservés : ${totalKnownSpells}${pendingClassChange === 'MAGE' ? ' (+ KATINO)' : pendingClassChange === 'PRIEST' ? ' (+ DIOS)' : ''}`
+                                : `HP preserved: ${selectedCcHero.hpLeft}/${selectedCcHero.hpMax} · Spells preserved: ${totalKnownSpells}${pendingClassChange === 'MAGE' ? ' (+ KATINO)' : pendingClassChange === 'PRIEST' ? ' (+ DIOS)' : ''}`}
+                            </div>
+                            <div className="text-amber-300">
+                              • {lang === 'fr'
+                                ? `Caractéristiques réinitialisées aux bases ${getHeroRaceName(selectedCcHero.race)} (${raceBase.STRENGTH}/${raceBase.IQ}/${raceBase.PIETY}/${raceBase.VITALITY}/${raceBase.AGILITY}/${raceBase.LUCK}) · Objets non maudits déséquipés.`
+                                : `Attributes reset to ${getHeroRaceName(selectedCcHero.race)} base (${raceBase.STRENGTH}/${raceBase.IQ}/${raceBase.PIETY}/${raceBase.VITALITY}/${raceBase.AGILITY}/${raceBase.LUCK}) · Non-cursed items unequipped.`}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-end gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setPendingClassChange(null)}
+                              className="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
+                            >
+                              {lang === 'fr' ? 'Annuler' : 'Cancel'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleConfirmClassChange(selectedCcHero.id, pendingClassChange)}
+                              className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>{lang === 'fr' ? `Devenir ${getHeroClassName(pendingClassChange)}` : `Become ${getHeroClassName(pendingClassChange)}`}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* MODE 3: RESPEC EXISTING HERO */}
             {trainingMode === 'RESPEC' && (
               <div className="bg-slate-900/70 border border-slate-800 p-6 rounded-xl space-y-5">
                 <div>
